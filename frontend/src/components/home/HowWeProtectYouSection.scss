@@ -4,14 +4,14 @@
 
 .how-protect-section {
   position: relative;
-  padding: var(--landing-section-padding-y-top) var(--landing-section-padding-x) var(--landing-section-padding-y-bottom);
+  padding: var(--hp-section-py) var(--hp-px);
   background: transparent;
 }
 
 .how-protect-container {
-  max-width: var(--landing-section-inner-max);
+  max-width: var(--hp-max);
   margin: 0 auto;
-  padding: 0 4rem;
+  padding: 0;
   box-sizing: border-box;
 }
 

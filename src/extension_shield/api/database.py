@@ -1721,7 +1721,20 @@ class SupabaseDatabase:
                 .execute()
             )
             rows = getattr(resp, "data", None) or []
-            total_scans = len(rows)
+            total_scans = None
+            try:
+                count_resp = (
+                    self.client.table(self.table_scan_results)
+                    .select("extension_id", count="exact")
+                    .eq("status", "completed")
+                    .limit(1)
+                    .execute()
+                )
+                total_scans = getattr(count_resp, "count", None)
+            except Exception:
+                total_scans = None
+            if total_scans is None:
+                total_scans = len(rows)
             high_risk = sum(1 for r in rows if (r.get("risk_level") or "").lower() == "high")
             total_files = sum(int(r.get("total_files") or 0) for r in rows)
             total_findings = sum(int(r.get("total_findings") or 0) for r in rows)

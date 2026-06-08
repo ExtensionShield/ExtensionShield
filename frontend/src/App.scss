@@ -570,9 +570,9 @@ body {
 }
 
 .nav-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
+  position: fixed;
+  top: var(--extensionshield-header-offset);
+  left: auto;
   min-width: 280px;
   max-width: calc(100vw - 2rem);
   background: var(--extensionshield-bg-card);
@@ -587,13 +587,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  margin-top: 0.25rem;
+  margin-top: 0;
 
   /* Categorized dropdown (e.g. Research = Research + Resources) – centered on viewport */
   &--sections {
     position: fixed;
     left: 50%;
-    top: calc(var(--extensionshield-header-height) + 0.5rem);
+    top: var(--extensionshield-header-offset);
     transform: translateX(-50%);
     animation: megamenuEnterCentered 0.2s ease;
     min-width: 320px;

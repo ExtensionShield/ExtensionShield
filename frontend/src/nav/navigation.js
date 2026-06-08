@@ -15,8 +15,14 @@ export const topNavItems = [
     category: NAV_CATEGORIES.PRODUCT,
     label: "Scan",
     path: "/scan",
-    matchPaths: ["/scan", "/extension-security", "/extension-risk-score", "/extension-permissions"],
+    matchPaths: ["/scan", "/free-extension-scanner", "/extension-security", "/extension-risk-score", "/extension-permissions"],
     dropdownItems: [
+      {
+        icon: "🔎",
+        label: "Free Extension Scanner",
+        description: "Check any Chrome extension by URL",
+        path: "/free-extension-scanner"
+      },
       {
         icon: "🛡️",
         label: "Security Platform",
@@ -56,7 +62,7 @@ export const topNavItems = [
           { icon: "📋", label: "Case Studies", description: "Real-world analysis", path: "/research/case-studies" },
           { icon: "⚙️", label: "How We Score", description: "How we score risk", path: "/research/methodology" },
           { icon: "benchmarks", label: "Benchmarks", description: "Industry trends & scoring", path: "/research/benchmarks" },
-          { icon: "compare", label: "Compare Scanners", description: "ExtensionShield vs alternatives", path: "/compare" }
+          { icon: "compare", label: "Compare Tools", description: "Security tool comparison", path: "/compare" }
         ]
       },
       {
@@ -157,6 +163,7 @@ export const footerConfig = {
     {
       heading: "Product",
       links: [
+        { label: "Free Extension Scanner", path: "/free-extension-scanner" },
         { label: "Risk Check (Free)", path: "/scan" },
         { label: "Private Build Audit (Pro)", path: "/scan/upload" },
         { label: "Extension Security", path: "/extension-security" },
@@ -170,8 +177,8 @@ export const footerConfig = {
       links: [
         { label: "How We Score", path: "/research/methodology" },
         { label: "Case Studies", path: "/research/case-studies" },
-        { label: "Compare Scanners", path: "/compare" },
-        { label: "Spin.ai Comparison", path: "/compare/spin-ai" }
+        { label: "Compare Tools", path: "/compare" },
+        { label: "Extension Governance", path: "/extension-governance" }
       ]
     },
     {

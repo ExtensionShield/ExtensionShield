@@ -5,6 +5,13 @@ import { getBlogPostBySlug } from "../../data/blogPosts";
 import "../compare/ComparePage.scss";
 import "./BlogPostPage.scss";
 
+const defaultInternalLinks = [
+  { label: "Scan an extension", to: "/scan" },
+  { label: "Browser extension security", to: "/extension-security" },
+  { label: "Extension risk score", to: "/extension-risk-score" },
+  { label: "All browser extension security guides", to: "/blog" },
+];
+
 const BlogPostPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,7 +67,14 @@ const BlogPostPage = () => {
           </div>
 
           <div className="compare-links">
-            <Link to="/blog">← All blog posts</Link>
+            <h3>Related pages</h3>
+            <ul>
+              {(post.internalLinks || defaultInternalLinks).map((link) => (
+                <li key={link.to}>
+                  <Link to={link.to}>{link.label}</Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>

@@ -274,15 +274,6 @@ export default function HowWeProtectYouSection() {
               </div>
             </div>
 
-            <motion.p
-              className="how-protect-footnote"
-              initial={reduced ? false : { opacity: 0 }}
-              whileInView={reduced ? {} : { opacity: 1 }}
-              viewport={{ once: true, amount: 0.5 }}
-              transition={{ duration: 0.35, delay: stagger * 7 }}
-            >
-              Just because it's in the Chrome store doesn't mean it's safe.
-            </motion.p>
           </div>
         </div>
       </div>

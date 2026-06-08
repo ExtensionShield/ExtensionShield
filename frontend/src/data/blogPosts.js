@@ -446,5 +446,78 @@ export const blogPosts = [
   }
 ];
 
+export const blogStrategyTopics = [
+  {
+    title: "How to Check if a Chrome Extension Is Safe Before Installing",
+    longTailKeyword: "how to check if chrome extension is safe",
+    intent: "Practical pre-install safety checklist for users who are one search away from installing an extension.",
+    featuredSnippetAngle: "Answer with a numbered checklist: permissions, publisher, reviews, privacy policy, update history, and risk score.",
+    internalLinks: ["/scan", "/extension-security", "/extension-risk-score", "/blog"]
+  },
+  {
+    title: "What Permissions Are Dangerous in Chrome Extensions?",
+    longTailKeyword: "dangerous chrome extension permissions",
+    intent: "Explain high-risk permissions and help users understand whether requested access is justified.",
+    featuredSnippetAngle: "List dangerous permissions with one-sentence risk explanations.",
+    internalLinks: ["/extension-permissions", "/scan", "/extension-risk-score", "/blog"]
+  },
+  {
+    title: "Can Chrome Extensions Steal Data?",
+    longTailKeyword: "can chrome extensions steal data",
+    intent: "Answer a security fear directly and show how permissions, page access, and network calls create exposure.",
+    featuredSnippetAngle: "Lead with a direct yes/no answer, then list the main data paths.",
+    internalLinks: ["/extension-security", "/extension-permissions", "/scan", "/blog"]
+  },
+  {
+    title: "How Hackers Use Browser Extensions to Steal Data",
+    longTailKeyword: "how hackers use browser extensions to steal data",
+    intent: "Educate users and security teams on attack chains without hype.",
+    featuredSnippetAngle: "Break the attack into install, permission, collection, exfiltration, and update abuse steps.",
+    internalLinks: ["/extension-security", "/scan", "/extension-risk-score", "/blog"]
+  },
+  {
+    title: "Chrome Extension Scanner vs Extension Governance Platform",
+    longTailKeyword: "chrome extension scanner vs governance platform",
+    intent: "Capture scanner traffic while moving readers toward the larger governance category.",
+    featuredSnippetAngle: "Use a two-column scanner vs governance comparison.",
+    internalLinks: ["/extension-governance", "/extension-security", "/scan", "/blog"]
+  },
+  {
+    title: "Top Risky Chrome Extension Patterns to Watch in 2026",
+    longTailKeyword: "risky chrome extensions 2026",
+    intent: "Rank for annual risk queries without publishing an unsupported blacklist.",
+    featuredSnippetAngle: "List risky patterns such as all-site access, data collection, obfuscation, ownership changes, and suspicious updates.",
+    internalLinks: ["/scan", "/extension-permissions", "/extension-risk-score", "/blog"]
+  },
+  {
+    title: "Spin.ai vs ExtensionShield",
+    longTailKeyword: "Spin.ai alternative",
+    intent: "Capture high-intent comparison traffic from buyers evaluating browser extension security tools.",
+    featuredSnippetAngle: "Neutral best-fit comparison table by workflow.",
+    internalLinks: ["/compare/spin-ai", "/extension-governance", "/scan", "/blog"]
+  },
+  {
+    title: "CRXcavator vs ExtensionShield",
+    longTailKeyword: "CRXcavator alternative",
+    intent: "Capture users looking for a current extension risk scoring and governance workflow.",
+    featuredSnippetAngle: "Compare historical risk scoring criteria with current governance requirements.",
+    internalLinks: ["/compare/crxcavator", "/extension-risk-score", "/scan", "/blog"]
+  },
+  {
+    title: "How to Build a Chrome Extension Allowlist Policy",
+    longTailKeyword: "chrome extension allowlist policy",
+    intent: "Help enterprise security teams create a repeatable governance process.",
+    featuredSnippetAngle: "Give policy tiers: allow, monitor, request fix, block.",
+    internalLinks: ["/extension-governance", "/extension-risk-score", "/scan", "/blog"]
+  },
+  {
+    title: "How to Audit a CRX or ZIP Chrome Extension Before Release",
+    longTailKeyword: "audit CRX ZIP chrome extension before release",
+    intent: "Convert developers who need pre-release extension security checks.",
+    featuredSnippetAngle: "Checklist for manifest, permissions, content scripts, service worker, network access, and privacy disclosures.",
+    internalLinks: ["/scan/upload", "/extension-security", "/extension-permissions", "/blog"]
+  }
+];
+
 export const getBlogPostBySlug = (slug) =>
   blogPosts.find((p) => p.slug === slug) || null;
