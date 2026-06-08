@@ -28,16 +28,16 @@ const CrxcavatorAlternativePage = () => {
           <header className="compare-header">
             <h1>CRXcavator Alternative</h1>
             <p>
-              CRXcavator is a well-known Chrome extension security review tool. If you are comparing a <strong>CRXcavator alternative</strong>, ExtensionShield focuses on transparent scoring, SAST, private build audits, and governance evidence.
+              CRXcavator (Duo/Cisco) is a well-known chrome extension security scanner. If you’re looking for a <strong>CRXcavator alternative</strong> with transparent scoring, SAST, and governance, ExtensionShield is built for that.
             </p>
           </header>
 
           <div className="compare-prose">
             <p>
-              CRXcavator is known for reviewing extension metadata, permissions, CSP, external JavaScript, vulnerable libraries, and related risk factors. Teams comparing alternatives should focus on methodology transparency, evidence quality, current workflow fit, and whether the tool supports a dedicated <strong>governance and compliance</strong> process.
+              CRXcavator provides permission-based scoring, RetireJS, and CSP checks for Chrome, Firefox, and Edge extensions. Teams often look for alternatives due to availability, limited transparency in how scores are calculated, or the need for a dedicated <strong>governance and compliance</strong> layer.
             </p>
             <p>
-              <strong>ExtensionShield</strong> gives you a single <strong>chrome extension risk score</strong> (0–100) with three dimensions: Security (40%), Privacy (35%), and Governance (25%). It adds SAST, threat signals, obfuscation detection, and explicit governance signals so you can audit extensions and support compliance review. The methodology is documented, and reports are evidence-based.
+              <strong>ExtensionShield</strong> gives you a single <strong>chrome extension risk score</strong> (0–100) with three dimensions: Security (40%), Privacy (35%), and Governance (25%). We add SAST (Semgrep), VirusTotal integration, obfuscation detection, and explicit governance signals so you can audit extensions and support compliance. Our methodology is documented; reports are evidence-based and suitable for audits.
             </p>
             <ul>
               <li>Transparent weights and methodology (Security / Privacy / Governance)</li>
@@ -48,16 +48,16 @@ const CrxcavatorAlternativePage = () => {
           </div>
 
           <div className="compare-cta">
-            <Link to="/scan">Scan an extension</Link>
+            <Link to="/scan">Try ExtensionShield free →</Link>
           </div>
 
           <div className="compare-links">
             <h3>More comparisons</h3>
             <ul>
-              <li><Link to="/compare">Best browser extension security tools</Link></li>
-              <li><Link to="/compare/crxcavator">CRXcavator vs ExtensionShield (detailed)</Link></li>
+              <li><Link to="/compare">Best chrome extension security scanner</Link></li>
+              <li><Link to="/compare/crxcavator">ExtensionShield vs CRXcavator (detailed)</Link></li>
               <li><Link to="/compare/crxplorer">ExtensionShield vs CRXplorer</Link></li>
-              <li><Link to="/compare/extension-auditor">Extension Auditor vs ExtensionShield</Link></li>
+              <li><Link to="/compare/extension-auditor">ExtensionShield vs ExtensionAuditor</Link></li>
             </ul>
           </div>
         </div>

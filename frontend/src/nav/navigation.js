@@ -177,8 +177,8 @@ export const footerConfig = {
       links: [
         { label: "How We Score", path: "/research/methodology" },
         { label: "Case Studies", path: "/research/case-studies" },
-        { label: "Compare Tools", path: "/compare" },
-        { label: "Extension Governance", path: "/extension-governance" }
+        { label: "Compare Scanners", path: "/compare" },
+        { label: "Spin.ai Comparison", path: "/compare/spin-ai" }
       ]
     },
     {

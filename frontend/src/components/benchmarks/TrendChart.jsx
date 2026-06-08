@@ -36,21 +36,30 @@ const TrendChart = ({ data, dataKey, title, color = "#22c55e", height = 350, the
   };
 
   return (
-    <div className="trend-chart" style={{ width: '100%', height }}>
+    <div className="trend-chart" style={{ width: '100%', height, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       <h4 className="trend-chart__title" style={{ 
         fontSize: '0.9375rem', 
         fontWeight: 600, 
-        marginBottom: '1rem'
+        marginBottom: '1rem',
+        flexShrink: 0
       }}>
         {title}
       </h4>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <LineChart data={formattedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--theme-border-subtle)" />
           <XAxis 
             dataKey="date" 
             stroke="var(--theme-text-subtle)"
             style={{ fontSize: '0.75rem' }}
+            interval="preserveEnd"
+            minTickGap={20}
+            angle={-35}
+            textAnchor="end"
+            dx={-5}
+            dy={10}
+            height={60}
+            tickLine={false}
           />
           <YAxis 
             stroke="var(--theme-text-subtle)"

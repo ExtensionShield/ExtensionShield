@@ -261,15 +261,14 @@
   line-height: 1.5;
 }
 
-/* Charts */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
   margin-bottom: 1.5rem;
 
   @media (max-width: 968px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -296,6 +295,7 @@
   border-radius: 16px;
   padding: 1.5rem;
   transition: all 0.3s ease;
+  min-width: 0;
 
   .trend-chart__title {
     color: var(--extensionshield-text-primary, #f8fafc);

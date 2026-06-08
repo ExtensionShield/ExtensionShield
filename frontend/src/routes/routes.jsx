@@ -87,8 +87,8 @@ export const routes = [
     path: "/",
     element: <HomePage />,
     seo: {
-      title: "Browser Extension Security & Governance Platform | ExtensionShield",
-      description: "Open-source trust layer for browser extension security and governance. Scan Chrome extensions before install, audit private CRX/ZIP builds, and get evidence-backed risk scores.",
+      title: "Free Chrome Extension Scanner — Security, Privacy & Risk Score | ExtensionShield",
+      description: "Free Chrome extension scanner. Paste a Web Store URL to check permissions, privacy risks, malware signals, and a 0–100 risk score before you install—no signup. Open-source security & governance.",
       canonical: "/"
     },
     priority: 1.0,
@@ -277,7 +277,7 @@ export const routes = [
     element: <ExtensionSecurityPage />,
     seo: {
       title: "Browser Extension Security | Open-Source Extension Governance",
-      description: "Browser extension security guide and platform for pre-install Chrome Web Store scans, private CRX/ZIP audits, evidence-based risk scores, and extension governance.",
+      description: "Browser extension security platform for pre-install risk assessment, private CRX/ZIP audits, and enterprise extension governance.",
       canonical: "/extension-security"
     },
     priority: 0.9,
@@ -287,8 +287,8 @@ export const routes = [
     path: "/extension-risk-score",
     element: <ExtensionRiskScorePage />,
     seo: {
-      title: "Extension Risk Score | Security, Privacy & Governance Scoring",
-      description: "Extension risk score explained: how Security, Privacy, and Governance signals help users, developers, and enterprises decide whether to allow, block, monitor, or fix extensions.",
+      title: "Extension Risk Score | Security, Privacy, Governance Scoring",
+      description: "Understand ExtensionShield's extension risk score: security, privacy, and governance scoring for browser extension risk assessment.",
       canonical: "/extension-risk-score"
     },
     priority: 0.85,
@@ -298,8 +298,8 @@ export const routes = [
     path: "/extension-permissions",
     element: <ExtensionPermissionsPage />,
     seo: {
-      title: "Chrome Extension Permissions | Dangerous Permissions Explained",
-      description: "Chrome extension permissions explained for users, developers, and security teams. Learn which permissions are risky, how to review them, and how ExtensionShield scores access.",
+      title: "Browser Extension Permissions Explained | Dangerous Permissions",
+      description: "Browser extension permissions explained: all-site access, cookies, history, clipboard, webRequest, scripting, and permission combinations.",
       canonical: "/extension-permissions"
     },
     priority: 0.85,
@@ -309,8 +309,8 @@ export const routes = [
     path: "/extension-governance",
     element: <ExtensionGovernancePage />,
     seo: {
-      title: "Extension Governance | Browser Extension Compliance Platform",
-      description: "Extension governance guide for browser extension compliance, pre-install review, allow/block decisions, update monitoring, audit evidence, and enterprise workflows.",
+      title: "Extension Governance Platform | Browser Extension Compliance",
+      description: "Extension governance platform for browser extension compliance, allow/block decisions, update monitoring, policy evidence, and pre-install risk assessment.",
       canonical: "/extension-governance"
     },
     priority: 0.9,
@@ -345,7 +345,7 @@ export const routes = [
     element: <CompareIndexPage />,
     seo: {
       title: "Best Browser Extension Security Tools | Scanner & Governance Comparison",
-      description: "Compare browser extension security tools including ExtensionShield, Spin.ai, CRXcavator, CRXplorer, and Extension Auditor for risk scoring, governance, private audits, and pre-install review.",
+      description: "Compare browser extension security tools. ExtensionShield vs Spin.ai, CRXcavator, CRXplorer, and Extension Auditor for risk scoring, governance, and audits.",
       canonical: "/compare"
     },
     priority: 0.8,
@@ -388,8 +388,8 @@ export const routes = [
     path: "/compare/spin-ai",
     element: <CompareSpinAiPage />,
     seo: {
-      title: "Spin.ai Alternative | Spin.ai vs ExtensionShield",
-      description: "Compare Spin.ai and ExtensionShield for browser extension security, extension governance, pre-install scanning, open-source transparency, private build audits, and enterprise workflows.",
+      title: "Spin.ai vs ExtensionShield | Browser Extension Security Comparison",
+      description: "Compare Spin.ai SpinMonitor and SpinCRX with ExtensionShield for browser extension security, governance, pre-install scanning, open-source trust, and private build audits.",
       canonical: "/compare/spin-ai"
     },
     priority: 0.7,
