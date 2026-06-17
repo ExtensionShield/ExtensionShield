@@ -4,13 +4,25 @@ import SEOHead from "../components/SEOHead";
 import stanImage from "../assets/stanzin.png";
 import "./AboutUsPage.scss";
 
+const FOUNDER_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Stanzin Norzang",
+  "jobTitle": "Founder & Engineer",
+  "sameAs": [
+    "https://github.com/Stanzin7",
+    "https://www.linkedin.com/in/stanzin-norzang7/"
+  ]
+};
+
 const AboutUsPage = () => {
   return (
     <>
       <SEOHead
-        title="About Us | ExtensionShield"
-        description="Learn about ExtensionShield's founder, Stanzin, and why this project was created to help users understand browser extension security."
+        title="Stanzin Norzang | Founder of ExtensionShield"
+        description="Stanzin Norzang is the founder of ExtensionShield, an open-source browser extension security scanner. He also co-founded Cherker, a Himalayan sea buckthorn brand from Ladakh."
         pathname="/about"
+        schema={FOUNDER_SCHEMA}
       />
 
       <div className="about-us-page">
@@ -19,7 +31,7 @@ const AboutUsPage = () => {
             <div className="profile-image-container">
               <img 
                 src={stanImage} 
-                alt="Stanzin - Founder of ExtensionShield"
+                alt="Stanzin Norzang - Founder of ExtensionShield"
                 className="profile-image"
                 onError={(e) => {
                   // Fallback to placeholder if image doesn't exist
@@ -38,7 +50,7 @@ const AboutUsPage = () => {
                 <span>ST</span>
               </div>
             </div>
-            <h1>Stanzin</h1>
+            <h1>Stanzin Norzang</h1>
             <p className="founder-title">Founder & Engineer</p>
           </div>
 
@@ -69,6 +81,24 @@ const AboutUsPage = () => {
               <h2>Background</h2>
               <p>
                 I got my start in open source (Google Summer of Code, Drupal), then worked on enterprise systems at Hanover Insurance—where security, privacy, and compliance aren't optional. That's how ExtensionShield ended up practical: less vibes, more evidence.
+              </p>
+            </div>
+
+            <div className="story-section">
+              <h2>Beyond ExtensionShield</h2>
+              <p>
+                I'm from Ladakh, India, and a big part of my work is about building useful products that connect technology, trust, and local economic growth.
+              </p>
+              <p>
+                Outside cybersecurity, I also co-founded{" "}
+                <a
+                  href="https://cherker.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Cherker
+                </a>
+                , a Himalayan sea buckthorn brand from Ladakh focused on wild-grown sea buckthorn juice, tea, and wellness products sourced from the Himalayan region.
               </p>
             </div>
           </div>

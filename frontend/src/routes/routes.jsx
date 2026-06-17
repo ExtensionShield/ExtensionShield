@@ -697,8 +697,8 @@ export const routes = [
     path: "/about",
     element: <AboutUsPage />,
     seo: {
-      title: "About Us | ExtensionShield",
-      description: "Learn about ExtensionShield's founder, Stanzin, and why this project was created to help users understand browser extension security.",
+      title: "Stanzin Norzang | Founder of ExtensionShield",
+      description: "Stanzin Norzang is the founder of ExtensionShield, an open-source browser extension security scanner. He also co-founded Cherker, a Himalayan sea buckthorn brand from Ladakh.",
       canonical: "/about"
     },
     priority: 0.7,
