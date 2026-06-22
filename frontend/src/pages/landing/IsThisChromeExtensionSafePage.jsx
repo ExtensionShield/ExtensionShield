@@ -37,7 +37,7 @@ const faqItems = [
   },
   {
     question: "Does ExtensionShield work for enterprises?",
-    answer: "Yes. Teams use us for extension governance, allowlists, and audit-ready reports. See our Enterprise page for monitoring, alerts, and compliance."
+    answer: "Yes. Teams use us for extension governance, evidence-backed allow/block decisions, and audit-ready reports. See our Enterprise page for pre-install risk review and governance evidence."
   }
 ];
 

@@ -187,7 +187,7 @@ const EnterprisePage = () => {
             <div className="enterprise-pilot-addon">
               <h3 className="enterprise-pilot-addon__heading">Custom extensions, without the risk.</h3>
               <p className="enterprise-pilot-addon__text">
-                We build or harden internal extensions with minimal permissions, signed builds, and change alerts so you stay in policy.
+                We build or harden internal extensions with minimal permissions, signed builds, and audit-ready delivery so your extension stays auditable and in policy.
               </p>
             </div>
           </div>

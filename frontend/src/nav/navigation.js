@@ -89,10 +89,10 @@ export const topNavItems = [
         path: "/enterprise"
       },
       {
-        icon: "📡",
-        label: "Monitoring & Alerts",
-        description: "Real-time updates",
-        path: "/enterprise#monitoring"
+        icon: "📊",
+        label: "Risk Assessment",
+        description: "Pre-install extension review",
+        path: "/browser-extension-risk-assessment"
       },
       {
         icon: "📋",
