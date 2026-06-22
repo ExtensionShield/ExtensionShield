@@ -3,6 +3,10 @@ import { useLocation } from "react-router-dom";
 
 const ThemeContext = createContext();
 
+// Context modules co-locate the Provider and its hook by design; this is the
+// canonical React pattern. The rule below is a Fast-Refresh DX heuristic, not a
+// correctness check, so a scoped disable is the appropriate, low-churn choice.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {

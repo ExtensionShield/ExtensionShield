@@ -9,6 +9,10 @@ import { AUTH_ENABLED } from "../utils/featureFlags";
 
 const AuthContext = createContext(null);
 
+// Context modules co-locate the Provider and its hook by design; this is the
+// canonical React pattern. react-refresh/only-export-components is a Fast-Refresh
+// DX heuristic, not a correctness check, so a scoped disable is the right choice.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -20,13 +24,15 @@ export const useAuth = () => {
 const noop = () => {};
 const asyncNoop = async () => {};
 
-export const AuthProvider = ({ children }) => {
-  // Modal state: always available so "Sign In" opens the modal even when auth is disabled (OSS mode)
+// OSS mode: auth is disabled. Only the sign-in modal state is live so the
+// "Sign In" button can still open a modal explaining how to enable auth.
+// All hooks run unconditionally — no early returns.
+function AuthProviderDisabled({ children }) {
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const openModal = useCallback(() => setIsSignInModalOpen(true), []);
   const closeModal = useCallback(() => setIsSignInModalOpen(false), []);
 
-  const modalOnlyValue = {
+  const value = {
     user: null,
     session: null,
     isLoading: false,
@@ -49,10 +55,12 @@ export const AuthProvider = ({ children }) => {
     authEnabled: false,
   };
 
-  if (!AUTH_ENABLED) {
-    return <AuthContext.Provider value={modalOnlyValue}>{children}</AuthContext.Provider>;
-  }
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
 
+// Full Supabase-backed auth provider. All hooks run unconditionally.
+function AuthProviderEnabled({ children }) {
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,10 +102,10 @@ export const AuthProvider = ({ children }) => {
           if (event !== "INITIAL_SESSION" || nextSession) {
             logger.log("Auth state changed:", event, nextSession ? "has session" : "no session");
           }
-          
+
           setSession(nextSession || null);
           setUser(toUiUser(nextSession?.user));
-          
+
           // Update API client access token on session changes
           // This handles both initial sign-in and token refresh (scan + history APIs)
           if (nextSession?.access_token) {
@@ -107,7 +115,7 @@ export const AuthProvider = ({ children }) => {
             realScanService.setAccessToken(null);
             databaseService.setAccessToken(null);
           }
-          
+
           // Close modal on successful sign in
           if (event === 'SIGNED_IN' && nextSession) {
             logger.log("User signed in successfully");
@@ -127,14 +135,14 @@ export const AuthProvider = ({ children }) => {
               }
             }
           }
-          
+
           // Handle token refresh - update API client
           if (event === 'TOKEN_REFRESHED' && nextSession) {
             logger.log("Token refreshed, updating API client");
             realScanService.setAccessToken(nextSession.access_token);
             databaseService.setAccessToken(nextSession.access_token);
           }
-          
+
           // Clear error on sign out
           if (event === 'SIGNED_OUT') {
             setAuthError(null);
@@ -145,8 +153,8 @@ export const AuthProvider = ({ children }) => {
         });
         authStateSubscription = data;
       }
-    } catch (error) {
-      // console.error("Auth state change subscription failed:", error); // prod: no console
+    } catch {
+      // Auth state change subscription failed; continue without it.
     }
 
     // Check for auth errors in URL params (from OAuth callback failures)
@@ -238,18 +246,18 @@ export const AuthProvider = ({ children }) => {
           if (isMounted) setIsLoading(false);
           return;
         }
-        
+
         // Get current session with timeout to prevent hanging
         const sessionPromise = supabase.auth.getSession();
         let timeoutFired = false;
-        
+
         const timeoutPromise = new Promise((_, reject) => {
           timeoutId = setTimeout(() => {
             timeoutFired = true;
             reject(new Error("Session check timeout - taking too long"));
           }, 5000);
         });
-        
+
         let sessionResult;
         try {
           sessionResult = await Promise.race([sessionPromise, timeoutPromise]);
@@ -267,18 +275,16 @@ export const AuthProvider = ({ children }) => {
             timeoutId = null;
           }
         }
-        
+
         const { data, error: sessionError } = sessionResult;
-        
+
         if (sessionError) throw sessionError;
         if (!isMounted) return;
-        
+
         setSession(data.session || null);
         setUser(toUiUser(data.session?.user));
-      } catch (error) {
-        // console.error("Auth session load failed:", error); // prod: no console
-        // Don't crash - just continue without auth
-        // Ensure we clear any stuck state
+      } catch {
+        // Auth session load failed; continue without auth and clear stuck state.
         if (isMounted) {
           setSession(null);
           setUser(null);
@@ -313,7 +319,7 @@ export const AuthProvider = ({ children }) => {
         } else if (typeof authStateSubscription?.unsubscribe === "function") {
           authStateSubscription.unsubscribe();
         }
-      } catch (_) {
+      } catch {
         // ignore cleanup errors
       }
     };
@@ -434,8 +440,8 @@ export const AuthProvider = ({ children }) => {
       await authService.signOut();
       setSession(null);
       setUser(null);
-    } catch (error) {
-      // console.error("Sign out failed:", error); // prod: no console
+    } catch {
+      // Sign out failed; state is cleared in finally regardless.
     } finally {
       setIsLoading(false);
     }
@@ -464,15 +470,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase.auth.getSession();
       if (error) {
-        // console.error("Auth refresh failed:", error); // prod: no console
         setSession(null);
         setUser(null);
       } else {
         setSession(data.session || null);
         setUser(toUiUser(data.session?.user));
       }
-    } catch (error) {
-      // console.error("Auth refresh error:", error); // prod: no console
+    } catch {
+      // Auth refresh failed; clear session/user.
       setSession(null);
       setUser(null);
     } finally {
@@ -504,11 +509,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+}
+
+// Pick the provider variant once, based on the build-time feature flag. The
+// wrapper itself calls no hooks, so each inner provider's hooks always run in a
+// stable order (Rules of Hooks). AUTH_ENABLED is constant for the app lifetime,
+// so the chosen branch never changes across renders.
+export const AuthProvider = ({ children }) =>
+  AUTH_ENABLED ? (
+    <AuthProviderEnabled>{children}</AuthProviderEnabled>
+  ) : (
+    <AuthProviderDisabled>{children}</AuthProviderDisabled>
+  );
 
 export default AuthContext;
-
-
-
-
-

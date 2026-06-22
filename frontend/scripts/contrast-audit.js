@@ -158,9 +158,6 @@ function printReport(report) {
     console.log("");
   }
 
-  const darkFail = report.darkFail.filter((l) => !report.dark.find((r) => r.label === l && r.nonText) || report.dark.find((r) => r.label === l)?.ratio != null);
-  const lightFail = report.lightFail.filter((l) => !report.light.find((r) => r.label === l && r.nonText) || report.light.find((r) => r.label === l)?.ratio != null);
-
   if (report.darkFail.length || report.lightFail.length) {
     console.log("Failures: Dark:", report.darkFail.join(", ") || "none", "| Light:", report.lightFail.join(", ") || "none");
   }
@@ -168,7 +165,7 @@ function printReport(report) {
 
 function main() {
   const css = fs.readFileSync(CSS_PATH, "utf8");
-  const { report, root, light } = runAudit(css);
+  const { report } = runAudit(css);
   printReport(report);
 
   const textFails = {

@@ -14,7 +14,7 @@ const BrowserExtensionRiskAssessmentPage = () => {
     <>
       <SEOHead
         title="Browser Extension Risk Assessment | Enterprise Extension Security | ExtensionShield"
-        description="Browser extension risk assessment for enterprises: govern extensions, enforce allowlists, and get audit-ready reports. Extension security and compliance monitoring at scale."
+        description="Browser extension risk assessment for enterprises: govern extensions, review allowlist decisions, and get audit-ready reports. Evidence-backed compliance support for security teams."
         pathname="/browser-extension-risk-assessment"
         ogType="website"
       />
@@ -28,21 +28,21 @@ const BrowserExtensionRiskAssessmentPage = () => {
           <header className="compare-header">
             <h1>Browser Extension Risk Assessment</h1>
             <p>
-              Manage browser extension risk across your organization. ExtensionShield helps IT and security teams run extension governance, enforce allowlist policies, and get audit-ready extension risk assessments.
+              Manage browser extension risk across your organization. ExtensionShield helps IT and security teams run extension governance, support allowlist decisions with evidence, and get audit-ready extension risk assessments.
             </p>
           </header>
 
           <div className="compare-prose">
             <p>
-              <strong>Browser extension risk assessment</strong> is essential when employees install extensions outside of IT approval. Shadow IT extensions can expose data, violate compliance, and introduce malware. A structured program — with a <strong>browser extension allowlist policy</strong>, consistent scoring, and compliance monitoring — reduces that risk.
+              <strong>Browser extension risk assessment</strong> is essential when employees install extensions outside of IT approval. Shadow IT extensions can expose data, violate compliance, and introduce malware. A structured program — with a <strong>browser extension allowlist policy</strong>, consistent scoring, and evidence-backed review — reduces that risk.
             </p>
             <p>
-              ExtensionShield provides a single <strong>extension risk score</strong> (0–100) plus Security, Privacy, and Governance dimensions. Use it to evaluate extensions before allowlisting, monitor existing installs, and re-scan when extensions update. Enterprise plans add automated monitoring, alerts, and audit-ready exports.
+              ExtensionShield provides a single <strong>extension risk score</strong> (0–100) plus Security, Privacy, and Governance dimensions. Use it to evaluate extensions before allowlisting and re-scan after updates to compare findings against prior versions. Enterprise plans add policy workflows, governance evidence packs, and audit-ready exports.
             </p>
             <ul>
               <li>Extension risk score and permission audit for every extension</li>
               <li>Governance and compliance signals (ToS, disclosure, policy alignment)</li>
-              <li>Monitoring and re-scan on update; alerts when risk changes</li>
+              <li>Re-scan after updates and compare findings against prior versions</li>
               <li>Audit-ready reports for security and compliance teams</li>
             </ul>
           </div>

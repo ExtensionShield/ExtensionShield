@@ -15,7 +15,6 @@ const ReportScoreCard = ({
   title = 'Score',
   score = null,
   band = 'NA',
-  confidence = null,
   contributors = [],
   icon = null,
   onClick = null
@@ -58,7 +57,6 @@ const ReportScoreCard = ({
   };
 
   const color = getBandColor();
-  const displayScore = score === null ? '--' : Math.round(score);
   const scorePercent = score !== null ? Math.round(score) : null;
 
   // Get top 2 contributors

@@ -89,10 +89,10 @@ export const topNavItems = [
         path: "/enterprise"
       },
       {
-        icon: "📡",
-        label: "Monitoring & Alerts",
-        description: "Real-time updates",
-        path: "/enterprise#monitoring"
+        icon: "📊",
+        label: "Risk Assessment",
+        description: "Pre-install extension review",
+        path: "/browser-extension-risk-assessment"
       },
       {
         icon: "📋",
@@ -154,19 +154,22 @@ export const userMenuItems = [
 
 /**
  * Footer Configuration
- * Two-column layout: left = brand + disclaimer, right = link groups.
+ * Two-region layout: left = brand + disclaimer + social, right = 3 link groups.
  */
 export const footerConfig = {
-  disclaimer: "Open-source browser extension security and governance through Security, Privacy, and Governance analysis. ExtensionShield turns extension evidence into allow, block, monitor, or fix decisions.",
+  disclaimer: "Open-source scanner for browser extension security, privacy, and governance. Turn extension evidence into allow, block, monitor, or fix decisions.",
   tagline: "Pre-install extension security you can trust.",
+  nonAffiliation:
+    "ExtensionShield is an independent tool and is not affiliated with Google, the Chrome Web Store, or any browser manufacturer.",
+  repoUrl: "https://github.com/Stanzin7/ExtensionShield",
+  repo: "Stanzin7/ExtensionShield",
+  discordUrl: "https://discord.gg/mgR4skWB",
   linkGroups: [
     {
       heading: "Product",
       links: [
         { label: "Free Extension Scanner", path: "/free-extension-scanner" },
         { label: "Risk Check (Free)", path: "/scan" },
-        { label: "Private Build Audit (Pro)", path: "/scan/upload" },
-        { label: "Extension Security", path: "/extension-security" },
         { label: "Risk Score", path: "/extension-risk-score" },
         { label: "Is extension safe?", path: "/is-this-chrome-extension-safe" },
         { label: "Permissions", path: "/extension-permissions" }
@@ -184,19 +187,11 @@ export const footerConfig = {
     {
       heading: "Company",
       links: [
-        { label: "Extension Governance", path: "/extension-governance" },
+        { label: "About", path: "/about" },
         { label: "Enterprise", path: "/enterprise" },
+        { label: "Extension Governance", path: "/extension-governance" },
         { label: "Careers", path: "/careers" },
-        { label: "Contribute", path: "/contribute" }
-      ]
-    },
-    {
-      heading: "Legal & Community",
-      links: [
-        { label: "Privacy Policy", path: "/privacy-policy" },
-        { label: "Community", path: "/community" },
-        { label: "Discord", href: "https://discord.gg/mgR4skWB", external: true },
-        { label: "GitHub", href: "https://github.com/Stanzin7/ExtensionShield", external: true }
+        { label: "Privacy Policy", path: "/privacy-policy" }
       ]
     }
   ]

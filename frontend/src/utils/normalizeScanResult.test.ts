@@ -214,7 +214,7 @@ const blockedRawResult: RawScanResult = {
     overall_confidence: 0.95,
     decision: 'BLOCK',
     decision_reasons: ['VirusTotal: 8 malware detections'],
-    hard_gates_triggered: ['VIRUSTOTAL_MALWARE'],
+    hard_gates_triggered: ['VT_MALWARE'],
     risk_level: 'critical',
   },
 };
@@ -346,7 +346,7 @@ describe('normalizeScanResult', () => {
       
       expect(result.scores.decision).toBe('BLOCK');
       expect(result.scores.overall.band).toBe('BAD');
-      expect(result.keyFindings.some(f => f.title === 'VIRUSTOTAL_MALWARE')).toBe(true);
+      expect(result.keyFindings.some(f => f.title === 'Flagged by antivirus engines')).toBe(true);
       expect(result.keyFindings[0].severity).toBe('high');
     });
 
@@ -500,8 +500,8 @@ describe('normalizeScanResult', () => {
   describe('key findings extraction', () => {
     it('should prioritize hard gates as high severity', () => {
       const result = normalizeScanResult(blockedRawResult);
-      const hardGateFinding = result.keyFindings.find(f => f.title === 'VIRUSTOTAL_MALWARE');
-      
+      const hardGateFinding = result.keyFindings.find(f => f.title === 'Flagged by antivirus engines');
+
       expect(hardGateFinding).toBeDefined();
       expect(hardGateFinding?.severity).toBe('high');
       expect(hardGateFinding?.layer).toBe('security');
@@ -543,7 +543,7 @@ describe('normalizeScanResult', () => {
         },
       });
       
-      const sensitiveExfilFinding = result.keyFindings.find(f => f.title === 'SENSITIVE_EXFIL');
+      const sensitiveExfilFinding = result.keyFindings.find(f => f.title === 'May send your data to external servers');
       expect(sensitiveExfilFinding).toBeDefined();
       expect(sensitiveExfilFinding?.layer).toBe('privacy');
     });

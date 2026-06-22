@@ -21,7 +21,7 @@ const DEMO_STEPS = [
   },
 ];
 
-function DemoModal({ isOpen, onClose, triggerRef }) {
+function DemoModal({ isOpen, onClose }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [direction, setDirection] = useState(1);

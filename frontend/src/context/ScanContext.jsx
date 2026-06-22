@@ -5,13 +5,16 @@ import databaseService from "../services/databaseService";
 import { normalizeExtensionId } from "../utils/extensionId";
 import { getScanResultsRoute } from "../utils/slug";
 import { useAuth } from "./AuthContext";
-import { requiresAuthForScan } from "../utils/authUtils";
 
 // User-friendly message for service unavailability (matches backend)
 const SERVICE_UNAVAILABLE_MESSAGE = "ExtensionShield is temporarily unavailable. We're working to restore service and will be back shortly. Please try again in a few minutes.";
 
 const ScanContext = createContext(null);
 
+// Context modules co-locate the Provider and its hook by design; this is the
+// canonical React pattern. react-refresh/only-export-components is a Fast-Refresh
+// DX heuristic, not a correctness check, so a scoped disable is the right choice.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useScan = () => {
   const context = useContext(ScanContext);
   if (!context) {

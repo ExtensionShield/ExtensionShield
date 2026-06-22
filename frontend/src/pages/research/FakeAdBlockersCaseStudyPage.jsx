@@ -108,7 +108,7 @@ const FakeAdBlockersCaseStudyPage = () => {
               <h2>Red Flags &amp; How to Protect Your Organization</h2>
               <ul className="lessons-list">
                 <li>
-                  <strong>Scan before allowing extensions.</strong> Use a Chrome extension security scanner to check for obfuscation, excessive permissions, and suspicious network behavior. ExtensionShield’s three-layer model (security, privacy, governance) helps enterprises enforce policy.
+                  <strong>Scan before allowing extensions.</strong> Use a Chrome extension security scanner to check for obfuscation, excessive permissions, and suspicious network behavior. ExtensionShield’s three-layer model (security, privacy, governance) gives enterprises the evidence to make allow/block decisions.
                 </li>
                 <li>
                   <strong>Don’t trust names and ratings alone.</strong> Clones of popular ad blockers have been caught injecting ads and stealing traffic. High install counts and positive reviews can be gamed.

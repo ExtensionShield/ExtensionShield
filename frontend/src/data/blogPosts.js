@@ -415,7 +415,7 @@ export const blogPosts = [
       },
       {
         heading: "Scanner vs platform",
-        body: "A scanner is enough for one-off checks. A platform is better when teams need repeatable governance decisions, update monitoring, and evidence for allow/block policy."
+        body: "A scanner is enough for one-off checks. A platform is better when teams need repeatable governance decisions, governance evidence, and audit-ready records for allow/block policy."
       },
       {
         heading: "ExtensionShield's position",

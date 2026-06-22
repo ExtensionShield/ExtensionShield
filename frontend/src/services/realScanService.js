@@ -53,7 +53,7 @@ class RealScanService {
 
   // Extract extension ID from Chrome Web Store URL
   extractExtensionId(url) {
-    const match = url.match(/\/detail\/(?:[^\/]+\/)?([a-z]{32})/);
+    const match = url.match(/\/detail\/(?:[^/]+\/)?([a-z]{32})/);
     return match ? match[1] : null;
   }
 
@@ -95,50 +95,40 @@ class RealScanService {
 
   // Trigger a scan for an extension URL
   async triggerScan(url) {
-    try {
-      const { response, body } = await fetchJson(`${this.baseURL}/api/scan/trigger`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...this.getRequestHeaders(),
-        },
-        body: JSON.stringify({ url }),
-      });
+    const { response, body } = await fetchJson(`${this.baseURL}/api/scan/trigger`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.getRequestHeaders(),
+      },
+      body: JSON.stringify({ url }),
+    });
 
-      if (response.ok) {
-        return body;
-      }
-
-      throw buildFetchError(response, body, "Failed to trigger scan");
-    } catch (error) {
-      // console.error("Failed to trigger scan:", error); // prod: no console
-      throw error;
+    if (response.ok) {
+      return body;
     }
+
+    throw buildFetchError(response, body, "Failed to trigger scan");
   }
 
   // Upload and scan a CRX/ZIP file
   async uploadAndScan(file) {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const { response, body } = await fetchJson(`${this.baseURL}/api/scan/upload`, {
-        method: "POST",
-        headers: {
-          ...this.getRequestHeaders(),
-        },
-        body: formData,
-      });
+    const { response, body } = await fetchJson(`${this.baseURL}/api/scan/upload`, {
+      method: "POST",
+      headers: {
+        ...this.getRequestHeaders(),
+      },
+      body: formData,
+    });
 
-      if (response.ok) {
-        return body;
-      }
-
-      throw buildFetchError(response, body, "Failed to upload file");
-    } catch (error) {
-      // console.error("Failed to upload file:", error); // prod: no console
-      throw error;
+    if (response.ok) {
+      return body;
     }
+
+    throw buildFetchError(response, body, "Failed to upload file");
   }
 
   // Get real scan results from CLI analysis.
@@ -158,25 +148,21 @@ class RealScanService {
   async _getRealScanResultsInner(extensionId) {
     const url = getScanResultsUrl(extensionId);
     if (!url) return null;
-    try {
-      const { response, body } = await fetchJson(url, {
-        headers: {
-          ...this.getRequestHeaders(),
-        },
-      });
+    const { response, body } = await fetchJson(url, {
+      headers: {
+        ...this.getRequestHeaders(),
+      },
+    });
 
-      if (response.ok) {
-        return body;
-      }
-
-      if (response.status === 404) {
-        return null;
-      }
-
-      throw buildFetchError(response, body, "Failed to fetch scan results");
-    } catch (error) {
-      throw error;
+    if (response.ok) {
+      return body;
     }
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    throw buildFetchError(response, body, "Failed to fetch scan results");
   }
 
   async checkScanStatus(extensionId) {
@@ -493,43 +479,33 @@ class RealScanService {
 
   // Get file content from extracted files
   async getFileContent(extensionId, filePath) {
-    try {
-      // Encode each path segment separately to preserve forward slashes
-      const encodedPath = filePath.split('/').map(segment => encodeURIComponent(segment)).join('/');
-      
-      const response = await fetch(
-        `${this.baseURL}/api/scan/file/${extensionId}/${encodedPath}`,
-      );
+    // Encode each path segment separately to preserve forward slashes
+    const encodedPath = filePath.split('/').map(segment => encodeURIComponent(segment)).join('/');
 
-      if (response.ok) {
-        const result = await response.json();
-        return result.content || "File content not available";
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Failed to fetch file content");
-      }
-    } catch (error) {
-      // console.error("Failed to get file content:", error); // prod: no console
-      throw error;
+    const response = await fetch(
+      `${this.baseURL}/api/scan/file/${extensionId}/${encodedPath}`,
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      return result.content || "File content not available";
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "Failed to fetch file content");
     }
   }
 
   // Get file list from extracted directory
   async getFileList(extensionId) {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/api/scan/files/${extensionId}`,
-      );
+    const response = await fetch(
+      `${this.baseURL}/api/scan/files/${extensionId}`,
+    );
 
-      if (response.ok) {
-        const result = await response.json();
-        return result.files || [];
-      } else {
-        throw new Error("Failed to fetch file list");
-      }
-    } catch (error) {
-      // console.error("Failed to get file list:", error); // prod: no console
-      throw error;
+    if (response.ok) {
+      const result = await response.json();
+      return result.files || [];
+    } else {
+      throw new Error("Failed to fetch file list");
     }
   }
 
@@ -569,19 +545,14 @@ class RealScanService {
 
   // Get compliance report (report.json) - uses same GET /api/scan/results/:id
   async getComplianceReport(scanId) {
-    try {
-      const url = getScanResultsUrl(scanId);
-      if (!url) throw new Error("Invalid scan id");
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        return this.formatComplianceResults(data);
-      }
-      throw new Error("Failed to fetch compliance report");
-    } catch (error) {
-      // console.error("Failed to get compliance report:", error); // prod: no console
-      throw error;
+    const url = getScanResultsUrl(scanId);
+    if (!url) throw new Error("Invalid scan id");
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      return this.formatComplianceResults(data);
     }
+    throw new Error("Failed to fetch compliance report");
   }
 
   // Map backend verdicts to frontend verdicts
@@ -666,49 +637,39 @@ class RealScanService {
 
   // Download enforcement bundle as JSON
   async downloadEnforcementBundle(scanId) {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/api/scan/enforcement_bundle/${scanId}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        // Create a downloadable JSON file
-        const jsonString = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonString], { type: "application/json" });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `enforcement_bundle_${scanId}.json`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        return true;
-      } else {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || "Failed to download enforcement bundle");
-      }
-    } catch (error) {
-      // console.error("Failed to download enforcement bundle:", error); // prod: no console
-      throw error;
+    const response = await fetch(
+      `${this.baseURL}/api/scan/enforcement_bundle/${scanId}`
+    );
+    if (response.ok) {
+      const data = await response.json();
+      // Create a downloadable JSON file
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `enforcement_bundle_${scanId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      return true;
+    } else {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || "Failed to download enforcement bundle");
     }
   }
 
   // Get enforcement bundle data
   async getEnforcementBundle(scanId) {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/api/scan/enforcement_bundle/${scanId}`
-      );
-      if (response.ok) {
-        return await response.json();
-      } else {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || "Failed to get enforcement bundle");
-      }
-    } catch (error) {
-      // console.error("Failed to get enforcement bundle:", error); // prod: no console
-      throw error;
+    const response = await fetch(
+      `${this.baseURL}/api/scan/enforcement_bundle/${scanId}`
+    );
+    if (response.ok) {
+      return await response.json();
+    } else {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || "Failed to get enforcement bundle");
     }
   }
 }

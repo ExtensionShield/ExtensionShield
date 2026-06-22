@@ -9,7 +9,7 @@ const governanceSchema = {
   "name": "ExtensionShield",
   "applicationCategory": "SecurityApplication",
   "operatingSystem": "Web",
-  "description": "Open-source browser extension security and governance platform for extension risk assessment, compliance evidence, monitoring, and allow/block decisions.",
+  "description": "Open-source browser extension security and governance platform for extension risk assessment, compliance evidence, and allow/block decision support.",
   "url": "https://extensionshield.com/extension-governance"
 };
 
@@ -20,7 +20,7 @@ const ExtensionGovernancePage = () => {
     <>
       <SEOHead
         title="Extension Governance Platform | Browser Extension Compliance"
-        description="Extension governance platform for browser extension compliance, allow/block decisions, update monitoring, policy evidence, and pre-install risk assessment."
+        description="Extension governance platform for browser extension compliance, allow/block decisions, governance evidence, policy support, and pre-install risk assessment."
         pathname="/extension-governance"
         ogType="website"
         keywords="extension governance platform, browser extension compliance, extension governance, browser extension governance, extension policy"
@@ -37,14 +37,14 @@ const ExtensionGovernancePage = () => {
           <header className="compare-header">
             <h1>Extension Governance Platform</h1>
             <p>
-              ExtensionShield helps teams govern browser extensions before they reach production browsers: assess risk, document evidence, enforce policy, and monitor changes.
+              ExtensionShield helps teams govern browser extensions before they reach production browsers: assess risk, document evidence, and support allow/block policy decisions.
             </p>
           </header>
 
           <div className="compare-prose">
             <h2>From scanner output to governance decisions</h2>
             <p>
-              Security teams do not need another raw finding list. They need a repeatable decision process: request, assess, approve, block, monitor, and re-review when risk changes. ExtensionShield turns extension analysis into that process.
+              Security teams do not need another raw finding list. They need a repeatable decision process: request, assess, approve, block, and re-review when extensions change. ExtensionShield turns extension analysis into that evidence layer.
             </p>
 
             <h2>Governance workflows ExtensionShield supports</h2>
@@ -52,7 +52,7 @@ const ExtensionGovernancePage = () => {
               <li><strong>Pre-install review:</strong> scan Chrome Web Store extensions before users install them.</li>
               <li><strong>Allow/block decisions:</strong> map Security, Privacy, and Governance findings to an organizational policy.</li>
               <li><strong>Private build audit:</strong> review CRX/ZIP builds before release or internal rollout.</li>
-              <li><strong>Update monitoring:</strong> re-check extensions when versions, permissions, ownership, or behavior changes.</li>
+              <li><strong>Re-review after updates:</strong> re-scan after version or permission changes and compare findings against the prior report.</li>
               <li><strong>Audit evidence:</strong> preserve the score drivers and findings behind every decision.</li>
             </ul>
 

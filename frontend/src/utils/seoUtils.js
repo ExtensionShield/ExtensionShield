@@ -22,11 +22,10 @@ export const getCanonicalUrl = (pathname) => {
 
 /**
  * Get Open Graph image URL (1200×630 recommended)
- * 
- * @param {string} pathname - Optional pathname for page-specific images
+ *
  * @returns {string} OG image URL
  */
-export const getOGImage = (pathname = '/') => {
+export const getOGImage = () => {
   return `${CANONICAL_DOMAIN}/og.png`;
 };
 
@@ -61,7 +60,7 @@ export const OG_IMAGE_HEIGHT = 630;
 
 export const getOGTags = ({ title, description, pathname = '/', type = 'website', image }) => {
   const canonicalUrl = getCanonicalUrl(pathname);
-  const ogImage = image || getOGImage(pathname);
+  const ogImage = image || getOGImage();
   
   return {
     'og:title': title,

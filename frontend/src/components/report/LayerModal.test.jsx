@@ -10,7 +10,7 @@
  * Pure logic only — no rendering required.
  */
 import { describe, it, expect } from 'vitest';
-import { humanizeFactor, isNotAnalyzed, triageFactors } from './LayerModal';
+import { humanizeFactor, isNotAnalyzed, triageFactors } from './layerFactors';
 
 describe('LayerModal status mapping', () => {
   it('Data Sharing with no network coverage is "Not analyzed", not "Clear"', () => {

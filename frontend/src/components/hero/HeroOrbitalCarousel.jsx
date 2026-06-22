@@ -68,12 +68,6 @@ function simplifyScan(scan) {
   };
 }
 
-function getOverallStatus(scan) {
-  if (scan?.security?.level === "high" || scan?.privacy?.level === "high" || scan?.governance?.level === "high") return "danger";
-  if (scan?.security?.level === "warn" || scan?.privacy?.level === "warn" || scan?.governance?.level === "warn") return "warning";
-  return "safe";
-}
-
 /**
  * Checks if extensionId looks like a real Chrome extension ID (32 lowercase a-p).
  */
@@ -409,7 +403,9 @@ export default function HeroOrbitalCarousel() {
   const [cardRevealed, setCardRevealed] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [scans, setScans] = useState(HERO_SNAPSHOT);
-  const [iconCacheVersion, setIconCacheVersion] = useState(0);
+  // Only the setter is used (to force a re-render when extension icons finish
+  // loading); the value itself is never read.
+  const [, setIconCacheVersion] = useState(0);
   const [compact, setCompact] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const rafRef = useRef(null);

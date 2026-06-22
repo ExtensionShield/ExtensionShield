@@ -16,11 +16,8 @@ import { normalizeHighlights } from '../../utils/normalizeScanResult';
 
 const SummaryPanel = ({
   scores = {},
-  factorsByLayer = {},
   rawScanResult = null,
   keyFindings = [],
-  onViewEvidence = null,
-  topFindings = [],
   onViewRiskyPermissions = null,
   onViewNetworkDomains = null
 }) => {

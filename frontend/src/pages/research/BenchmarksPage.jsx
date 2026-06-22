@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import SEOHead from "../../components/SEOHead";
-import { useTheme } from "../../context/ThemeContext";
 import { TrendChart, SourcesBox } from "../../components/benchmarks";
 import "./BenchmarksPage.scss";
 
 const BenchmarksPage = () => {
-  const { theme } = useTheme();
   const [trendsData, setTrendsData] = useState(null);
-  const [benchmarksData, setBenchmarksData] = useState(null);
+  // Only the setter is used; the fetched dataset is not yet rendered.
+  const [, setBenchmarksData] = useState(null);
   const [scannerComparison, setScannerComparison] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

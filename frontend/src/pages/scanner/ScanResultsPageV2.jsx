@@ -184,7 +184,7 @@ const ScanResultsPageV2 = () => {
       setIsLoading(true);
 
       try {
-        const data = await loadResultsById(scanId);
+        await loadResultsById(scanId);
         if (!cancelled) {
           loadedScanIdRef.current = scanId;
         }
@@ -220,9 +220,6 @@ const ScanResultsPageV2 = () => {
     }
   }, [scanResults]);
 
-  const handleViewFile = (file) => {
-    setFileViewerModal({ isOpen: true, file });
-  };
 
   const getFileContent = async (extensionId, filePath) => {
     return await realScanService.getFileContent(extensionId, filePath);
@@ -348,7 +345,7 @@ const ScanResultsPageV2 = () => {
             <span>Extension ID:</span>
             <code>{scanId}</code>
           </div>
-          {process.env.NODE_ENV === 'development' && rawData && (
+          {import.meta.env.DEV && rawData && (
             <details className="error-raw-data">
               <summary>Raw Data (Dev Only)</summary>
               <pre>{JSON.stringify(rawData, null, 2)}</pre>
@@ -367,12 +364,11 @@ const ScanResultsPageV2 = () => {
   }
 
   // Extract data from viewModel - provide safe defaults
-  const { meta, scores, factorsByLayer, keyFindings, permissions, evidenceIndex } = viewModel || {
+  const { meta, scores, factorsByLayer, keyFindings, evidenceIndex } = viewModel || {
     meta: {},
     scores: {},
     factorsByLayer: {},
     keyFindings: [],
-    permissions: {},
     evidenceIndex: {}
   };
 

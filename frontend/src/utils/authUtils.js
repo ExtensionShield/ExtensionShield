@@ -29,7 +29,10 @@ export function requiresAuthForScan() {
  * Checks if a string contains control characters or null bytes
  */
 const hasControlChars = (str) => {
-  // Check for null byte or control characters (0x00-0x1F, except \t, \n, \r)
+  // Check for null byte or control characters (0x00-0x1F, except \t, \n, \r).
+  // Matching control characters is the explicit purpose of this guard, so the
+  // no-control-regex rule (which flags them as likely-accidental) does not apply.
+  // eslint-disable-next-line no-control-regex
   return /[\u0000\u0001-\u0008\u000B\u000C\u000E-\u001F]/.test(str);
 };
 

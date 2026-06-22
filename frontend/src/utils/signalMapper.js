@@ -165,7 +165,7 @@ export function calculateAllSignals(scanResult) {
 /**
  * Code signal from SAST and entropy analysis.
  */
-function calculateCodeSignal(scanResult) {
+export function calculateCodeSignal(scanResult) {
   const sastResults = scanResult?.sast_results || scanResult?.sastResults || {};
   const entropyAnalysis = scanResult?.entropy_analysis || scanResult?.entropyAnalysis || {};
   const scoringV2 = scanResult?.scoring_v2 || {};
@@ -231,37 +231,43 @@ function calculateCodeSignal(scanResult) {
 /**
  * Permissions signal from permissions analysis.
  */
-function calculatePermsSignal(scanResult) {
+export function calculatePermsSignal(scanResult) {
   const permsAnalysis = scanResult?.permissions_analysis || scanResult?.permissionsAnalysis || {};
   const permissions = permsAnalysis?.permissions_details || permsAnalysis?.permissions || [];
   
-  // Count high-risk permissions
-  let highRiskCount = 0;
-  let mediumRiskCount = 0;
-  
+  // Count high-risk permissions. Track by permission name so a permission that
+  // appears in BOTH permissions_details and the manifest is only counted once
+  // (the manifest is where these permissions originate, so they overlap).
+  const highRiskPerms = new Set();
+  const mediumRiskPerms = new Set();
+
   const permissionsList = Array.isArray(permissions) ? permissions : Object.values(permissions);
-  
+
   permissionsList.forEach(perm => {
     const risk = (perm.risk || perm.risk_level || '').toLowerCase();
-    if (risk === 'high' || risk === 'critical') highRiskCount++;
-    else if (risk === 'medium') mediumRiskCount++;
+    const name = perm?.name || perm?.permission || String(perm);
+    if (risk === 'high' || risk === 'critical') highRiskPerms.add(name);
+    else if (risk === 'medium') mediumRiskPerms.add(name);
   });
-  
+
   // Also check manifest for dangerous permissions
   const manifest = scanResult?.manifest || {};
-  const dangerousPerms = ['<all_urls>', 'webRequest', 'webRequestBlocking', 'clipboardRead', 
+  const dangerousPerms = ['<all_urls>', 'webRequest', 'webRequestBlocking', 'clipboardRead',
                           'history', 'management', 'nativeMessaging', 'debugger'];
-  
+
   const allPerms = [
     ...(manifest.permissions || []),
     ...(manifest.host_permissions || [])
   ];
-  
+
   allPerms.forEach(p => {
     if (dangerousPerms.some(dp => p.includes(dp))) {
-      highRiskCount++;
+      highRiskPerms.add(p);
     }
   });
+
+  const highRiskCount = highRiskPerms.size;
+  const mediumRiskCount = mediumRiskPerms.size;
   
   // Determine signal level
   let level = SIGNAL_LEVELS.OK;
@@ -287,7 +293,7 @@ function calculatePermsSignal(scanResult) {
 /**
  * Intel signal from VirusTotal and threat intelligence.
  */
-function calculateIntelSignal(scanResult) {
+export function calculateIntelSignal(scanResult) {
   const vtAnalysis = scanResult?.virustotal_analysis || scanResult?.virustotalAnalysis || {};
   
   const maliciousCount = vtAnalysis?.total_malicious || vtAnalysis?.malicious || 0;

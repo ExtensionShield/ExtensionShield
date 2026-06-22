@@ -19,7 +19,9 @@ const ResultFeedback = ({ scanId }) => {
   const [reason, setReason] = useState(null);
   const [suggestedScore, setSuggestedScore] = useState(50);
   const [comment, setComment] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  // Only the setter is used (cleared/!set during submit flow); the message is
+  // not currently surfaced in the UI.
+  const [, setErrorMessage] = useState("");
 
   const baseURL = import.meta.env.VITE_API_URL || "";
 

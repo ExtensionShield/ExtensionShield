@@ -2,7 +2,7 @@ import React, { Suspense, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { BrowserRouter as Router, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { useTheme, ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import { ScanProvider } from "./context/ScanContext";
 import routes from "./routes/routes";
 import { topNavItems, userMenuItems, getMobileNavSections } from "./nav/navigation";
@@ -10,7 +10,7 @@ import SignInModal from "./components/SignInModal";
 import ShieldLogo from "./components/ShieldLogo";
 import Footer from "./components/Footer";
 import AppBackground from "./components/AppBackground";
-import ThemeToggle from "./components/ThemeToggle";
+import useGitHubStars, { formatStars } from "./hooks/useGitHubStars";
 import { trackPageView } from "./services/telemetryService";
 import "./App.scss";
 
@@ -362,12 +362,32 @@ function AuthLoadingDots() {
   );
 }
 
+// Compact GitHub trust-signal badge (replaces theme toggle)
+function GitHubBadge() {
+  const { stars } = useGitHubStars("Stanzin7/ExtensionShield");
+  const label = formatStars(stars);
+  return (
+    <a
+      href="https://github.com/Stanzin7/ExtensionShield"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="header-gh-badge"
+      aria-label={label ? `ExtensionShield on GitHub · ${label} stars` : "ExtensionShield on GitHub"}
+    >
+      <svg viewBox="0 0 17 16" fill="none" className="header-gh-icon" aria-hidden="true">
+        <path fillRule="evenodd" clipRule="evenodd" d="M8.5 2.22168C5.23312 2.22168 2.58496 4.87398 2.58496 8.14677C2.58496 10.7642 4.27962 12.9853 6.63026 13.7684C6.92601 13.8228 7.03366 13.6401 7.03366 13.4827C7.03366 13.3425 7.02893 12.9693 7.02597 12.4754C5.38041 12.8333 5.0332 11.681 5.0332 11.681C4.76465 10.996 4.37663 10.8139 4.37663 10.8139C3.83954 10.4471 4.41744 10.4542 4.41744 10.4542C5.01072 10.4956 5.32303 11.0647 5.32303 11.0647C5.85065 11.9697 6.70774 11.7082 7.04431 11.5568C7.09873 11.1741 7.25134 10.9132 7.42051 10.7654C6.10737 10.6157 4.72621 10.107 4.72621 7.83683C4.72621 7.19031 4.95689 6.66092 5.33486 6.24686C5.27394 6.09721 5.07105 5.49447 5.39283 4.67938C5.39283 4.67938 5.88969 4.51967 7.01947 5.28626C7.502 5.15466 7.99985 5.08763 8.5 5.08692C9.00278 5.08929 9.50851 5.15495 9.98113 5.28626C11.1103 4.51967 11.606 4.67879 11.606 4.67879C11.9289 5.49447 11.7255 6.09721 11.6651 6.24686C12.0437 6.66092 12.2732 7.19031 12.2732 7.83683C12.2732 10.1129 10.8897 10.6139 9.5724 10.7606C9.78475 10.9434 9.97344 11.3048 9.97344 11.8579C9.97344 12.6493 9.96634 13.2887 9.96634 13.4827C9.96634 13.6413 10.0728 13.8258 10.3733 13.7678C11.5512 13.3728 12.5751 12.6175 13.3003 11.6089C14.0256 10.6002 14.4155 9.38912 14.415 8.14677C14.415 4.87398 11.7663 2.22168 8.5 2.22168Z" fill="currentColor" />
+      </svg>
+      {label && (
+        <span className="header-gh-stars" aria-hidden="true">{label}</span>
+      )}
+    </a>
+  );
+}
+
 // App Header Component
 function AppHeader() {
   const location = useLocation();
-  const { theme } = useTheme();
-  const { user, isAuthenticated, openSignInModal, isLoading, authEnabled } = useAuth();
-  const isHomePage = location.pathname === "/";
+  const { user, isAuthenticated, openSignInModal, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const mobileMenuRef = React.useRef(null);
 
@@ -410,7 +430,7 @@ function AppHeader() {
         </nav>
 
         <div className="header-actions header-actions-desktop">
-          <ThemeToggle />
+          <GitHubBadge />
           {isLoading ? (
             <AuthLoadingDots />
           ) : isAuthenticated && user ? (
@@ -422,10 +442,10 @@ function AppHeader() {
           )}
         </div>
 
-        {/* Group ThemeToggle and Hamburger in one wrapper on mobile so space-between aligns properly */}
+        {/* Group GitHub badge and hamburger in one wrapper on mobile so space-between aligns properly */}
         <div className="header-actions-mobile-wrapper" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="header-actions header-actions-mobile">
-            <ThemeToggle />
+            <GitHubBadge />
           </div>
 
           <button

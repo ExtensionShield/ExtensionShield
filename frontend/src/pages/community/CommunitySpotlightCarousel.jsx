@@ -32,7 +32,7 @@ const CommunitySpotlightCarousel = () => {
   const total = items.length;
 
   const goTo = useCallback((index) => {
-    setActiveIndex((i) => (index + total) % total);
+    setActiveIndex((index + total) % total);
   }, [total]);
 
   const goPrev = useCallback(() => {

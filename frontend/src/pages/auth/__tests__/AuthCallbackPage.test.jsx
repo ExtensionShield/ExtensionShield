@@ -3,7 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import AuthCallbackPage from '../AuthCallbackPage';
-import { supabase } from '../../../services/supabaseClient';
 
 // Mock supabase: callback page no longer calls exchangeCodeForSession; it waits for
 // onAuthStateChange(SIGNED_IN) or getSession() returning a session.

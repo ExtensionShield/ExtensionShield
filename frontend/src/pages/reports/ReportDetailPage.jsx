@@ -13,9 +13,8 @@ import { SummaryPanel, LayerModal, ReportScoreCard, EvidenceDrawer } from "../..
 import realScanService from "../../services/realScanService";
 import databaseService from "../../services/databaseService";
 import { getRiskLevel } from "../../utils/signalMapper";
-import { 
-  normalizeScanResultSafe, 
-  validateEvidenceIntegrity,
+import {
+  normalizeScanResultSafe,
   isDevelopmentMode,
   gateIdToLayer,
   extractFindingsByLayer
@@ -409,7 +408,7 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
 };
 
 // Version History Component
-const VersionHistorySection = ({ currentVersion, currentScore, extensionId, scanHistory }) => {
+const VersionHistorySection = ({ scanHistory }) => {
   // Format date
   const formatDate = (timestamp) => {
     if (!timestamp) return "Unknown";
@@ -661,15 +660,6 @@ const ReportDetailPage = () => {
       
       if (!viewModel) {
         setNormalizationError("Failed to normalize scan result data");
-        // console.error("[ReportDetailPage] normalizeScanResultSafe returned null"); // prod: no console
-      } else {
-        // Validate evidence integrity and log warnings
-        const validation = validateEvidenceIntegrity(viewModel);
-        if (!validation.valid) {
-          validation.warnings.forEach(warning => {
-            // console.warn(`[ReportDetailPage] Evidence validation warning: ${warning}`); // prod: no console
-          });
-        }
       }
       
       // Build version history from current scan (in future, this could come from API)
@@ -691,10 +681,6 @@ const ReportDetailPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleViewFile = (file) => {
-    setFileViewerModal({ isOpen: true, file });
   };
 
   const getFileContent = async (extensionId, filePath) => {

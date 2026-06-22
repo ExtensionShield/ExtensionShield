@@ -6,7 +6,7 @@ import { trackEvent } from "../services/telemetryService";
 import "./EnterprisePage.scss";
 
 const INTEREST_OPTIONS = [
-  { value: "monitoring_rescan", label: "Monitoring + auto-rescan on updates" },
+  { value: "monitoring_rescan", label: "Update risk review and re-scan workflows" },
   { value: "policy_allow_block", label: "Policy allow/block + approvals" },
   { value: "audit_exports", label: "Audit exports / SIEM integrations" },
   { value: "custom_extension", label: "Custom extension build / hardening (pilot)" },
@@ -129,7 +129,7 @@ const EnterprisePage = () => {
         "name": "What is enterprise extension management?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Enterprise extension management allows IT and security teams to monitor, govern, and enforce policies for browser extensions used across their organization. This includes risk scoring, compliance monitoring, and automated alerting."
+          "text": "Enterprise extension management gives IT and security teams a structured way to assess, document, and govern browser extensions across their organization. This includes pre-install risk scoring, evidence-backed allow/block decisions, and compliance-ready reports covering Security, Privacy, and Governance findings."
         }
       },
       {
@@ -137,7 +137,7 @@ const EnterprisePage = () => {
         "name": "How does extension governance work?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Extension governance enables organizations to create allow/block lists, enforce security policies, and generate audit-ready reports. Administrators can monitor extension usage and receive alerts when risk levels change."
+          "text": "Extension governance turns scanner findings into documented decisions. ExtensionShield provides scored pre-install reports — with Security, Privacy, and Governance findings — that give security teams the evidence needed to allow, block, or flag an extension for further review."
         }
       },
       {
@@ -145,15 +145,7 @@ const EnterprisePage = () => {
         "name": "What compliance features are available?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "ExtensionShield Enterprise provides policy packs for common compliance frameworks, audit-ready exports, and detailed reporting on extension security, privacy, and governance signals."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Can I monitor extensions automatically?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes! Enterprise plans include automatic monitoring and re-scanning when extensions are updated. You'll receive alerts when risk scores change or new security issues are detected."
+          "text": "ExtensionShield provides evidence-backed reports covering permission scope, host access, network behavior, code patterns, publisher identity, and policy disclosure accuracy. These reports support browser extension compliance review and give teams documented rationale for allow/block decisions."
         }
       }
     ]
@@ -163,7 +155,7 @@ const EnterprisePage = () => {
     <>
       <SEOHead
         title="Extension Governance Platform for Enterprise | ExtensionShield"
-        description="Browser extension governance for enterprise: allowlist policies, update monitoring, audit exports, pre-install risk assessment, and compliance evidence."
+        description="Browser extension governance for enterprise: pre-install risk assessment, governance evidence, scored reports, and compliance decision support for security teams."
         pathname="/enterprise"
         ogType="website"
         schema={faqSchema}
@@ -177,7 +169,7 @@ const EnterprisePage = () => {
 
           <h1>Request an Extension Governance Pilot</h1>
           <p>
-            Govern browser extensions before they become shadow IT. Get allow/block policies, update monitoring, risk alerts, and audit-ready evidence for your team.
+            Govern browser extensions before they become shadow IT. Get scored pre-install reports, governance evidence, and audit-ready assessments for your security team.
           </p>
         </div>
 
@@ -185,19 +177,17 @@ const EnterprisePage = () => {
           <div className="enterprise-card">
             <h2>What you’ll get</h2>
             <ul className="enterprise-features">
-              <li>Monitoring & auto-rescan on updates</li>
-              <li>Alerting when risk changes</li>
-              <li>Policy packs + audit exports</li>
-              <li>Org allow/block list governance</li>
-              <li>
-                SSO/RBAC <span className="coming-soon-tag">Coming soon</span>
-              </li>
+              <li>Pre-install audit — CRX/ZIP or Chrome Web Store URL</li>
+              <li>Governance evidence for allow/block decisions</li>
+              <li>Policy evidence + audit exports <span className="coming-soon-tag">Pilot</span></li>
+              <li>Org-level review workflows <span className="coming-soon-tag">Pilot</span></li>
+              <li>SSO/RBAC <span className="coming-soon-tag">Coming soon</span></li>
             </ul>
             <div className="enterprise-card-divider" aria-hidden="true" />
             <div className="enterprise-pilot-addon">
               <h3 className="enterprise-pilot-addon__heading">Custom extensions, without the risk.</h3>
               <p className="enterprise-pilot-addon__text">
-                We build or harden internal extensions with minimal permissions, signed builds, and change alerts so you stay in policy.
+                We build or harden internal extensions with minimal permissions, signed builds, and audit-ready delivery so your extension stays auditable and in policy.
               </p>
             </div>
           </div>

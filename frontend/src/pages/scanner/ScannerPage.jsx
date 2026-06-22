@@ -178,7 +178,6 @@ const ScannerPage = () => {
   const [loadError, setLoadError] = useState(null); // e.g. API unreachable
   const [sortConfig, setSortConfig] = useState({ key: "timestamp", direction: "desc" });
   const [hoveredRow, setHoveredRow] = useState(null);
-  const [copiedId, setCopiedId] = useState(null);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const tableWrapperRef = useRef(null);
   const demoTriggerRef = useRef(null);
@@ -470,22 +469,6 @@ const ScannerPage = () => {
     const route = getScanResultsRoute(scan.extension_id, scan.extension_name);
     navigate(route);
   }, [navigate]);
-
-  const handleMonitor = useCallback(() => {
-    navigate("/enterprise");
-  }, [navigate]);
-
-  const handleCopyLink = useCallback((scan) => {
-    const route = getScanResultsRoute(scan.extension_id, scan.extension_name);
-    const link = `${window.location.origin}${route}`;
-    navigator.clipboard.writeText(link).then(
-      () => {
-        setCopiedId(scan.extension_id);
-        setTimeout(() => setCopiedId(null), 2000);
-      },
-      () => {}
-    );
-  }, []);
 
   const faqSchema = {
     "@context": "https://schema.org",
@@ -891,9 +874,6 @@ const ScannerPage = () => {
                               View
                             </button>
                           </div>
-                          {copiedId === scan.extension_id && (
-                            <span className="copied-toast">Copied!</span>
-                          )}
                         </td>
                       </tr>
                     ))}

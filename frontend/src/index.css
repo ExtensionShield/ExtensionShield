@@ -278,7 +278,7 @@
 /* ============================================================================
    LIGHT MODE THEME
    Warm cream/ivory tones - WCAG AA compliant.
-   Toggle UI: components/ThemeToggle.jsx | Class applied by: context/ThemeContext.jsx
+   Class applied by: context/ThemeContext.jsx
    ============================================================================ */
 .light {
   /* Background - Warm light tones */

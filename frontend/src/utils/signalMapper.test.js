@@ -328,7 +328,7 @@ describe('Signal Mapper', () => {
 
       expect(enriched.extension_id).toBe('test-ext');
       expect(enriched.score).toBe(75);
-      expect(enriched.risk_level).toBe('MED');
+      expect(enriched.risk_level).toBe('MEDIUM');
       expect(enriched.findings_count).toBe(5);
       expect(enriched.signals).toBeDefined();
       expect(enriched.signals.code_signal).toBeDefined();

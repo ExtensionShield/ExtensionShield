@@ -20,6 +20,22 @@ vi.mock('../../services/realScanService', () => ({
   },
 }));
 
+vi.mock('../../services/databaseService', () => ({
+  default: {
+    setAccessToken: vi.fn(),
+  },
+}));
+
+// Force auth ON for these tests. In OSS mode AUTH_ENABLED is false (no env),
+// which makes AuthProvider render the disabled variant that never touches
+// Supabase. These tests verify the enabled provider's event handling, so we
+// enable the flag and provide a Supabase URL (stubbed in beforeEach).
+vi.mock('../../utils/featureFlags', () => ({
+  AUTH_ENABLED: true,
+  HISTORY_ENABLED: true,
+  CLOUD_MODE: true,
+}));
+
 // Test component that uses auth
 const TestComponent = () => {
   const { user, session, isAuthenticated, accessToken } = useAuth();
@@ -40,7 +56,10 @@ describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    
+    // The enabled provider only subscribes / loads a session when a Supabase
+    // URL is configured. Provide one for the duration of each test.
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
+
     mockUnsubscribe = vi.fn();
     mockOnAuthStateChange = vi.fn((callback) => {
       // Store callback for manual triggering
@@ -63,6 +82,7 @@ describe('AuthContext', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
   });
 
   describe('SIGNED_IN event', () => {

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import DemoModal from "../DemoModal";
 
 function TestWrapper() {
@@ -21,7 +21,7 @@ describe("DemoModal", () => {
     vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   });
 
-  it("opens on Step-by-step guide click, shows step 1 image; Next twice shows step 3; Done closes", () => {
+  it("opens on Step-by-step guide click, walks steps 1→3, then finishes and closes", async () => {
     render(<TestWrapper />);
 
     const watchDemoBtn = screen.getByRole("button", { name: /step-by-step guide/i });
@@ -31,18 +31,24 @@ describe("DemoModal", () => {
     expect(dialog).toBeInTheDocument();
 
     const img = within(dialog).getByRole("img", { hidden: true });
-    expect(img).toHaveAttribute("src", expect.stringContaining("demo-step1"));
+    expect(img).toHaveAttribute("src", expect.stringContaining("Demo-step1"));
 
-    const nextBtn = within(dialog).getByRole("button", { name: /next/i });
-    fireEvent.click(nextBtn);
-    expect(within(dialog).getByRole("img", { hidden: true })).toHaveAttribute("src", expect.stringContaining("demo-step2"));
+    // Advance to step 2
+    fireEvent.click(within(dialog).getByRole("button", { name: /next step/i }));
+    expect(within(dialog).getByRole("img", { hidden: true })).toHaveAttribute("src", expect.stringContaining("Demo-step2"));
 
-    fireEvent.click(nextBtn);
-    expect(within(dialog).getByRole("img", { hidden: true })).toHaveAttribute("src", expect.stringContaining("demo-step3"));
+    // The Next button is disabled for ~400ms during the slide animation; wait for
+    // it to re-enable before advancing again (the component debounces step changes).
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: /next step/i })).toBeEnabled());
 
-    const doneBtn = within(dialog).getByRole("button", { name: /done/i });
-    fireEvent.click(doneBtn);
+    // Advance to step 3 (last step)
+    fireEvent.click(within(dialog).getByRole("button", { name: /next step/i }));
+    expect(within(dialog).getByRole("img", { hidden: true })).toHaveAttribute("src", expect.stringContaining("Demo-step3"));
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // On the last step the action button finishes the walkthrough and closes the modal
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: /finish walkthrough/i })).toBeEnabled());
+    fireEvent.click(within(dialog).getByRole("button", { name: /finish walkthrough/i }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

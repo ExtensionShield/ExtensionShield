@@ -77,17 +77,10 @@ export const validateOrigin = () => {
  */
 export const validateConfig = () => {
   const supabaseCheck = validateSupabaseConfig();
-  const originCheck = validateOrigin();
 
   if (!supabaseCheck.valid) {
     // console.error("Configuration validation failed. Authentication may not work."); // prod: no console
     return false;
-  }
-
-  if (supabaseCheck.warnings.length > 0) {
-    supabaseCheck.warnings.forEach(warning => {
-      // console.warn("⚠️", warning); // prod: no console
-    });
   }
 
   return true;
