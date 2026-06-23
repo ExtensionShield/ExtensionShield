@@ -518,12 +518,16 @@ class VirusTotalAnalyzer(BaseAnalyzer):
         results = {
             "enabled": True,
             "files_analyzed": 0,
+            "files_found_in_vt": 0,
             "files_with_detections": 0,
             "total_malicious": 0,
             "total_suspicious": 0,
             "file_results": [],
             "summary": {
-                "threat_level": "clean",
+                # Default to "unknown" — only downgraded to "clean" when at least
+                # one file was actually present in VirusTotal with engine coverage.
+                # Not-found is missing intelligence, not a clean result.
+                "threat_level": "unknown",
                 "detected_families": [],
                 "recommendation": "",
             },
@@ -568,6 +572,10 @@ class VirusTotalAnalyzer(BaseAnalyzer):
                     malicious = stats.get("malicious", 0)
                     suspicious = stats.get("suspicious", 0)
 
+                    # File was actually present in VirusTotal with engine coverage.
+                    if stats.get("total_engines", 0) > 0:
+                        results["files_found_in_vt"] += 1
+
                     if malicious > 0 or suspicious > 0:
                         results["files_with_detections"] += 1
                         results["total_malicious"] += malicious
@@ -611,11 +619,23 @@ class VirusTotalAnalyzer(BaseAnalyzer):
                 "CAUTION: Some files in this extension have been flagged as suspicious. "
                 "Review carefully before installation."
             )
-        elif results["files_analyzed"] > 0:
+        elif results["files_found_in_vt"] > 0:
+            # At least one file was actually present in VirusTotal and engines
+            # returned no detections — a genuine clean result (still not a safety
+            # guarantee, but real intelligence).
             results["summary"]["threat_level"] = "clean"
             results["summary"]["recommendation"] = (
                 "No known threats detected in VirusTotal database. "
                 "Note: This does not guarantee the extension is safe."
+            )
+        elif results["files_analyzed"] > 0:
+            # Files were hashed but NONE were present in VirusTotal's database.
+            # Missing intelligence must NOT be reported as "clean".
+            results["summary"]["threat_level"] = "unknown"
+            results["summary"]["recommendation"] = (
+                "No VirusTotal intelligence available: none of the scanned files "
+                "were found in the VirusTotal database. This is missing intelligence, "
+                "not a clean result, and should not be treated as safe."
             )
 
         return results

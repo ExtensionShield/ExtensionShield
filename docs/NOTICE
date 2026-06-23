@@ -11,14 +11,25 @@ Third-party attributions
 ExtensionShield incorporates or was inspired by the following:
 
 - ThreatXtension (https://github.com/barvhaim/ThreatXtension)
+  ThreatXtension is distributed under the MIT License (declared in its upstream
+  README; no separate LICENSE file is published in the upstream repository, so
+  the exact upstream copyright text is not reproduced here).
+
   We took inspiration from ThreatXtension in the same space (Chrome extension
   security scanning, VirusTotal integration). The initial security score
   aggregation logic (risk points by category) was inspired by ThreatXtension;
   ExtensionShield's primary scoring is the V2 ScoringEngine (multi-layer,
-  gates, governance) in extension_shield.scoring.engine. Supabase migration
-  schemas were initially derived from SQLite schema patterns from that
-  project; see supabase/migrations/ and supabase/schemas/ for file-level
-  comments.
+  gates, governance) in extension_shield.scoring.engine.
+
+  A set of Semgrep malware-detection rules in
+  src/extension_shield/config/custom_semgrep_rules.yaml (credential theft,
+  cookie theft, C2/exfiltration, keylogger, clipboard, URL hijacking, and
+  tracking) was adapted from ThreatXtension's MIT-licensed Semgrep ruleset;
+  see the in-file section header for the local attribution.
+
+  Supabase migration schemas were initially derived from SQLite schema
+  patterns from that project; see supabase/migrations/ and supabase/schemas/
+  for file-level comments.
 
 Other dependencies are governed by their respective licenses; see
 pyproject.toml and frontend/package.json.

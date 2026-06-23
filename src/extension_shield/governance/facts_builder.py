@@ -436,7 +436,9 @@ class FactsBuilder:
         vt_analysis = analysis_results.get("virustotal_analysis", {})
         if vt_analysis:
             findings.virustotal_malicious_count = vt_analysis.get("total_malicious", 0)
-            findings.virustotal_threat_level = vt_analysis.get("summary", {}).get("threat_level", "clean")
+            # Default to "unknown" (not "clean"): absent VT intelligence must not
+            # be conflated with a clean result.
+            findings.virustotal_threat_level = vt_analysis.get("summary", {}).get("threat_level", "unknown")
             
             for file_result in vt_analysis.get("file_results", []):
                 vt_data = file_result.get("virustotal", {})
