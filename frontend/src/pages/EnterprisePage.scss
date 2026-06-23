@@ -453,3 +453,35 @@
 }
 
 
+
+/* ── Minimal placeholder variant ──────────────────────────────────────────
+   Used while team-focused capabilities are not yet shipped. The /enterprise
+   route is kept alive (200) for SEO; this variant tightens layout so the
+   page reads as a factual placeholder, not a feature pitch. */
+.enterprise-page--minimal .enterprise-container {
+  max-width: 640px;
+}
+
+.enterprise-page--minimal .enterprise-header h1 {
+  margin-bottom: 0.75rem;
+}
+
+.enterprise-minimal-body {
+  margin-top: 1.5rem;
+
+  p {
+    line-height: 1.7;
+    margin: 0 0 1rem;
+  }
+
+  h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 1.75rem 0 0.5rem;
+  }
+}
+
+.enterprise-form--minimal {
+  margin-top: 0.75rem;
+}
+

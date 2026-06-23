@@ -188,7 +188,7 @@ const IsThisChromeExtensionSafePage = () => {
               <li><Link to="/chrome-extension-permissions">Chrome extension permissions explained</Link></li>
               <li><Link to="/research/methodology">How we score extensions</Link></li>
               <li><Link to="/research/case-studies">Case studies: real extension risks</Link></li>
-              <li><Link to="/compare">Compare scanners</Link></li>
+              <li><Link to="/compare">Compare Tools</Link></li>
               <li><Link to="/crxcavator-alternative">Comparing scanners? See CRXcavator alternative</Link></li>
               <li><Link to="/enterprise">Enterprise extension security</Link></li>
             </ul>

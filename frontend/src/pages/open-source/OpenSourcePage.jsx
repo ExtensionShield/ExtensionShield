@@ -9,7 +9,7 @@ const OpenSourcePage = () => {
     <>
       <SEOHead
         title="Open Source | ExtensionShield"
-        description="ExtensionShield Core is open source under the MIT License. The hosted service and enterprise components are proprietary. Explore our GitHub, contribute code, join GSoC, or help improve browser extension security for everyone."
+        description="ExtensionShield Core is open source under the MIT License. Explore the GitHub repo, contribute code, join open-source programs, or help improve browser extension security."
         pathname="/open-source"
       />
 
@@ -21,8 +21,7 @@ const OpenSourcePage = () => {
             <div className="oss-badge">🌱 Open Source</div>
             <h1>Built in the Open</h1>
             <p>
-              ExtensionShield Core is open source under the MIT License.
-              The hosted service and certain enterprise components (advanced rule packs, threat-intel integrations, and automation workflows) are proprietary and governed by the ExtensionShield Commercial License.
+              ExtensionShield Core is open source under the MIT License. The hosted scanner at extensionshield.com runs on this codebase — anyone can read the source, file issues, and contribute.
             </p>
           </header>
 
@@ -114,8 +113,7 @@ const OpenSourcePage = () => {
           <div className="license-section">
             <h3>License</h3>
             <p>
-              <strong>ExtensionShield Core</strong> is open source under the <strong>MIT License</strong>. 
-              The hosted service and certain enterprise components are proprietary and governed by the <strong>ExtensionShield Commercial License</strong>.
+              <strong>ExtensionShield Core</strong> is open source under the <strong>MIT License</strong>. See the GitHub repository for the full license and source.
             </p>
           </div>
         </div>

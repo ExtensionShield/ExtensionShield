@@ -27,6 +27,18 @@ function isI18nPlaceholder(text) {
   return typeof text === "string" && /^__MSG_[A-Za-z0-9@_]+__$/.test(text.trim());
 }
 
+/** True if text is raw JSON chaff that should never be shown (e.g. "[]", "{}", "null"). */
+function isRawJsonChaff(text) {
+  if (typeof text !== "string") return false;
+  const t = text.trim();
+  return t === "[]" || t === "{}" || t === "null" || t === "undefined" || t === "false" || t === "true";
+}
+
+/** True if the string looks like a URL — catches pasted full result URLs used as scan IDs. */
+function looksLikeUrl(str) {
+  return typeof str === "string" && /^https?:\/\//i.test(str.trim());
+}
+
 /** Short overview: first 250 chars at word boundary, truncate the rest. No LLM, no cost. */
 function shortOverview(text) {
   if (!text || typeof text !== "string") return "";
@@ -60,7 +72,13 @@ function getDisplayDescription(scanResults) {
   ];
   
   for (const raw of candidates) {
-    if (raw && typeof raw === "string" && !isI18nPlaceholder(raw) && raw.trim()) {
+    if (
+      raw &&
+      typeof raw === "string" &&
+      !isI18nPlaceholder(raw) &&
+      !isRawJsonChaff(raw) &&
+      raw.trim()
+    ) {
       return raw;
     }
   }
@@ -171,6 +189,10 @@ const ScanResultsPageV2 = () => {
     let cancelled = false;
 
     const loadResults = async () => {
+      // Bail out early for obviously invalid scan IDs (e.g., a full URL was pasted)
+      if (!scanId || looksLikeUrl(scanId)) {
+        return;
+      }
       if (isLoadingRef.current || loadedScanIdRef.current === scanId) {
         return;
       }
@@ -261,6 +283,30 @@ const ScanResultsPageV2 = () => {
       noindex
     />
   );
+
+  // Guard: scanId is a URL (e.g. user pasted full results URL). Show friendly error.
+  if (scanId && looksLikeUrl(scanId)) {
+    return (
+      <>
+        {genericNoindexHead}
+        <div className="results-v2">
+          <nav className="results-v2-nav">
+            <Link to="/scan" className="nav-back">← Back</Link>
+          </nav>
+          <div className="results-v2-empty">
+            <div className="empty-icon">🔗</div>
+            <h2>That doesn't look like an extension ID</h2>
+            <p>
+              It looks like you followed a full URL instead of an extension ID. Try pasting the Chrome Web Store URL into the scanner to start a new scan.
+            </p>
+            <div className="empty-actions">
+              <Button onClick={() => navigate("/scan")}>Go to Scanner</Button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Loading state - smooth shield animation
   if (isLoading || isLoadingRef.current) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  AlertTriangle, ArrowRight, CheckCircle, ClipboardCheck,
+  AlertTriangle, ArrowRight, CheckCircle,
   Code2, Download, Eye, Github, Lock, Scale, ShieldCheck, Star,
 } from "lucide-react";
 import { useScan } from "../context/ScanContext";
@@ -45,78 +45,27 @@ const HONEY_SCAN = {
   reviewCount: 2,
 };
 
-/* ── Section 3: Honey findings + the signal ExtensionShield surfaces ─────────── */
-const HONEY_POINTS = [
-  {
-    cls: "theft",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 8v4M12 16h.01" />
-      </svg>
-    ),
-    title: "Affiliate Link Hijacking",
-    body: "Investigators found silent overwriting of creator affiliate codes. Creators reported lost commissions.",
-    flag: "Signal: Broad host permissions",
-  },
-  {
-    cls: "data",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    ),
-    title: "Shopping Surveillance",
-    body: "Investigators reported tracking of views, carts, and purchases. Data reportedly shared with retailers.",
-    flag: "Signal: Page-content access across all sites",
-  },
-  {
-    cls: "fake",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M18 6L6 18M6 6l12 12" />
-      </svg>
-    ),
-    title: 'Disputed "Best" Coupons',
-    body: "Users reported finding better deals publicly. The coupon animation was questioned by investigators.",
-    flag: "Signal: Page-rewrite behavior",
-  },
-  {
-    cls: "money",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <line x1="12" y1="1" x2="12" y2="23" />
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    ),
-    title: "Retailer Kickbacks",
-    body: "Investigators reported payments to prioritize certain deals. Users disputed whether they received the best available price.",
-    flag: "Signal: Publisher / ownership history",
-  },
-];
-
-/* ── Section 5: The three risk layers ───────────────────────────────────────── */
+/* ── The three risk layers ──────────────────────────────────────────────────── */
 const RISK_LAYERS = [
   {
     title: "Security",
     Icon: ShieldCheck,
-    body: "Risky APIs, obfuscated code, and VirusTotal signals — the signs that an extension is doing something it shouldn't.",
-    range: "A low score means risky APIs or packed code we can't fully read.",
+    direction: "Higher score = safer code",
+    body: "Code-risk signals: risky APIs, obfuscation, and malware-related indicators.",
     link: { label: "Browser extension security", to: "/extension-security" },
   },
   {
     title: "Privacy",
     Icon: Eye,
-    body: "What an extension can read: your tabs, clipboard, browsing history, and cookies. We show exactly what's granted and why it matters.",
-    range: "A low score means broad host permissions and high data access.",
+    direction: "Higher score = less exposure",
+    body: "Permission and data-exposure signals: host access, cookies, clipboard access, and trackers.",
     link: { label: "Chrome extension permissions", to: "/extension-permissions" },
   },
   {
     title: "Governance",
     Icon: Scale,
-    body: "Publisher identity, ownership history, and Web Store version history. Extensions change — we track the record, not just the current build.",
-    range: "A high score means a stable, transparent, well-disclosed publisher.",
+    direction: "Higher score = more transparent publisher",
+    body: "Publisher and release-history signals: identity, ownership changes, and version history.",
     link: { label: "Extension governance", to: "/extension-governance" },
   },
 ];
@@ -190,58 +139,220 @@ const ScanPreviewCard = () => (
   </Link>
 );
 
-/* ── Section 2: version-diff artifact ───────────────────────────────────────── */
-const VersionDiffArtifact = () => (
-  <div className="hp-vdiff" aria-hidden="true">
-    <div className="hp-vdiff-header">
-      <span className="hp-vdiff-title">Extension update</span>
-      <span className="hp-vdiff-badge">Silent · No notification</span>
+/* ── Section 2: update-gap artifact ──────────────────────────────────────────
+   Interactive comparison: v12.0.1 (reviewed) vs v12.4.0 (needs review).
+   Same declared permissions in both versions — change signals are separate
+   evidence rows (new outbound destination, publisher change, privacy
+   disclosure change). Animation triggers on first scroll into view, replays
+   on hover and keyboard focus. Honors prefers-reduced-motion.
+   ─────────────────────────────────────────────────────────────────────────── */
+const useReducedMotion = () => {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = (e) => setReduced(e.matches);
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
+  return reduced;
+};
+
+const UpdateGapContent = () => (
+  <>
+    <div className="hp-ugap-header">
+      <div className="hp-ugap-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="7" fill="#1e293b" />
+          <path
+            d="M10 13h1.5v-1a2.5 2.5 0 0 1 5 0v1H18v2h-1a1 1 0 1 0 0 2h1v2h-7v-2h1a1 1 0 1 0 0-2h-2v-2z"
+            fill="#475569"
+          />
+          <path d="M19 19h1.5v1.5h1.5v1.5H17V20h2v-1z" fill="#475569" />
+        </svg>
+      </div>
+      <div className="hp-ugap-meta">
+        <span className="hp-ugap-name">Productivity Plus</span>
+        <span className="hp-ugap-store">Chrome Web Store</span>
+      </div>
     </div>
-    <div className="hp-vdiff-versions">
-      <div className="hp-vdiff-v hp-vdiff-v--trusted">
-        <span className="hp-vdiff-tag">Trusted</span>
-        <span className="hp-vdiff-ver">v12.0.1</span>
-        <span className="hp-vdiff-ago">3 months ago</span>
+
+    {/* Version 1 — reviewed, low risk */}
+    <div className="hp-ugap-v1">
+      <div className="hp-ugap-row-label hp-ugap-row-label--reviewed">
+        <span className="hp-ugap-dot hp-ugap-dot--green" />
+        <span>v12.0.1 · Reviewed · low risk</span>
       </div>
-      <span className="hp-vdiff-arrow" aria-hidden="true">→</span>
-      <div className="hp-vdiff-v hp-vdiff-v--updated">
-        <span className="hp-vdiff-tag">Updated</span>
-        <span className="hp-vdiff-ver">v12.4.0</span>
-        <span className="hp-vdiff-ago">1 week ago</span>
+      <div className="hp-ugap-chips">
+        <span className="hp-ugap-chip hp-ugap-chip--ok">activeTab</span>
+        <span className="hp-ugap-chip hp-ugap-chip--ok">storage</span>
+        <span className="hp-ugap-chip hp-ugap-chip--ok">cookies</span>
       </div>
-    </div>
-    <div className="hp-vdiff-diff">
-      <div className="hp-vdiff-line hp-vdiff-line--add">
-        <span className="hp-vdiff-glyph">+</span>
-        <span className="hp-vdiff-key">permissions:</span>
-        <span className="hp-vdiff-val">host → &lt;all_urls&gt;</span>
-        <span className="hp-vdiff-note">NEW</span>
-      </div>
-      <div className="hp-vdiff-line hp-vdiff-line--add">
-        <span className="hp-vdiff-glyph">+</span>
-        <span className="hp-vdiff-key">endpoint:</span>
-        <span className="hp-vdiff-val">api.new-vendor.com/track</span>
-        <span className="hp-vdiff-note">NEW</span>
-      </div>
-      <div className="hp-vdiff-line hp-vdiff-line--add">
-        <span className="hp-vdiff-glyph">+</span>
-        <span className="hp-vdiff-key">endpoint:</span>
-        <span className="hp-vdiff-val">data.partner.io/events</span>
-        <span className="hp-vdiff-note">NEW</span>
-      </div>
-      <div className="hp-vdiff-line hp-vdiff-line--change">
-        <span className="hp-vdiff-glyph">±</span>
-        <span className="hp-vdiff-key">publisher:</span>
-        <span className="hp-vdiff-val">Original Dev → Acquirer Corp</span>
-        <span className="hp-vdiff-note">CHANGED</span>
+      <div className="hp-ugap-pub">
+        <span className="hp-ugap-pub-key">Publisher</span>
+        <span className="hp-ugap-pub-val">original.dev</span>
       </div>
     </div>
-    <div className="hp-vdiff-footer">
-      <AlertTriangle size={11} strokeWidth={2.5} />
-      <span>Chrome did not notify you of these changes</span>
+
+    {/* Timeline divider */}
+    <div className="hp-ugap-divider">
+      <div className="hp-ugap-divider-rule hp-ugap-divider-rule--left" />
+      <span className="hp-ugap-divider-label">v12.4.0 released · 3 months later</span>
+      <div className="hp-ugap-divider-rule hp-ugap-divider-rule--right" />
     </div>
-  </div>
+
+    {/* Version 2 — same permissions, but change signals revealed */}
+    <div className="hp-ugap-v2">
+      <div className="hp-ugap-row-label hp-ugap-row-label--needsreview">
+        <span className="hp-ugap-dot hp-ugap-dot--amber" />
+        <span>v12.4.0 · Running now</span>
+      </div>
+      <div className="hp-ugap-unchanged">
+        <CheckCircle size={11} strokeWidth={2.5} aria-hidden />
+        <span>Declared permissions unchanged</span>
+      </div>
+      <div className="hp-ugap-chips">
+        <span className="hp-ugap-chip hp-ugap-chip--ok">activeTab</span>
+        <span className="hp-ugap-chip hp-ugap-chip--ok">storage</span>
+        <span className="hp-ugap-chip hp-ugap-chip--ok">cookies</span>
+      </div>
+      <div className="hp-ugap-signals">
+        <span className="hp-ugap-signals-label">Change signals</span>
+        <div className="hp-ugap-signal hp-ugap-signal--n1">
+          <span className="hp-ugap-signal-glyph" aria-hidden>↗</span>
+          <span className="hp-ugap-signal-key">New endpoint in code</span>
+          <span className="hp-ugap-signal-val">api.tracker.io</span>
+        </div>
+        <div className="hp-ugap-signal hp-ugap-signal--n2">
+          <span className="hp-ugap-signal-glyph" aria-hidden>⇄</span>
+          <span className="hp-ugap-signal-key">Publisher changed</span>
+          <span className="hp-ugap-signal-val">original.dev → acquirer.corp</span>
+        </div>
+        <div className="hp-ugap-signal hp-ugap-signal--n3">
+          <span className="hp-ugap-signal-glyph" aria-hidden>§</span>
+          <span className="hp-ugap-signal-key">Privacy disclosure</span>
+          <span className="hp-ugap-signal-val">changed</span>
+        </div>
+        <div className="hp-ugap-signal hp-ugap-signal--n4">
+          <span className="hp-ugap-signal-glyph" aria-hidden>!</span>
+          <span className="hp-ugap-signal-key">Status</span>
+          <span className="hp-ugap-signal-val">Needs review</span>
+        </div>
+      </div>
+    </div>
+
+    <div className="hp-ugap-footer">
+      <AlertTriangle size={11} strokeWidth={2.5} aria-hidden />
+      <span>Re-review recommended after meaningful changes</span>
+    </div>
+  </>
 );
+
+const UpdateGapArtifact = () => {
+  const ref = useRef(null);
+  const [playKey, setPlayKey] = useState(0);
+  const reducedMotion = useReducedMotion();
+
+  // Auto-play on first scroll into view
+  useEffect(() => {
+    if (!ref.current || typeof IntersectionObserver === "undefined") return;
+    const node = ref.current;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setPlayKey((k) => k + 1);
+            io.disconnect();
+          }
+        });
+      },
+      { threshold: 0.35 }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, []);
+
+  const replay = useCallback(() => {
+    if (reducedMotion) return;
+    setPlayKey((k) => k + 1);
+  }, [reducedMotion]);
+
+  return (
+    <div
+      ref={ref}
+      className={`hp-ugap ${reducedMotion ? "is-reduced" : "is-animated"}`}
+      tabIndex={0}
+      role="figure"
+      aria-label="Comparison of extension version 12.0.1 and 12.4.0. Same declared permissions in both versions. Version 12.4.0 has four change signals: a new endpoint reference in extension code (api.tracker.io), the publisher changed from original.dev to acquirer.corp, the privacy disclosure changed, and the status is now Needs review. Re-review is recommended."
+      onMouseEnter={replay}
+      onFocus={replay}
+    >
+      <UpdateGapContent key={playKey} />
+    </div>
+  );
+};
+
+/* ── How-it-works motion wrapper ─────────────────────────────────────────────
+   Plays a single subtle search → scan → findings sequence the first time the
+   section crosses ~40% of the viewport. Does NOT replay on hover, focus, or
+   re-entry. Honors prefers-reduced-motion.
+
+   States (mutually exclusive class on `.hp-flow`):
+     is-pending  — initial hidden state held until IntersectionObserver fires
+     is-animated — keyframes run (one-shot, animation-fill-mode: both)
+     is-reduced  — show final state immediately, no animation
+   Per-card hover affordance (subtle border/shadow lift) lives on
+   `.hp-flow-ui:hover` and is independent of this state machine.
+   ─────────────────────────────────────────────────────────────────────────── */
+const HowItWorksFlow = ({ children }) => {
+  const ref = useRef(null);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (reducedMotion || !ref.current || typeof IntersectionObserver === "undefined") return;
+    const node = ref.current;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setShouldAnimate(true);
+            io.disconnect();
+          }
+        });
+      },
+      { threshold: 0.4 }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [reducedMotion]);
+
+  const stateClass = reducedMotion
+    ? "is-reduced"
+    : shouldAnimate
+      ? "is-animated"
+      : "is-pending";
+
+  return (
+    <div
+      ref={ref}
+      className={`hp-flow ${stateClass}`}
+      aria-label="Three-step process: search, scan, read results"
+    >
+      <div className="hp-flow-inner">
+        {children}
+      </div>
+    </div>
+  );
+};
 
 /* ── Section 6: GitHub star badge ───────────────────────────────────────────── */
 const StarBadge = ({ className = "" }) => {
@@ -686,140 +797,7 @@ const HomePage = () => {
             </button>
           </section>
 
-          {/* ── Section 2 — The Problem ───────────────────────────────────── */}
-          <section className="hp-problem landing-separator" id="the-problem" aria-labelledby="hp-problem-title">
-            <div className="hp-problem-inner">
-              <div className="hp-problem-copy">
-                <p className="hp-eyebrow">The silent update</p>
-                <h2 id="hp-problem-title">Extensions don't ask permission twice.</h2>
-                <p>
-                  You grant an extension its permissions once — at install. After that it can
-                  ship an update that quietly does more than the version you trusted.
-                </p>
-                <p>
-                  Ownership changes too. An extension with hundreds of thousands of users can be
-                  sold to a new publisher, and the Chrome Web Store won't tell you.
-                </p>
-                <p>
-                  By the time anyone notices, it has already been reading your browsing. That's
-                  the gap ExtensionShield closes — before you install.
-                </p>
-              </div>
-
-              <VersionDiffArtifact />
-            </div>
-          </section>
-
-          {/* ── Section 3 — Honey case study ──────────────────────────────── */}
-          <section className="honey-case-study" id="honey" aria-labelledby="honey-title">
-            <div className="case-study-container">
-              <div className="case-study-header">
-                <span className="case-study-badge">CASE STUDY</span>
-                <h2 className="case-study-title" id="honey-title">
-                  17M users. $4B acquisition. Zero transparency.
-                  <span className="subtitle">
-                    Honey — the coupon extension — was acquired and used to divert affiliate
-                    commissions. MegaLag exposed it in December 2024.
-                  </span>
-                </h2>
-              </div>
-
-              <div className="case-study-content">
-                <div className="scam-details">
-                  <div className="scam-intro">
-                    <p>
-                      Promised savings. Investigators reported{" "}
-                      <strong>commission diversion</strong> and{" "}
-                      <strong>alleged worse deals</strong>. Here's what made it possible — and what a
-                      scan surfaces.
-                    </p>
-                  </div>
-
-                  <div className="scam-points">
-                    {HONEY_POINTS.map(({ cls, icon, title, body, flag }) => (
-                      <div className="scam-point" key={title}>
-                        <div className={`point-icon ${cls}`}>{icon}</div>
-                        <div className="point-content">
-                          <h4>{title}</h4>
-                          <p>{body}</p>
-                          <p className="point-flag">
-                            <ShieldCheck size={13} strokeWidth={2} aria-hidden />
-                            <span>{flag}</span>
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Link to="/research/case-studies/honey" className="scam-footer scam-footer-link">
-                    <div className="exposed-by">
-                      <span>Exposed by</span>
-                      <strong>MegaLag</strong>
-                      <span className="date">· December 2024</span>
-                    </div>
-                    <span className="scam-footer-read-more">
-                      <span>Read the full case study</span>
-                      <ArrowRight size={16} strokeWidth={2} aria-hidden />
-                    </span>
-                  </Link>
-                </div>
-
-                <div className="honey-icon-section">
-                  <div className="honey-icon-wrapper">
-                    <div className="honey-logo">
-                      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M50 5L93.3 27.5V72.5L50 95L6.7 72.5V27.5L50 5Z"
-                          fill="url(#honeyGradient)"
-                          stroke="url(#honeyStroke)"
-                          strokeWidth="2"
-                        />
-                        <path d="M50 30L62 38V54L50 62L38 54V38L50 30Z" fill="rgba(255,255,255,0.15)" />
-                        <path d="M35 45L47 53V69L35 77L23 69V53L35 45Z" fill="rgba(255,255,255,0.1)" />
-                        <path d="M65 45L77 53V69L65 77L53 69V53L65 45Z" fill="rgba(255,255,255,0.1)" />
-                        <text x="50" y="58" textAnchor="middle" fill="white" fontSize="28" fontWeight="bold" fontFamily="Arial">h</text>
-                        <defs>
-                          <linearGradient id="honeyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#FF9500" />
-                            <stop offset="50%" stopColor="#FF6B00" />
-                            <stop offset="100%" stopColor="#E85D04" />
-                          </linearGradient>
-                          <linearGradient id="honeyStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#FFB347" />
-                            <stop offset="100%" stopColor="#FF8C00" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-                    <div className="warning-badge">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                        <line x1="12" y1="9" x2="12" y2="13" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="honey-stats">
-                    <div className="honey-stat">
-                      <span className="stat-number">17M+</span>
-                      <span className="stat-desc">Reported Users</span>
-                    </div>
-                    <div className="honey-stat">
-                      <span className="stat-number">$4B</span>
-                      <span className="stat-desc">Acquisition</span>
-                    </div>
-                    <div className="honey-stat">
-                      <span className="stat-number danger">—</span>
-                      <span className="stat-desc">Savings Not Guaranteed</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ── Section 4 — How it works ──────────────────────────────────── */}
+          {/* ── Section 2 — How it works ──────────────────────────────────── */}
           <section className="hp-how landing-separator" id="how-it-works" aria-labelledby="hp-how-title">
             <div className="hp-how-inner">
               <div className="hp-section-head">
@@ -827,9 +805,13 @@ const HomePage = () => {
                 <h2 id="hp-how-title">Search, scan, read the findings.</h2>
               </div>
 
-              <div className="hp-flow" aria-label="Three-step process: search, scan, read results">
+              <HowItWorksFlow>
                 {/* Step 1 — Input state */}
                 <div className="hp-flow-step">
+                  <div className="hp-flow-step-head">
+                    <span className="hp-flow-num" aria-hidden="true">01</span>
+                    <h3>Search or paste</h3>
+                  </div>
                   <div className="hp-flow-ui hp-flow-ui--input" aria-hidden="true">
                     <div className="hp-flow-input-bar">
                       <svg viewBox="0 0 24 24" fill="none" className="hp-flow-chrome" aria-hidden="true">
@@ -844,8 +826,6 @@ const HomePage = () => {
                     </div>
                     <p className="hp-flow-hint">Name or Chrome Web Store URL</p>
                   </div>
-                  <span className="hp-flow-num" aria-hidden="true">01</span>
-                  <h3>Search or paste</h3>
                   <p>Find any extension by name, or paste a Chrome Web Store URL.</p>
                 </div>
 
@@ -853,6 +833,10 @@ const HomePage = () => {
 
                 {/* Step 2 — Scan state */}
                 <div className="hp-flow-step">
+                  <div className="hp-flow-step-head">
+                    <span className="hp-flow-num" aria-hidden="true">02</span>
+                    <h3>We scan in ~10 seconds</h3>
+                  </div>
                   <div className="hp-flow-ui hp-flow-ui--scan" aria-hidden="true">
                     <div className="hp-flow-layer-rows">
                       <div className="hp-flow-lr">
@@ -876,8 +860,6 @@ const HomePage = () => {
                     </div>
                     <div className="hp-flow-elapsed">~10 seconds</div>
                   </div>
-                  <span className="hp-flow-num" aria-hidden="true">02</span>
-                  <h3>We scan in ~10 seconds</h3>
                   <p>Three independent risk layers: permissions, code patterns, and publisher history.</p>
                 </div>
 
@@ -885,6 +867,10 @@ const HomePage = () => {
 
                 {/* Step 3 — Report state */}
                 <div className="hp-flow-step">
+                  <div className="hp-flow-step-head">
+                    <span className="hp-flow-num" aria-hidden="true">03</span>
+                    <h3>Read the findings</h3>
+                  </div>
                   <div className="hp-flow-ui hp-flow-ui--report" aria-hidden="true">
                     <div className="hp-flow-report-top">
                       <span className="hp-flow-report-name">PayPal Honey</span>
@@ -899,15 +885,13 @@ const HomePage = () => {
                       <div className="hp-flow-find ok"><CheckCircle size={10} strokeWidth={2} /> VirusTotal: clear</div>
                     </div>
                   </div>
-                  <span className="hp-flow-num" aria-hidden="true">03</span>
-                  <h3>Read the findings</h3>
                   <p>Scored report with evidence-linked findings and what they mean for you.</p>
                 </div>
-              </div>
+              </HowItWorksFlow>
             </div>
           </section>
 
-          {/* ── Section 5 — Scoring model ─────────────────────────────────── */}
+          {/* ── Section 3 — Scoring model ─────────────────────────────────── */}
           <section className="hp-layers landing-separator" id="risk-layers" aria-labelledby="hp-layers-title">
             <div className="hp-layers-inner">
               <div className="hp-section-head">
@@ -925,6 +909,18 @@ const HomePage = () => {
                   <span className="hp-sf-risk-pill medium" aria-hidden="true">MEDIUM</span>
                 </div>
 
+                {/* Signal-flow cue — quiet label clarifying that the composite
+                    above is built from the three layers below. The three
+                    ticks sit above each column to make the merge visible. */}
+                <div className="hp-sf-flow" aria-hidden="true">
+                  <span className="hp-sf-flow-tick" />
+                  <span className="hp-sf-flow-tick" />
+                  <span className="hp-sf-flow-tick" />
+                  <span className="hp-sf-flow-label">
+                    Three independent layers combine into the composite score above
+                  </span>
+                </div>
+
                 <div className="hp-sf-layers" role="list">
                   {RISK_LAYERS.map((layer) => (
                     <div className="hp-sf-layer" key={layer.title} role="listitem">
@@ -933,16 +929,51 @@ const HomePage = () => {
                         <h3 className="hp-sf-layer-name">{layer.title}</h3>
                       </div>
                       <p className="hp-sf-layer-body">{layer.body}</p>
-                      <p className="hp-sf-layer-range">{layer.range}</p>
+                      <p className="hp-sf-layer-direction">{layer.direction}</p>
                       <Link to={layer.link.to} className="hp-sf-layer-link">{layer.link.label}</Link>
                     </div>
                   ))}
                 </div>
               </div>
+
+              <div className="hp-sf-cta">
+                <Link to="/research/methodology" className="hp-sf-cta-primary">
+                  See how we score
+                  <ArrowRight size={14} strokeWidth={2} aria-hidden />
+                </Link>
+                <span className="hp-sf-cta-sep" aria-hidden="true">·</span>
+                <Link to="/scan" className="hp-sf-cta-secondary">Scan an extension</Link>
+              </div>
             </div>
           </section>
 
-          {/* ── Section 6 — Auditable by design ──────────────────────────── */}
+          {/* ── Section 4 — The Update Gap ────────────────────────────────── */}
+          <section className="hp-problem landing-separator" id="the-problem" aria-labelledby="hp-problem-title">
+            <div className="hp-problem-inner">
+              <div className="hp-problem-copy">
+                <p className="hp-eyebrow">The update gap</p>
+                <h2 id="hp-problem-title">The extension you trusted can change after install.</h2>
+                <p>
+                  Permissions are only one signal. A later version can change code behavior,
+                  network destinations, or publisher ownership — even when declared permissions
+                  stay the same.
+                </p>
+                <p>
+                  ExtensionShield surfaces those change signals for re-review.
+                </p>
+                <p className="hp-problem-aside">
+                  <Link to="/research/case-studies/honey" className="hp-problem-aside-link">
+                    Read the Honey case study
+                    <ArrowRight size={13} strokeWidth={2} aria-hidden />
+                  </Link>
+                </p>
+              </div>
+
+              <UpdateGapArtifact />
+            </div>
+          </section>
+
+          {/* ── Section 5 — Auditable by design ──────────────────────────── */}
           <section className="hp-open landing-separator" id="open-source" aria-labelledby="hp-open-title">
             <div className="hp-open-inner">
               <div className="hp-open-copy">
@@ -1005,87 +1036,8 @@ const HomePage = () => {
             </div>
           </section>
 
-          {/* ── Section 7 — For security teams ────────────────────────────── */}
-          <section className="hp-ent landing-separator" id="for-teams" aria-labelledby="hp-ent-title">
-            <div className="hp-ent-inner">
-              {/* Left: positioning + proof + CTA */}
-              <div className="hp-ent-copy">
-                <p className="hp-eyebrow">For security teams</p>
-                <h2 id="hp-ent-title">Security teams need evidence, not claims.</h2>
-                <p>
-                  ExtensionShield gives your team a scored, auditable report before any extension
-                  reaches an employee's browser. Allow or block decisions backed by evidence, not gut calls.
-                </p>
-                <ul className="hp-ent-proof">
-                  <li>
-                    <ClipboardCheck size={14} strokeWidth={2} aria-hidden />
-                    <span>Pre-install audit — CRX/ZIP or Chrome Web Store URL</span>
-                  </li>
-                  <li>
-                    <ShieldCheck size={14} strokeWidth={2} aria-hidden />
-                    <span>Allow or block with attached evidence — not a gut call</span>
-                  </li>
-                  <li>
-                    <Scale size={14} strokeWidth={2} aria-hidden />
-                    <span>Review publisher history and version-change signals before approval</span>
-                  </li>
-                </ul>
-                <Link to="/enterprise" className="hp-btn hp-btn-primary hp-ent-cta">
-                  Talk to us about Enterprise
-                  <ArrowRight size={15} strokeWidth={2} aria-hidden />
-                </Link>
-              </div>
-
-              {/* Right: pre-install review artifact */}
-              <div className="hp-ent-artifact" aria-hidden="true">
-                <div className="hp-ent-review">
-                  <div className="hp-ent-review-head">
-                    <ClipboardCheck size={13} strokeWidth={2} />
-                    <span>Pre-install Review</span>
-                    <span className="hp-ent-review-type">CRX upload</span>
-                  </div>
-                  <div className="hp-ent-ext-row">
-                    <span className="hp-ent-ext-name">Notionlytics Pro</span>
-                    <span className="hp-ent-ext-ver">v2.1.0</span>
-                  </div>
-                  <div className="hp-ent-scores">
-                    <div className="hp-ent-sr">
-                      <ShieldCheck size={12} strokeWidth={2} />
-                      <span className="hp-ent-sr-name">Security</span>
-                      <div className="hp-ent-sr-bar"><div className="hp-ent-sr-fill" style={{ width: "87%" }} /></div>
-                      <span className="hp-ent-sr-num">87</span>
-                      <span className="hp-ent-verdict pass">Pass</span>
-                    </div>
-                    <div className="hp-ent-sr">
-                      <Eye size={12} strokeWidth={2} />
-                      <span className="hp-ent-sr-name">Privacy</span>
-                      <div className="hp-ent-sr-bar"><div className="hp-ent-sr-fill warn" style={{ width: "62%" }} /></div>
-                      <span className="hp-ent-sr-num warn">62</span>
-                      <span className="hp-ent-verdict review">Review</span>
-                    </div>
-                    <div className="hp-ent-sr">
-                      <Scale size={12} strokeWidth={2} />
-                      <span className="hp-ent-sr-name">Governance</span>
-                      <div className="hp-ent-sr-bar"><div className="hp-ent-sr-fill" style={{ width: "91%" }} /></div>
-                      <span className="hp-ent-sr-num">91</span>
-                      <span className="hp-ent-verdict pass">Pass</span>
-                    </div>
-                  </div>
-                  <div className="hp-ent-meta">
-                    <span>9 permissions</span>
-                    <span aria-hidden="true">·</span>
-                    <span className="hp-ent-flag">2 findings flagged</span>
-                  </div>
-                  <div className="hp-ent-decision">
-                    <span className="hp-ent-dec-btn allowlist" aria-hidden="true">Allow</span>
-                    <span className="hp-ent-dec-btn flag" aria-hidden="true">Review</span>
-                    <span className="hp-ent-dec-btn block" aria-hidden="true">Block</span>
-                  </div>
-                </div>
-                <p className="hp-ent-caption" aria-hidden="true">Representative pre-install review workflow</p>
-              </div>
-            </div>
-          </section>
+          {/* Section 6 — For security teams CTA band: temporarily hidden.
+             The /enterprise route is still served by a minimal placeholder page. */}
 
         </div>
 

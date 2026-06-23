@@ -135,3 +135,81 @@
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Success-state visuals only. Independent of the processing/error card chrome
+   above so loading and error keep their existing look. Sits on the existing
+   off-white/grid background from AppBackground — no dark panel.
+   ───────────────────────────────────────────────────────────────────────────── */
+.auth-callback-success-state {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  text-align: center;
+  /* Subtle reveal — opacity-only, no transform, no delay, no extension of
+     the visible state. Redirect timing is owned by the parent useEffect. */
+  animation: auth-callback-success-fade-in 0.25s ease-out;
+}
+
+.auth-callback-success-shield {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Brand mark — separate from the green check below it */
+  margin-bottom: 0.25rem;
+}
+
+.auth-callback-success-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--extensionshield-accent, #16a34a);
+}
+
+.auth-callback-success-check svg {
+  width: 100%;
+  height: 100%;
+}
+
+.auth-callback-success-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--extensionshield-text-primary);
+  margin: 0;
+}
+
+.auth-callback-success-status {
+  font-size: 0.875rem;
+  color: var(--extensionshield-text-muted);
+  margin: 0;
+}
+
+@keyframes auth-callback-success-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-callback-success-state {
+    animation: none;
+  }
+}
+
+/* Dark mode: lighter check tone for contrast on dark surfaces */
+@media (prefers-color-scheme: dark) {
+  .auth-callback-success-heading {
+    color: #f7fafc;
+  }
+  .auth-callback-success-status {
+    color: #a0aec0;
+  }
+}
+

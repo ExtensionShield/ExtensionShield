@@ -190,13 +190,12 @@
   grid-template-columns: repeat(3, minmax(0, 150px));
   gap: 0.75rem 2.5rem;
 
+  /* Skip the awkward 2-column stage — the 3rd group would sit alone with
+     blank space beside it and a wide row gap. Stack directly to 1-column
+     with consistent vertical rhythm matching the in-column item spacing. */
   @media (max-width: 760px) {
-    grid-template-columns: repeat(2, minmax(0, 150px));
-  }
-
-  @media (max-width: 460px) {
     grid-template-columns: 1fr;
-    gap: 1.75rem;
+    gap: 1.25rem;
   }
 }
 

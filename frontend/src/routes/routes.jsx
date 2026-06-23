@@ -675,15 +675,17 @@ export const routes = [
   },
 
   // ============ ENTERPRISE ROUTES ============
+  // Route preserved (200 response, sitemap entry kept) while the section is hidden
+  // from nav/footer/homepage. Content is minimal — see EnterprisePage.jsx.
   {
     path: "/enterprise",
     element: <EnterprisePage />,
     seo: {
-      title: "Extension Governance Platform for Enterprise | ExtensionShield",
-      description: "Browser extension governance for enterprise: pre-install risk assessment, governance evidence, scored reports, and compliance decision support for security teams.",
+      title: "Enterprise (planned) | ExtensionShield",
+      description: "ExtensionShield is currently focused on open-source extension analysis. Enterprise capabilities are planned for the future.",
       canonical: "/enterprise"
     },
-    priority: 0.8,
+    priority: 0.3,
     changefreq: "monthly"
   },
 
