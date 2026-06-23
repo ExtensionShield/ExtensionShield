@@ -63,7 +63,7 @@ const ExtensionGovernancePage = () => {
           </div>
 
           <div className="compare-cta">
-            <Link to="/enterprise">Request a governance pilot</Link>
+            <Link to="/enterprise">Enterprise capabilities — planned</Link>
           </div>
 
           <div className="compare-links">

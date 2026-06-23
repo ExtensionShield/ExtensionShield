@@ -30,7 +30,7 @@
 
   --hp-max: 1200px;
   --hp-px:  clamp(1.25rem, 4vw, 3rem);
-  --hp-section-py: clamp(3rem, 6vw, 5rem);
+  --hp-section-py: clamp(2.25rem, 4.75vw, 3.75rem);
 }
 
 /* Separator: hairline gradient centred inside max-width */
@@ -738,7 +738,7 @@
 
 .hp-section-head {
   max-width: 640px;
-  margin: 0 0 2.25rem;
+  margin: 0 0 1.5rem;
 
   h2 {
     font-size: clamp(1.375rem, 3vw, 1.875rem);
@@ -841,6 +841,7 @@
 
 .hp-problem-copy {
   min-width: 0;
+  max-width: 46ch;
 
   h2 {
     font-size: clamp(1.5rem, 3.2vw, 2.125rem);
@@ -861,157 +862,293 @@
   }
 }
 
-/* Version diff artifact */
-.hp-vdiff {
+/* Inline Honey case-study link inside the Update Gap copy column */
+.hp-problem-aside {
+  margin-top: 1.25rem !important;
+}
+
+.hp-problem-aside-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--extensionshield-accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  svg {
+    transition: transform 0.15s ease;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-bottom-color: currentColor;
+
+    svg { transform: translateX(2px); }
+  }
+}
+
+/* Update-gap artifact (Section 2 — The Update Gap)
+   Interactive version-comparison card. Triggers animation on viewport entry
+   and replays on hover / keyboard focus. Final-state CSS is the base; the
+   `.is-animated` modifier scopes initial-hidden state + keyframe delays so
+   reduced-motion users (no `.is-animated`) see only the final state. */
+.hp-ugap {
   border: 1px solid var(--extensionshield-border);
   border-radius: 14px;
   background: var(--extensionshield-bg-card);
   overflow: hidden;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
-  font-family: var(--font-mono, ui-monospace, monospace);
+  outline: none;
+  transition: box-shadow 0.2s ease;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25), 0 2px 16px rgba(0, 0, 0, 0.07);
+  }
 }
 
-.hp-vdiff-header {
+.hp-ugap-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.625rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--extensionshield-border);
   background: var(--extensionshield-bg-secondary);
 }
 
-.hp-vdiff-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--extensionshield-text-secondary);
-  font-family: var(--font-sans);
+.hp-ugap-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.hp-vdiff-badge {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.18);
-  color: #dc2626;
-  font-family: var(--font-sans);
-}
-
-.hp-vdiff-versions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--extensionshield-border);
-  background: var(--extensionshield-bg-card);
-}
-
-.hp-vdiff-v {
+.hp-ugap-meta {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
 }
 
-.hp-vdiff-tag {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-family: var(--font-sans);
-
-  .hp-vdiff-v--trusted & { color: #16a34a; }
-  .hp-vdiff-v--updated & { color: #dc2626; }
-}
-
-.hp-vdiff-ver {
-  font-size: 0.9375rem;
-  font-weight: 700;
+.hp-ugap-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--extensionshield-text-primary);
 }
 
-.hp-vdiff-ago {
+.hp-ugap-store {
   font-size: 0.6875rem;
   color: var(--extensionshield-text-muted);
-  font-family: var(--font-sans);
 }
 
-.hp-vdiff-arrow {
-  flex: 1;
-  text-align: center;
-  font-size: 1rem;
-  color: var(--extensionshield-text-muted);
-  font-family: var(--font-sans);
+.hp-ugap-v1 { padding: 0.75rem 1rem; }
+.hp-ugap-v2 {
+  padding: 0.75rem 1rem;
+  background: rgba(245, 158, 11, 0.022);
 }
 
-.hp-vdiff-diff {
-  padding: 0.625rem 0;
+.hp-ugap-row-label {
   display: flex;
-  flex-direction: column;
-  background: var(--extensionshield-bg-card);
-}
-
-.hp-vdiff-line {
-  display: grid;
-  grid-template-columns: 1.25rem auto 1fr auto;
-  align-items: baseline;
-  gap: 0.375rem;
-  padding: 0.3rem 1rem;
-  font-size: 0.78125rem;
-  line-height: 1.5;
-
-  &.hp-vdiff-line--add {
-    background: rgba(22, 163, 74, 0.04);
-  }
-
-  &.hp-vdiff-line--change {
-    background: rgba(245, 158, 11, 0.05);
-  }
-}
-
-.hp-vdiff-glyph {
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-sans);
+  color: var(--extensionshield-text-muted);
 
-  .hp-vdiff-line--add & { color: #16a34a; }
-  .hp-vdiff-line--change & { color: #b45309; }
+  &.hp-ugap-row-label--reviewed { color: #15803d; }
+  &.hp-ugap-row-label--needsreview { color: #b45309; }
 }
 
-.hp-vdiff-key {
+.hp-ugap-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+
+  &.hp-ugap-dot--green {
+    background: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+  }
+
+  &.hp-ugap-dot--amber {
+    background: #d97706;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+  }
+}
+
+.hp-ugap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.625rem;
+}
+
+.hp-ugap-chip {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.175rem 0.45rem;
+  border-radius: 4px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+
+  &.hp-ugap-chip--ok {
+    background: rgba(22, 163, 74, 0.06);
+    border: 1px solid rgba(22, 163, 74, 0.16);
+    color: #166534;
+  }
+}
+
+.hp-ugap-pub {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.6875rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.hp-ugap-pub-key {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--extensionshield-text-muted);
+  font-family: var(--font-sans);
+  margin-right: 0.1rem;
+}
+
+.hp-ugap-pub-val { color: var(--extensionshield-text-secondary); }
+
+/* "Declared permissions unchanged" reassurance row */
+.hp-ugap-unchanged {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #15803d;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(22, 163, 74, 0.05);
+  border: 1px solid rgba(22, 163, 74, 0.14);
+  font-family: var(--font-sans);
+
+  svg { color: #16a34a; flex-shrink: 0; }
+}
+
+/* Timeline divider */
+.hp-ugap-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(245, 158, 11, 0.03);
+  border-top: 1px solid rgba(245, 158, 11, 0.12);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.12);
+}
+
+.hp-ugap-divider-rule {
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(245, 158, 11, 0.4) 0,
+    rgba(245, 158, 11, 0.4) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.hp-ugap-divider-label {
+  font-size: 0.5875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #b45309;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+}
+
+/* Change-signal evidence rows */
+.hp-ugap-signals {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.07);
+  border-radius: 6px;
+}
+
+.hp-ugap-signals-label {
+  display: block;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--extensionshield-text-muted);
+  font-family: var(--font-sans);
+  margin-bottom: 0.4rem;
+}
+
+.hp-ugap-signal {
+  display: grid;
+  grid-template-columns: 1.1rem auto 1fr;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.275rem 0.5rem;
+  margin-bottom: 0.225rem;
+  font-size: 0.6875rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  border-radius: 4px;
+  background: rgba(217, 119, 6, 0.04);
+  border: 1px solid rgba(217, 119, 6, 0.12);
+
+  &:last-child { margin-bottom: 0; }
+
+  /* The 4th row is the verdict — slight emphasis */
+  &.hp-ugap-signal--n4 {
+    background: rgba(220, 38, 38, 0.05);
+    border-color: rgba(220, 38, 38, 0.18);
+    margin-top: 0.35rem;
+
+    .hp-ugap-signal-glyph { color: #b91c1c; }
+    .hp-ugap-signal-key   { color: #991b1b; }
+    .hp-ugap-signal-val   { color: #991b1b; font-weight: 600; }
+  }
+}
+
+.hp-ugap-signal-glyph {
+  font-weight: 700;
+  color: #b45309;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.hp-ugap-signal-key {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #92400e;
+  font-family: var(--font-sans);
   white-space: nowrap;
 }
 
-.hp-vdiff-val {
+.hp-ugap-signal-val {
   color: var(--extensionshield-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.hp-vdiff-note {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 0.1rem 0.3rem;
-  border-radius: 3px;
-  white-space: nowrap;
-
-  .hp-vdiff-line--add & {
-    background: rgba(22, 163, 74, 0.1);
-    color: #16a34a;
-    border: 1px solid rgba(22, 163, 74, 0.2);
-  }
-
-  .hp-vdiff-line--change & {
-    background: rgba(245, 158, 11, 0.1);
-    color: #b45309;
-    border: 1px solid rgba(245, 158, 11, 0.2);
-  }
-}
-
-.hp-vdiff-footer {
+.hp-ugap-footer {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1024,6 +1161,90 @@
   font-family: var(--font-sans);
 
   svg { flex-shrink: 0; color: #f59e0b; }
+}
+
+/* ── Animation: scoped only to .hp-ugap.is-animated ───────────────────────
+   Timing (≈ 6s total):
+     0.0–1.0s  v1 visible (already painted) + green dot pulses once
+     1.0–2.0s  amber timeline rule draws + label fades in
+     2.0–3.0s  v2 base reveals (label, unchanged marker, identical chips)
+     3.0–4.2s  three change-signal rows stagger in
+     4.2–5.3s  signals briefly highlighted, settle
+     5.3–6.0s  footer fades in
+   Reduced-motion users get `.is-reduced` instead: final state only. */
+@keyframes hp-ugap-fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hp-ugap-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes hp-ugap-draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes hp-ugap-dot-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }
+  60%  { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
+  100% { box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2); }
+}
+
+@keyframes hp-ugap-signals-highlight {
+  0%   { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+  35%  { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+}
+
+.hp-ugap.is-animated {
+  .hp-ugap-dot--green {
+    animation: hp-ugap-dot-pulse 1s 0.2s 1;
+  }
+
+  .hp-ugap-divider-rule {
+    transform: scaleX(0);
+    animation: hp-ugap-draw 0.55s 1s both;
+
+    &.hp-ugap-divider-rule--left  { transform-origin: left center; }
+    &.hp-ugap-divider-rule--right {
+      transform-origin: right center;
+      animation-delay: 1.25s;
+      animation-duration: 0.45s;
+    }
+  }
+
+  .hp-ugap-divider-label {
+    opacity: 0;
+    animation: hp-ugap-fade 0.4s 1.5s both;
+  }
+
+  .hp-ugap-v2 {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: hp-ugap-fade-up 0.45s 2s both;
+  }
+
+  .hp-ugap-unchanged {
+    opacity: 0;
+    animation: hp-ugap-fade 0.4s 2.55s both;
+  }
+
+  .hp-ugap-signal--n1 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 3.0s both; }
+  .hp-ugap-signal--n2 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 3.4s both; }
+  .hp-ugap-signal--n3 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 3.8s both; }
+  .hp-ugap-signal--n4 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 4.2s both; }
+
+  .hp-ugap-signals {
+    animation: hp-ugap-signals-highlight 1.1s 4.8s 1 both;
+  }
+
+  .hp-ugap-footer {
+    opacity: 0;
+    animation: hp-ugap-fade 0.5s 5.7s both;
+  }
 }
 
 /* ── Section 4 — How it works (connected flow) ─────────────────────────────── */
@@ -1039,12 +1260,123 @@
   margin: 0 auto;
 }
 
-/* Three-step flow */
+/* Three-step flow — wrapper handles hover/focus replay, inner is the grid */
 .hp-flow {
+  outline: none;
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease;
+
+  /* Focus ring kept for accessibility even though sequence does not replay on
+     focus — this is just the standard keyboard-focus affordance. */
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22);
+  }
+}
+
+.hp-flow-inner {
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1fr;
   gap: 0;
   align-items: start;
+}
+
+/* Animation — scoped to .hp-flow.is-animated.
+   One-shot search → scan → findings sequence, total ~3.3s. Fires when
+   IntersectionObserver crosses 0.4 threshold. `.is-pending` holds the same
+   initial-hidden state until IO fires so elements do not flash visible.
+   `.is-reduced` skips both classes entirely and renders the final state.
+   Transform + opacity + border-color only. No loops, no replay. */
+@keyframes hp-flow-fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hp-flow-bar-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes hp-flow-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes hp-flow-focus-ring {
+  from { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+  60%  { box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25); }
+  to   { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+
+/* Initial-hidden state shared by both is-pending and is-animated, so the
+   pre-IO state matches the keyframe `from` block. .is-reduced does not get
+   these rules — its elements render in their normal visible state. */
+.hp-flow.is-pending,
+.hp-flow.is-animated {
+  .hp-flow-step:nth-child(1) .hp-flow-ui { opacity: 0; transform: translateY(4px); }
+  .hp-flow-step:nth-child(3) .hp-flow-ui { opacity: 0; transform: translateY(4px); }
+  .hp-flow-step:nth-child(5) .hp-flow-ui { opacity: 0; transform: translateY(4px); }
+  .hp-flow-conn:nth-child(2) { opacity: 0; }
+  .hp-flow-conn:nth-child(4) { opacity: 0; }
+  .hp-flow-step:nth-child(3) .hp-flow-lr-fill { transform: scaleX(0); transform-origin: left center; }
+  .hp-flow-step:nth-child(3) .hp-flow-elapsed { opacity: 0; }
+  .hp-flow-step:nth-child(5) .hp-flow-report-score { opacity: 0; }
+  .hp-flow-step:nth-child(5) .hp-flow-find { opacity: 0; transform: translateY(3px); }
+  .hp-flow-step:nth-child(1) .hp-flow-url { opacity: 0; }
+}
+
+.hp-flow.is-animated {
+  /* === Card 1 — Search (0.00s – 0.95s) ============================ */
+  /* Card surface fades up */
+  .hp-flow-step:nth-child(1) .hp-flow-ui {
+    animation: hp-flow-fade-up 0.4s 0s both;
+  }
+  /* Sample query "PayPal Honey" reveals inside the search bar after the card
+     has settled — gives the "field activates → sample appears" beat without
+     a literal typing effect. */
+  .hp-flow-step:nth-child(1) .hp-flow-url {
+    animation: hp-flow-fade 0.35s 0.45s both;
+  }
+  /* Subtle one-shot accent ring on the input bar to read as "field active" */
+  .hp-flow-step:nth-child(1) .hp-flow-input-bar {
+    animation: hp-flow-focus-ring 0.9s 0.3s 1 both;
+  }
+  /* Connector hairline 1 → bridges into Card 2 */
+  .hp-flow-conn:nth-child(2) {
+    animation: hp-flow-fade 0.4s 0.95s both;
+  }
+
+  /* === 250 ms pause ============================================== */
+
+  /* === Card 2 — Scan (1.20s – 2.40s) ============================== */
+  .hp-flow-step:nth-child(3) .hp-flow-ui {
+    animation: hp-flow-fade-up 0.4s 1.2s both;
+  }
+  .hp-flow-step:nth-child(3) .hp-flow-lr-fill {
+    animation: hp-flow-bar-fill 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  .hp-flow-step:nth-child(3) .hp-flow-lr:nth-child(1) .hp-flow-lr-fill { animation-delay: 1.50s; }
+  .hp-flow-step:nth-child(3) .hp-flow-lr:nth-child(2) .hp-flow-lr-fill { animation-delay: 1.65s; }
+  .hp-flow-step:nth-child(3) .hp-flow-lr:nth-child(3) .hp-flow-lr-fill { animation-delay: 1.80s; }
+  .hp-flow-step:nth-child(3) .hp-flow-elapsed {
+    animation: hp-flow-fade 0.35s 2.30s both;
+  }
+  /* Connector hairline 2 → bridges into Card 3 */
+  .hp-flow-conn:nth-child(4) {
+    animation: hp-flow-fade 0.4s 2.45s both;
+  }
+
+  /* === 250 ms pause ============================================== */
+
+  /* === Card 3 — Report (2.70s – 3.30s) ============================ */
+  .hp-flow-step:nth-child(5) .hp-flow-ui {
+    animation: hp-flow-fade-up 0.4s 2.70s both;
+  }
+  .hp-flow-step:nth-child(5) .hp-flow-report-score {
+    animation: hp-flow-fade 0.4s 2.95s both;
+  }
+  .hp-flow-step:nth-child(5) .hp-flow-find:nth-child(1) { animation: hp-flow-fade-up 0.3s 3.05s both; }
+  .hp-flow-step:nth-child(5) .hp-flow-find:nth-child(2) { animation: hp-flow-fade-up 0.3s 3.15s both; }
+  .hp-flow-step:nth-child(5) .hp-flow-find:nth-child(3) { animation: hp-flow-fade-up 0.3s 3.25s both; }
 }
 
 .hp-flow-step {
@@ -1062,6 +1394,28 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   margin-bottom: 1.25rem;
+  position: relative;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  /* Accent top edge — gives each card a product-native feel */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      var(--extensionshield-accent) 0%,
+      color-mix(in srgb, var(--extensionshield-accent) 40%, transparent) 100%
+    );
+  }
+
+  &:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
 }
 
 /* Step 1 — Input */
@@ -1240,22 +1594,40 @@
   &.ok   { color: var(--extensionshield-text-muted); svg { stroke: #10b981; } }
 }
 
-/* Flow step text */
+/* Flow step head — keeps step number badge and title on the SAME row */
+.hp-flow-step-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0 0 0.875rem;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
 .hp-flow-num {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
   font-size: 0.625rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--extensionshield-text-muted);
-  margin-bottom: 0.3rem;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+  color: var(--extensionshield-accent);
+  background: color-mix(in srgb, var(--extensionshield-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--extensionshield-accent) 25%, transparent);
+  border-radius: 50%;
 }
 
 .hp-flow-step h3 {
   font-size: 1rem;
   font-weight: 600;
   color: var(--extensionshield-text-primary);
-  margin: 0 0 0.375rem;
+  /* Margin now lives on .hp-flow-step-head; h3 is just a flex child */
+  margin: 0;
+  min-width: 0;
 }
 
 .hp-flow-step p {
@@ -1270,21 +1642,29 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 2.5rem; /* aligns with center of UI panels */
+  justify-content: flex-start;
+  /* Aligns with the vertical center of each card's mock UI panel. The mock
+     UI now sits below the step number + title, so the connector needs to
+     drop further down to meet the new panel center on desktop. */
+  padding-top: 7rem;
   gap: 0;
 
   span:first-child {
     display: block;
-    width: 32px;
+    width: 24px;
     height: 1px;
-    background: var(--extensionshield-border);
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--extensionshield-accent) 30%, transparent),
+      color-mix(in srgb, var(--extensionshield-accent) 10%, transparent)
+    );
   }
 
   span:last-child {
     display: block;
-    font-size: 0.875rem;
-    color: var(--extensionshield-text-muted);
-    margin-top: -0.5rem;
+    font-size: 0.6875rem;
+    color: color-mix(in srgb, var(--extensionshield-accent) 60%, transparent);
+    margin-top: 0.25rem;
     line-height: 1;
   }
 }
@@ -1359,17 +1739,54 @@
   &.medium { background: rgba(245, 158, 11, 0.1); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.2); }
 }
 
+/* Signal-flow cue — quiet annotation sitting between the composite bar and
+   the three layer columns. Three small ticks align with each column center;
+   the centered label clarifies the merge. No SVG, no dominant arrows. */
+.hp-sf-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  position: relative;
+  padding: 0.6rem 0 0.4rem;
+  margin: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 70%, transparent);
+}
+
+.hp-sf-flow-tick {
+  width: 1px;
+  height: 8px;
+  background: color-mix(in srgb, var(--extensionshield-border) 80%, transparent);
+  justify-self: center;
+}
+
+.hp-sf-flow-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  color: var(--extensionshield-text-muted);
+  background: var(--extensionshield-bg-card);
+  padding: 0 0.625rem;
+  white-space: nowrap;
+  font-style: italic;
+}
+
 .hp-sf-layers {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .hp-sf-layer {
-  padding: 1.5rem 1.375rem;
+  padding: 1.25rem 1.375rem 1.375rem;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 
   & + & {
-    border-left: 1px solid var(--extensionshield-border);
+    /* Softened internal divider: lighter, dashed */
+    border-left: 1px dashed color-mix(in srgb, var(--extensionshield-border) 65%, transparent);
   }
 }
 
@@ -1377,15 +1794,15 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.875rem;
+  margin-bottom: 0.625rem;
 }
 
 .hp-sf-layer-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   border-radius: 8px;
   color: var(--extensionshield-accent);
@@ -1402,18 +1819,21 @@
 
 .hp-sf-layer-body {
   font-size: 0.875rem;
-  line-height: 1.6;
+  line-height: 1.55;
   color: var(--extensionshield-text-secondary);
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.875rem;
 }
 
-.hp-sf-layer-range {
-  font-size: 0.8125rem;
-  line-height: 1.5;
+/* Direction line — quieter technical annotation, no bright green */
+.hp-sf-layer-direction {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--extensionshield-text-muted);
-  margin: 0 0 0.875rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--extensionshield-border);
+  margin: auto 0 0.75rem;
+  padding-top: 0.625rem;
+  border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 60%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
 }
 
 .hp-sf-layer-link {
@@ -1421,9 +1841,80 @@
   font-weight: 600;
   color: var(--extensionshield-accent);
   text-decoration: none;
+  align-self: flex-start;
 
   &:hover { text-decoration: underline; }
   &:focus-visible { outline: 2px solid var(--extensionshield-accent); outline-offset: 3px; border-radius: 3px; }
+}
+
+/* Section-level CTA — sits below the panel. Primary is a restrained text link
+   with an arrow; secondary is an even quieter inline link. Neither competes
+   with the hero scan CTA. */
+.hp-sf-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.hp-sf-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--extensionshield-accent);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease;
+
+  svg { transition: transform 0.15s ease; }
+  &:hover,
+  &:focus-visible { border-bottom-color: currentColor; svg { transform: translateX(2px); } }
+  &:focus-visible { outline: none; }
+}
+
+.hp-sf-cta-sep {
+  color: var(--extensionshield-text-muted);
+}
+
+.hp-sf-cta-secondary {
+  color: var(--extensionshield-text-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--extensionshield-text-primary);
+    border-bottom-color: var(--extensionshield-text-muted);
+  }
+  &:focus-visible { outline: none; }
+}
+
+/* Mobile: stack flow cue ticks horizontally if needed and the columns stack */
+@media (max-width: 720px) {
+  .hp-sf-flow {
+    grid-template-columns: 1fr;
+    padding: 0.5rem 0;
+  }
+  .hp-sf-flow-tick {
+    display: none;
+  }
+  .hp-sf-flow-label {
+    position: static;
+    transform: none;
+    background: transparent;
+    padding: 0;
+    white-space: normal;
+    text-align: center;
+  }
+  .hp-sf-layer + .hp-sf-layer {
+    border-left: none;
+    border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 65%, transparent);
+  }
 }
 
 /* ── Section 6 — Auditable by design ───────────────────────────────────────── */
@@ -1602,7 +2093,7 @@
   svg { flex-shrink: 0; color: #f59e0b; }
 }
 
-/* ── Section 7 — For security teams (enterprise 2-column) ──────────────────── */
+/* ── Section 6 — For security teams (CTA band: single-column, centered) ───── */
 .hp-ent {
   padding: var(--hp-section-py) var(--hp-px);
 }
@@ -1614,6 +2105,22 @@
   grid-template-columns: 1fr 1fr;
   gap: clamp(2rem, 4vw, 4rem);
   align-items: center;
+}
+
+/* Compact CTA band variant — overrides the 2-column layout */
+.hp-ent--band {
+  padding-top: clamp(1.5rem, 3vw, 2.25rem);
+  padding-bottom: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.hp-ent-inner--band {
+  display: block;
+  max-width: 640px;
+  text-align: left;
+
+  .hp-ent-copy h2 { margin-bottom: 0.75rem; }
+  .hp-ent-copy p  { margin-bottom: 1rem; }
+  .hp-ent-proof   { margin-bottom: 1rem; gap: 0.4rem; }
 }
 
 .hp-ent-copy {
@@ -2166,7 +2673,12 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: calc(var(--extensionshield-header-height, 60px) + 1.5rem) 1.5rem 1rem;
+    /* Match the desktop header→hero visible gap. Desktop totals 4.5rem
+       (.hero-section padding-top extra) + 3rem (.hero-inner padding-top) =
+       7.5rem of breathing room below the rounded header before the eyebrow
+       line. Mobile has no .hero-inner equivalent, so we absorb both
+       contributions into a single padding-top calc here. */
+    padding: calc(var(--extensionshield-header-height, 60px) + 7.5rem) 1.5rem 1rem;
     gap: 0.5rem;
 
     .hero-tagline {
@@ -2314,8 +2826,12 @@
     grid-template-columns: 1fr;
   }
 
-  .hp-flow {
+  /* How it works — stack the three-step flow vertically.
+     Grid lives on `.hp-flow-inner` (the wrapper). Connectors are hidden
+     since they only make sense in the horizontal layout. */
+  .hp-flow-inner {
     grid-template-columns: 1fr;
+    gap: 1.75rem;
   }
 
   .hp-flow-conn {
@@ -2328,7 +2844,7 @@
 
   .hp-sf-layer + .hp-sf-layer {
     border-left: none;
-    border-top: 1px solid var(--extensionshield-border);
+    border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 65%, transparent);
   }
 
   .hp-open-inner .hp-repo {

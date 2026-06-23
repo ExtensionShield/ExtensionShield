@@ -97,19 +97,28 @@ function UserMenu() {
 
   return (
     <div className="user-menu-container" ref={menuRef}>
-      <button className="user-menu-trigger" onClick={() => setIsMenuOpen(!isMenuOpen)} disabled={isLoading}>
+      <button
+        className="user-menu-trigger"
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        disabled={isLoading}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={isMenuOpen}
+        aria-label={user.name ? `Account menu for ${user.name}` : "Account menu"}
+        title={user.name || "Account"}
+      >
         {user.avatar && !avatarError ? (
-          <img 
-            src={user.avatar} 
-            alt={user.name} 
-            className="user-avatar" 
+          <img
+            src={user.avatar}
+            alt=""
+            className="user-avatar"
             onError={handleAvatarError}
           />
         ) : (
-          <div className="user-avatar-fallback">{getInitials(user.name)}</div>
+          <div className="user-avatar-fallback" aria-hidden="true">{getInitials(user.name)}</div>
         )}
         <span className="user-name">{user.name?.split(" ")[0]}</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`menu-chevron ${isMenuOpen ? "open" : ""}`}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`menu-chevron ${isMenuOpen ? "open" : ""}`} aria-hidden="true">
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
@@ -170,11 +179,13 @@ function UserMenu() {
   );
 }
 
-// Nav Item Dropdown Component (for Scan, Research, Enterprise)
+// Nav Item Dropdown Component (for Scan, Research). Also handles direct-link
+// top-nav items (Open Source, About) via the `!hasDropdown` early return below.
 function NavItemDropdown({ item, location }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const menuRef = React.useRef(null);
   const timeoutRef = React.useRef(null);
+  const { isAuthenticated } = useAuth();
   
   const isActive = item.matchPaths.some(path => 
     location.pathname.startsWith(path)
@@ -314,20 +325,18 @@ function NavItemDropdown({ item, location }) {
             </>
           ) : (
             <>
-              {item.category && (
-                <div className="nav-dropdown-category" aria-hidden="true">{item.category}</div>
-              )}
               {item.dropdownItems.map((dropdownItem, idx) => {
                 const Element = dropdownItem.external ? "a" : NavLink;
                 const linkProps = dropdownItem.external 
                   ? { href: dropdownItem.href, target: "_blank", rel: "noopener noreferrer" }
                   : { to: dropdownItem.path };
 
+                const showSignInHint = dropdownItem.requiresAuth && !isAuthenticated;
                 return (
-                  <Element 
-                    key={idx} 
-                    {...linkProps} 
-                    className="nav-dropdown-item" 
+                  <Element
+                    key={idx}
+                    {...linkProps}
+                    className="nav-dropdown-item"
                     onClick={() => setIsOpen(false)}
                   >
                     <div className="nav-dropdown-icon">{renderIcon(dropdownItem.icon)}</div>
@@ -336,6 +345,9 @@ function NavItemDropdown({ item, location }) {
                         <div className="nav-dropdown-label">{dropdownItem.label}</div>
                         {dropdownItem.badge && (
                           <span className="nav-dropdown-badge" aria-hidden="true">{dropdownItem.badge}</span>
+                        )}
+                        {showSignInHint && (
+                          <span className="nav-dropdown-hint" aria-label="Sign in required">Sign in</span>
                         )}
                       </div>
                       <div className="nav-dropdown-desc">{dropdownItem.description}</div>
@@ -470,11 +482,17 @@ function AppHeader() {
         >
           <nav className="mobile-menu-nav" aria-label="Mobile">
             {mobileSections.map((section, sectionIdx) => (
-              <div key={sectionIdx} className="mobile-menu-section">
-                <span className="mobile-menu-section-title">{section.category}</span>
+              <div
+                key={sectionIdx}
+                className={`mobile-menu-section${section.directLink ? " mobile-menu-section--direct" : ""}`}
+              >
+                {!section.directLink && (
+                  <span className="mobile-menu-section-title">{section.label || section.category}</span>
+                )}
                 <div className="mobile-menu-section-links">
                   {section.links.map((link, idx) => {
                     const key = link.path || link.href || `${sectionIdx}-${idx}`;
+                    const showSignInHint = link.requiresAuth && !isAuthenticated;
                     if (link.external && link.href) {
                       return (
                         <a
@@ -486,6 +504,9 @@ function AppHeader() {
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           {link.label}
+                          {link.badge && (
+                            <span className="mobile-menu-badge" aria-hidden="true">{link.badge}</span>
+                          )}
                         </a>
                       );
                     }
@@ -497,6 +518,12 @@ function AppHeader() {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         {link.label}
+                        {link.badge && (
+                          <span className="mobile-menu-badge" aria-hidden="true">{link.badge}</span>
+                        )}
+                        {showSignInHint && (
+                          <span className="mobile-menu-hint" aria-label="Sign in required">Sign in</span>
+                        )}
                       </NavLink>
                     );
                   })}

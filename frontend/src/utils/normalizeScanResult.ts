@@ -917,6 +917,12 @@ export function normalizeScanResult(raw: RawScanResult): ReportViewModel {
     return /^[a-p]{32}$/.test(s.trim());
   }
 
+  const isI18nPlaceholderStr = (s: string): boolean => /^__MSG_[A-Za-z0-9@_]+__$/.test(s.trim());
+  const isRawJsonChaffStr = (s: string): boolean => {
+    const t = s.trim();
+    return t === '[]' || t === '{}' || t === 'null' || t === 'undefined';
+  };
+
   const nameCandidates = [
     raw.extension_name,
     formatted.name,
@@ -924,7 +930,13 @@ export function normalizeScanResult(raw: RawScanResult): ReportViewModel {
     raw.metadata?.name,
     (raw.metadata as { chrome_stats?: { name?: string } })?.chrome_stats?.name,
     raw.manifest?.name,
-  ].filter((n): n is string => typeof n === 'string' && n.trim() !== '' && !looksLikeExtensionId(n));
+  ].filter((n): n is string =>
+    typeof n === 'string' &&
+    n.trim() !== '' &&
+    !looksLikeExtensionId(n) &&
+    !isI18nPlaceholderStr(n) &&
+    !isRawJsonChaffStr(n)
+  );
 
   let resolvedName = nameCandidates[0] || null;
 

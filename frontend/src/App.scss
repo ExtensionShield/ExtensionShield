@@ -214,22 +214,46 @@ body {
 
 
 .nav-item {
+  position: relative;
   padding: 0.625rem 1.125rem;
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--extensionshield-text-secondary);
   text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease;
+
+  /* Thin green underline — drives active and open dropdown indication */
+  &::after {
+    content: '';
+    position: absolute;
+    left: 1.125rem;
+    right: 1.125rem;
+    bottom: 0.35rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--extensionshield-accent);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.18s ease;
+  }
 
   &:hover {
     color: var(--extensionshield-text-primary);
-    background: rgba(255, 255, 255, 0.05);
   }
 
-  &.active {
+  &.active,
+  &.open {
     color: var(--extensionshield-text-primary);
-    background: rgba(34, 197, 94, 0.1);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--extensionshield-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
@@ -297,11 +321,11 @@ body {
 @keyframes megamenuEnter {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateX(-50%) translateY(-4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
@@ -321,7 +345,9 @@ body {
 .light .nav-dropdown-menu {
   background: var(--extensionshield-bg-card);
   border: 1px solid var(--extensionshield-border);
-  box-shadow: var(--extensionshield-card-shadow);
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
 .light .megamenu-item:hover,
@@ -570,9 +596,14 @@ body {
 }
 
 .nav-dropdown-menu {
-  position: fixed;
-  top: var(--extensionshield-header-offset);
-  left: auto;
+  /* Anchor centered under the trigger (container is position: relative) so the
+     menu sits ~5px below the header and its visual center aligns with the
+     trigger label above. */
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   min-width: 280px;
   max-width: calc(100vw - 2rem);
   background: var(--extensionshield-bg-card);
@@ -580,22 +611,37 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--extensionshield-border);
   border-radius: 14px;
-  box-shadow: var(--extensionshield-card-shadow);
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    0 2px 6px rgba(15, 23, 42, 0.04);
   padding: 0.75rem;
   z-index: 1300;
-  animation: megamenuEnter 0.2s ease;
+  animation: megamenuEnter 0.18s ease;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   margin-top: 0;
 
-  /* Categorized dropdown (e.g. Research = Research + Resources) – centered on viewport */
+  /* Invisible pointer-safe hover bridge — fills the 5px gap between trigger
+     bottom and menu top so the cursor stays inside the container's hit area
+     while crossing into the dropdown. No visible artifact. */
+  &::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: transparent;
+  }
+
+  /* Categorized dropdown variant — also anchored centered under the trigger. */
   &--sections {
-    position: fixed;
+    position: absolute;
     left: 50%;
-    top: var(--extensionshield-header-offset);
+    top: calc(100% + 5px);
     transform: translateX(-50%);
-    animation: megamenuEnterCentered 0.2s ease;
+    animation: megamenuEnter 0.18s ease;
     min-width: 320px;
     width: max-content;
     max-width: min(560px, calc(100vw - 2rem));
@@ -713,6 +759,56 @@ body {
   border: 1px solid var(--extensionshield-accent);
   background: transparent;
   opacity: 0.95;
+}
+
+/* "Sign in" hint on auth-gated dropdown items (e.g. Private Build Audit) */
+.nav-dropdown-hint {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  color: var(--extensionshield-text-muted);
+  border: 1px solid var(--extensionshield-border);
+  background: transparent;
+  text-transform: none;
+}
+
+/* Mobile equivalents of the badge + auth hint */
+.mobile-menu-badge {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.45rem;
+  border-radius: 999px;
+  color: var(--extensionshield-accent);
+  border: 1px solid var(--extensionshield-accent);
+  background: transparent;
+  vertical-align: middle;
+}
+
+.mobile-menu-hint {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.45rem;
+  border-radius: 999px;
+  color: var(--extensionshield-text-muted);
+  border: 1px solid var(--extensionshield-border);
+  background: transparent;
+  vertical-align: middle;
+  text-transform: none;
+}
+
+/* Direct-link mobile sections (Open Source, About) — skip the redundant
+   category heading and tighten spacing so each item reads as a single row. */
+.mobile-menu-section--direct .mobile-menu-section-links {
+  margin-top: 0;
 }
 
 .nav-dropdown-label-row + .nav-dropdown-desc {
@@ -913,6 +1009,48 @@ body {
   }
 }
 
+/* Desktop header variant — avatar-only circle that matches the GitHubBadge's
+   42px-tall icon footprint. The GitHubBadge wrapper has no chrome (background,
+   border, padding, radius are all commented out), so the avatar trigger mirrors
+   that: no surrounding pill, no name, no chevron. Scoped to
+   `.header-actions-desktop` so the mobile menu's pill (name + chevron) is
+   preserved. */
+.header-actions-desktop .user-menu-trigger {
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--extensionshield-accent) 30%, var(--extensionshield-border));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--extensionshield-accent);
+    outline-offset: 2px;
+  }
+
+  .user-avatar,
+  .user-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    font-size: 0.875rem;
+  }
+
+  .user-name,
+  .menu-chevron {
+    display: none;
+  }
+}
+
 .user-avatar {
   width: 26px;
   height: 26px;
@@ -954,25 +1092,32 @@ body {
   }
 }
 
+/* Account dropdown — matches the Scan/Research dropdown system:
+   off-white surface, thin border, 14px radius, soft two-layer shadow,
+   compact padding. Narrower than the product menus (~260px). */
 .user-menu-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 5px);
   right: 0;
-  width: 280px;
-  background: rgba(17, 24, 39, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  width: 260px;
+  max-width: calc(100vw - 2rem);
+  background: var(--extensionshield-bg-card);
+  border: 1px solid var(--extensionshield-border);
+  border-radius: 14px;
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    0 2px 6px rgba(15, 23, 42, 0.04);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
   z-index: 200;
-  animation: menuSlideDown 0.2s ease-out;
+  animation: menuSlideDown 0.18s ease-out;
 }
 
 @keyframes menuSlideDown {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
@@ -981,8 +1126,8 @@ body {
 }
 
 .menu-header {
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 0.875rem 1rem;
+  background: var(--extensionshield-bg-secondary);
 }
 
 .menu-user-info {
@@ -992,23 +1137,25 @@ body {
 }
 
 .menu-avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .menu-avatar-fallback {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--extensionshield-accent) 0%, #16a34a 100%);
-  color: var(--extensionshield-bg-primary);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .menu-user-details {
@@ -1019,7 +1166,7 @@ body {
 }
 
 .menu-user-name {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--extensionshield-text-primary);
   overflow: hidden;
@@ -1028,7 +1175,7 @@ body {
 }
 
 .menu-user-email {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--extensionshield-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1038,69 +1185,92 @@ body {
 .menu-provider {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
+  gap: 0.4rem;
+  margin-top: 0.625rem;
+  padding: 0.35rem 0.55rem;
+  background: var(--extensionshield-bg-card);
+  border: 1px solid var(--extensionshield-border);
+  border-radius: 6px;
 
   .provider-badge {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
+    color: var(--extensionshield-text-muted);
   }
 
   span {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--extensionshield-text-muted);
   }
 }
 
 .menu-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--extensionshield-border);
   margin: 0;
 }
 
 .menu-nav {
-  padding: 0.5rem;
+  padding: 0.4rem;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
   width: 100%;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--extensionshield-text-secondary);
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   font-family: inherit;
   text-align: left;
 
   svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
+    color: var(--extensionshield-text-muted);
+    transition: color 0.15s ease;
   }
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
+  &:hover,
+  &:focus-visible {
+    background: color-mix(in srgb, var(--extensionshield-accent) 8%, transparent);
     color: var(--extensionshield-text-primary);
+
+    svg { color: var(--extensionshield-accent); }
   }
 
-  &.signout {
-    color: var(--risk-bad);
-    margin: 0.5rem;
-    width: calc(100% - 1rem);
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--extensionshield-accent) 30%, transparent);
+  }
 
-    &:hover {
-      background: rgba(239, 68, 68, 0.1);
+  /* Sign Out — distinct but restrained, not alarming */
+  &.signout {
+    margin: 0.25rem 0.4rem 0.4rem;
+    width: calc(100% - 0.8rem);
+    color: #b91c1c;
+
+    svg { color: #b91c1c; }
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(220, 38, 38, 0.07);
+      color: #991b1b;
+
+      svg { color: #991b1b; }
+    }
+
+    &:focus-visible {
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25);
     }
   }
 }

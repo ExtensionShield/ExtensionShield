@@ -62,7 +62,7 @@ const MethodologyPage = () => {
           <header className="methodology-header">
             <h1>How We Analyze Extensions</h1>
             <p className="subtitle">
-              Three independent security pipelines combine to create comprehensive governance.
+              Three independent analysis layers combine into one extension risk score.
             </p>
           </header>
 
@@ -207,7 +207,7 @@ const MethodologyPage = () => {
                   </div>
                   <div className="pipeline-details">
                     <h3>Privacy Analysis</h3>
-                    <h4 className="tech-credit">Proprietary Engine</h4>
+                    <h4 className="tech-credit">Behavioral privacy analysis</h4>
                     <p>Behavioral analysis of data collection, third-party trackers, PII handling, and cross-origin communication patterns.</p>
                     
                     <div className="pipeline-features">
@@ -252,16 +252,16 @@ const MethodologyPage = () => {
                       AUTO-UPDATED
                     </div>
                     <h3>Governance</h3>
-                    <h4 className="tech-credit">Policy Engine (Enterprise)</h4>
-                    <p className="pipeline-enterprise-note">
-                      Enterprises get this pipeline in their reports; it is not open source. From a regulation standpoint, reports include permission justification, alignment with GDPR and SOC2, developer reputation signals, and custom policy enforcement so you can prove due diligence and enforce your own rules.
+                    <h4 className="tech-credit">Publisher &amp; version signals</h4>
+                    <p>
+                      Publisher identity, ownership history, and Chrome Web Store version history. The report surfaces the record behind the build — not just the current snapshot — so a reader can see when ownership or behavior has changed.
                     </p>
-                    
+
                     <div className="pipeline-features">
+                      <div className="feature-tag">Publisher History</div>
+                      <div className="feature-tag">Ownership Changes</div>
+                      <div className="feature-tag">Version Tracking</div>
                       <div className="feature-tag">Permission Audit</div>
-                      <div className="feature-tag">GDPR/SOC2</div>
-                      <div className="feature-tag">Policy Packs</div>
-                      <div className="feature-tag">Dev Reputation</div>
                     </div>
                   </div>
                 </div>
@@ -280,8 +280,8 @@ const MethodologyPage = () => {
             <h3>Related</h3>
             <ul>
               <li><Link to="/scan">Scan an extension</Link> — Get a risk score in under a minute</li>
-              <li><Link to="/enterprise">Enterprise extension security</Link> — Governance and compliance at scale</li>
-              <li><Link to="/compare">Compare scanners</Link> — ExtensionShield vs CRXcavator and others</li>
+              <li><Link to="/research/case-studies">Browse case studies</Link> — Real-world analysis</li>
+              <li><Link to="/compare">Compare Tools</Link> — ExtensionShield vs CRXcavator and others</li>
             </ul>
           </section>
         </div>
