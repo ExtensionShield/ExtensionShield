@@ -391,7 +391,9 @@ def count_total_findings(state: WorkflowState) -> int:
     if not isinstance(permissions_details, dict):
         permissions_details = {}
     for _, perm_analysis in permissions_details.items():
-        if not perm_analysis.get("is_reasonable", True):
+        # Tri-state (D4): only CONFIRMED-unreasonable (False) is a finding;
+        # None = analysis unavailable, not unreasonable, so it must not be counted.
+        if perm_analysis.get("is_reasonable") is False:
             total += 1
     return total
 

@@ -1990,9 +1990,11 @@ def calculate_risk_distribution(state: WorkflowState) -> Dict[str, int]:
     if not isinstance(permissions_details, dict):
         permissions_details = {}
     for _, perm_analysis in permissions_details.items():
-        is_reasonable = perm_analysis.get("is_reasonable", True)
+        # Tri-state (D4): only CONFIRMED-unreasonable (False) contributes to the
+        # distribution; None = analysis unavailable, not unreasonable.
+        is_reasonable = perm_analysis.get("is_reasonable")
         risk = perm_analysis.get("risk_level", "").lower()
-        if not is_reasonable:
+        if is_reasonable is False:
             if risk == "high":
                 distribution["high"] += 1
             elif risk == "low":
