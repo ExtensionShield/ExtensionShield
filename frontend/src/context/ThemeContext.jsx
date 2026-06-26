@@ -21,16 +21,15 @@ const FORCE_DARK_ROUTES = [];
 export const ThemeProvider = ({ children }) => {
   const location = useLocation();
   const [theme, setTheme] = useState(() => {
-    // Site default is light (professional, trustworthy). We do NOT follow system preference;
-    // dark mode is only applied when the user explicitly toggles it.
-    const stored = localStorage.getItem("theme");
-    const initial = stored ?? "light";
-    // Apply theme class synchronously so first paint (e.g. /research/methodology) is correct before useEffect runs
-    if (typeof document !== "undefined") {
-      if (initial === "light") document.documentElement.classList.add("light");
-      else document.documentElement.classList.remove("light");
+    // Dark mode toggle was removed; clear any persisted dark preference so returning
+    // users aren't stuck in dark mode with no way to escape.
+    if (localStorage.getItem("theme") === "dark") {
+      localStorage.removeItem("theme");
     }
-    return initial;
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.add("light");
+    }
+    return "light";
   });
 
   // Determine effective theme based on route
