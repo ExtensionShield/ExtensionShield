@@ -9,7 +9,7 @@ const governanceSchema = {
   "name": "ExtensionShield",
   "applicationCategory": "SecurityApplication",
   "operatingSystem": "Web",
-  "description": "Open-source browser extension security and governance platform for extension risk assessment, compliance evidence, and allow/block decision support.",
+  "description": "Open-source browser extension scanner with a governance scoring layer (Security, Privacy, Governance) for pre-install risk assessment. Enterprise governance workflows are planned.",
   "url": "https://extensionshield.com/extension-governance"
 };
 
@@ -20,7 +20,7 @@ const ExtensionGovernancePage = () => {
     <>
       <SEOHead
         title="Extension Governance Platform | Browser Extension Compliance"
-        description="Extension governance platform for browser extension compliance, allow/block decisions, governance evidence, policy support, and pre-install risk assessment."
+        description="Browser extension scanner with a governance scoring layer for pre-install risk assessment, with evidence attached to each finding. Enterprise governance workflows are planned."
         pathname="/extension-governance"
         ogType="website"
         keywords="extension governance platform, browser extension compliance, extension governance, browser extension governance, extension policy"
@@ -37,28 +37,32 @@ const ExtensionGovernancePage = () => {
           <header className="compare-header">
             <h1>Extension Governance Platform</h1>
             <p>
-              ExtensionShield helps teams govern browser extensions before they reach production browsers: assess risk, document evidence, and support allow/block policy decisions.
+              ExtensionShield helps teams assess browser extensions before they reach production browsers: each scan produces a scored report across Security, Privacy, and Governance, with evidence attached to every finding to support a security review. Enterprise governance workflows are planned.
             </p>
           </header>
 
           <div className="compare-prose">
             <h2>From scanner output to governance decisions</h2>
             <p>
-              Security teams do not need another raw finding list. They need a repeatable decision process: request, assess, approve, block, and re-review when extensions change. ExtensionShield turns extension analysis into that evidence layer.
+              Security teams do not need another raw finding list. They need findings they can act on: each ExtensionShield scan produces a scored report across Security, Privacy, and Governance, and each finding includes evidence you can use to support a security review.
             </p>
 
-            <h2>Governance workflows ExtensionShield supports</h2>
+            <h2>How ExtensionShield helps today</h2>
             <ul>
               <li><strong>Pre-install review:</strong> scan Chrome Web Store extensions before users install them.</li>
-              <li><strong>Allow/block decisions:</strong> map Security, Privacy, and Governance findings to an organizational policy.</li>
+              <li><strong>Scored report:</strong> see Security, Privacy, and Governance findings to inform your own organizational policy.</li>
               <li><strong>Private build audit:</strong> review CRX/ZIP builds before release or internal rollout.</li>
-              <li><strong>Re-review after updates:</strong> re-scan after version or permission changes and compare findings against the prior report.</li>
-              <li><strong>Audit evidence:</strong> preserve the score drivers and findings behind every decision.</li>
+              <li><strong>Re-review by re-scanning:</strong> re-scan an extension and review its current findings.</li>
+              <li><strong>Evidence per finding:</strong> each finding includes evidence you can use to support a security review.</li>
             </ul>
+
+            <p>
+              Policy workflows, allow/block enforcement, fleet inventory, continuous monitoring, and audit-export are planned. See the <Link to="/enterprise">Enterprise page</Link> for what is on the roadmap.
+            </p>
 
             <h2>Browser extension compliance</h2>
             <p>
-              Browser extension compliance is not just whether an extension exists in inventory. It is whether the extension's access, disclosures, data flows, and update behavior match your acceptable risk policy. ExtensionShield provides the evidence needed for that review.
+              Browser extension compliance is not just whether an extension exists in inventory. It is whether the extension's access, disclosures, and claimed-vs-actual behavior match your acceptable risk policy. ExtensionShield scores Terms-of-Service alignment, disclosure and privacy-policy consistency, and claimed-vs-actual behavior, and each finding includes evidence you can use to support a security review.
             </p>
           </div>
 

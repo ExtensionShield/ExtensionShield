@@ -19,6 +19,7 @@ const SEOHead = ({
   title,
   description,
   pathname,
+  canonicalPath, // Optional: point canonical at a DIFFERENT path (consolidate near-duplicates)
   ogType = 'website',
   ogImage,
   twitterImage,
@@ -29,7 +30,9 @@ const SEOHead = ({
 }) => {
   const location = useLocation();
   const actualPathname = pathname || location.pathname;
-  const canonicalUrl = getCanonicalUrl(actualPathname);
+  // Canonical may intentionally differ from the current path to consolidate
+  // ranking signals onto a single owner page for a shared search intent.
+  const canonicalUrl = getCanonicalUrl(canonicalPath || actualPathname);
   const fullTitle = getPageTitle(title);
   
   const ogTags = getOGTags({

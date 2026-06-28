@@ -9,7 +9,7 @@ const CompareIndexPage = () => {
   return (
     <>
       <SEOHead
-        title="Best Browser Extension Security Tools | Scanner & Governance Comparison"
+        title="Compare Browser Extension Security Tools | Scanner & Governance Comparison"
         description="Compare browser extension security tools. ExtensionShield vs Spin.ai, CRXcavator, CRXplorer, and Extension Auditor for risk scoring, governance, and audits."
         pathname="/compare"
         ogType="website"
@@ -24,7 +24,7 @@ const CompareIndexPage = () => {
           </div>
 
           <header className="compare-header">
-            <h1>Best Browser Extension Security Tools</h1>
+            <h1>Compare Browser Extension Security Tools</h1>
             <p>
               Compare chrome extension security scanners, extension risk score tools, and governance platforms. See how ExtensionShield stacks up against Spin.ai, CRXcavator, CRXplorer, and Extension Auditor.
             </p>
@@ -32,7 +32,7 @@ const CompareIndexPage = () => {
 
           <div className="compare-prose">
             <p>
-              Choosing the right <strong>chrome extension security scanner</strong> or <strong>browser extension security scanner</strong> matters for security, privacy, and compliance. ExtensionShield provides a <strong>chrome extension risk score</strong> built on three layers (Security, Privacy, Governance), plus a <strong>chrome extension permissions checker</strong>, malware scanning, and <strong>audit chrome extension security</strong> reports — so you can <strong>check if a chrome extension is safe</strong> before installing.
+              Choosing a <strong>chrome extension security scanner</strong> or <strong>browser extension security scanner</strong> matters for security, privacy, and compliance. ExtensionShield provides a <strong>chrome extension risk score</strong> built on three layers (Security, Privacy, Governance), plus a <strong>chrome extension permissions checker</strong>, malware scanning, and <strong>audit chrome extension security</strong> reports — so you can <strong>check if a chrome extension is safe</strong> before installing.
             </p>
 
             <p>

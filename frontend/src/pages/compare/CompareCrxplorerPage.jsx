@@ -31,7 +31,7 @@ const CompareCrxplorerPage = () => {
 
           <div className="compare-prose">
             <p>
-              <strong>CRXplorer</strong> offers a single risk score, full source code viewer, and fast results. Its AI reads the code to produce a score, but the methodology and weights are not fully transparent. It does not document SAST, VirusTotal, or a dedicated governance/compliance layer.
+              Based on its public docs as of June 2026, <strong>CRXplorer</strong> offers a single risk score, a full source code viewer, and fast results, using AI to read the code and produce a score. ExtensionShield takes a different approach: it publishes its scoring weights and methodology (scoring/weights.py) and adds Semgrep SAST, VirusTotal hash lookups, and a governance layer.
             </p>
             <p>
               <strong>ExtensionShield</strong> provides a <strong>chrome extension risk score</strong> (0–100) with three documented, near-equally weighted layers: Security (34%), Privacy (33%), and Governance (33%), plus hard gates that override the score to BLOCK severe findings. We use Semgrep SAST, VirusTotal, obfuscation detection, and ChromeStats — plus a dedicated governance layer for ToS alignment and disclosure — so you can <strong>check if a chrome extension is safe</strong> with evidence you can cite. Ideal for <strong>browser extension security audit</strong> and <strong>extension risk assessment</strong>.
@@ -50,7 +50,7 @@ const CompareCrxplorerPage = () => {
           <div className="compare-links">
             <h3>More comparisons</h3>
             <ul>
-              <li><Link to="/compare">Best chrome extension security scanner</Link></li>
+              <li><Link to="/compare">Compare chrome extension security scanners</Link></li>
               <li><Link to="/compare/crxcavator">ExtensionShield vs CRXcavator</Link></li>
               <li><Link to="/compare/extension-auditor">ExtensionShield vs ExtensionAuditor</Link></li>
             </ul>

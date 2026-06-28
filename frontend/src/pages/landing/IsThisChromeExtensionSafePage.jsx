@@ -37,7 +37,7 @@ const faqItems = [
   },
   {
     question: "Does ExtensionShield work for enterprises?",
-    answer: "Yes. Teams use us for extension governance, evidence-backed allow/block decisions, and audit-ready reports. See our Enterprise page for pre-install risk review and governance evidence."
+    answer: "Teams use ExtensionShield for pre-install risk review: each scan produces a scored report across Security, Privacy, and Governance, with evidence attached to every finding to support a security review. Broader enterprise governance workflows are planned — see our Enterprise page."
   }
 ];
 
@@ -126,7 +126,7 @@ const IsThisChromeExtensionSafePage = () => {
             </div>
 
             <p>
-              Paste a Chrome Web Store URL on our scanner page. You’ll get a risk score, permission breakdown, and a list of domains the extension can contact—usually in under 60 seconds.
+              Paste a Chrome Web Store URL on our scanner page. You’ll get a risk score, permission breakdown, and a list of domains the extension can contact—typically in well under a minute.
             </p>
 
             <h2 id="what-we-check">What ExtensionShield checks</h2>

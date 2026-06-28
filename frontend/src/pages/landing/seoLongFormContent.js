@@ -263,7 +263,7 @@ export const extensionRiskScoreContent = {
         "Privacy risk often comes from combinations. All-site access plus external network calls creates a different risk profile than all-site access alone. Cookie access plus broad host permissions can expose sensitive session context. Clipboard access may be minor for one tool and serious for another.",
         "ExtensionShield treats privacy as a separate layer because organizations increasingly need to document data exposure even when there is no malware. Individuals also need a clear explanation of what an extension can see before they install it."
       ],
-      cta: { label: "Review Chrome extension permissions", to: "/extension-permissions" }
+      cta: { label: "Review Chrome extension permissions", to: "/chrome-extension-permissions" }
     },
     {
       heading: "Governance drivers behind an extension risk score",
@@ -595,7 +595,7 @@ export const extensionGovernanceContent = {
         "Critical findings should block installation or release. Examples include malware indicators, suspicious exfiltration behavior, unjustified cookie access, obfuscated code paired with broad host access, or privacy disclosures that do not match observed behavior.",
         "The policy should also define what happens after approval. If an extension adds sensitive permissions, changes publisher, contacts new domains, or receives new threat indicators, the prior decision should be re-opened."
       ],
-      cta: { label: "Review extension permissions", to: "/extension-permissions" }
+      cta: { label: "Review extension permissions", to: "/chrome-extension-permissions" }
     },
     {
       heading: "Evidence required for browser extension compliance",

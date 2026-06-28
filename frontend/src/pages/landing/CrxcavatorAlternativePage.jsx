@@ -34,7 +34,7 @@ const CrxcavatorAlternativePage = () => {
 
           <div className="compare-prose">
             <p>
-              CRXcavator provides permission-based scoring, RetireJS, and CSP checks for Chrome, Firefox, and Edge extensions. Teams often look for alternatives due to availability, limited transparency in how scores are calculated, or the need for a dedicated <strong>governance and compliance</strong> layer.
+              Based on its public docs as of June 2026, CRXcavator provides permission-based scoring, RetireJS, and CSP checks for Chrome, Firefox, and Edge extensions. Teams evaluating alternatives often want published scoring weights plus SAST and a dedicated <strong>governance and compliance</strong> layer. ExtensionShield publishes its scoring weights and methodology (scoring/weights.py) and adds Semgrep SAST, VirusTotal hash lookups, and a governance layer.
             </p>
             <p>
               <strong>ExtensionShield</strong> gives you a single <strong>chrome extension risk score</strong> (0–100) with three near-equally weighted dimensions: Security (34%), Privacy (33%), and Governance (33%), with hard gates that override the score to BLOCK severe findings. We add SAST (Semgrep), VirusTotal integration, obfuscation detection, and explicit governance signals so you can audit extensions and support compliance. Our methodology is documented; reports are evidence-based and suitable for audits.
@@ -54,7 +54,7 @@ const CrxcavatorAlternativePage = () => {
           <div className="compare-links">
             <h3>More comparisons</h3>
             <ul>
-              <li><Link to="/compare">Best chrome extension security scanner</Link></li>
+              <li><Link to="/compare">Compare chrome extension security scanners</Link></li>
               <li><Link to="/compare/crxcavator">ExtensionShield vs CRXcavator (detailed)</Link></li>
               <li><Link to="/compare/crxplorer">ExtensionShield vs CRXplorer</Link></li>
               <li><Link to="/compare/extension-auditor">ExtensionShield vs ExtensionAuditor</Link></li>

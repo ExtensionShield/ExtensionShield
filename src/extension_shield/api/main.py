@@ -4099,6 +4099,45 @@ if data_dir:
     app.mount("/data", StaticFiles(directory=data_dir), name="data")
 
 
+# --- Known-route manifest: lets the SPA catch-all return a REAL 404 for unknown
+# URLs (e.g. /Principal) instead of a soft-404 (200 + homepage shell). Generated
+# at build time by frontend/scripts/generate-sitemap.js -> routes-manifest.json.
+def _load_routes_manifest():
+    """Return (static_set, [compiled_dynamic_regexes]).
+
+    Falls back to (None, None) when the manifest is missing/unreadable, in which
+    case serve_spa preserves its previous always-200 behaviour (fail-safe).
+    """
+    import re as _re
+
+    try:
+        manifest_file = STATIC_DIR / "routes-manifest.json"
+        if not manifest_file.is_file():
+            return None, None
+        data = json.loads(manifest_file.read_text(encoding="utf-8"))
+        static_set = set(data.get("static", []))
+        dynamic = [_re.compile(p) for p in data.get("dynamic", [])]
+        return static_set, dynamic
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Could not load routes-manifest.json: %s", exc)
+        return None, None
+
+
+_KNOWN_STATIC, _KNOWN_DYNAMIC = _load_routes_manifest()
+
+
+def _is_known_route(full_path: str) -> bool:
+    """True if the path is a real SPA route (serve 200) vs unknown (serve 404)."""
+    if _KNOWN_STATIC is None:
+        return True  # manifest unavailable -> never 404 (previous behaviour)
+    if full_path in ("", "/"):
+        return True
+    normalized = "/" + full_path.strip("/")
+    if normalized in _KNOWN_STATIC:
+        return True
+    return any(rx.match(normalized) for rx in _KNOWN_DYNAMIC)
+
+
 # Catch-all route for SPA - must be defined last
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
@@ -4133,10 +4172,25 @@ async def serve_spa(full_path: str):
             if static_file.suffix.lower() in static_extensions or full_path in ("manifest.json", "robots.txt", "sitemap.xml"):
                 return FileResponse(static_file)
 
-    # Serve index.html for all other routes (SPA routing)
+    # Serve a prerendered nested snapshot if one exists (dist/<route>/index.html).
+    # These carry per-page title/canonical/OG/JSON-LD baked into the raw HTML.
+    if STATIC_DIR.exists() and full_path not in ("", "/"):
+        nested_index = STATIC_DIR / full_path / "index.html"
+        try:
+            within = os.path.realpath(nested_index).startswith(os.path.realpath(STATIC_DIR))
+        except Exception:
+            within = False
+        if within and nested_index.is_file():
+            return FileResponse(nested_index)
+
+    # Serve index.html for all other routes (SPA routing).
     index_file = STATIC_DIR / "index.html"
     if STATIC_DIR.exists() and index_file.exists():
-        return FileResponse(index_file)
+        if _is_known_route(full_path):
+            return FileResponse(index_file)
+        # Unknown URL -> real HTTP 404 (the SPA still renders its NotFoundPage),
+        # plus an explicit noindex header so crawlers drop it. Kills the soft-404.
+        return FileResponse(index_file, status_code=404, headers={"X-Robots-Tag": "noindex"})
 
     # If no static files, return helpful HTML (development mode)
     return HTMLResponse(_no_frontend_html())
