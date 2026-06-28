@@ -31,10 +31,10 @@ const CompareExtensionAuditorPage = () => {
 
           <div className="compare-prose">
             <p>
-              <strong>ExtensionAuditor</strong> offers real-time permission analysis, color-coded risk, review sentiment, and CSV export. It runs as a browser extension (Chrome, Edge, Opera, Brave) and processes data on-device. Scoring methodology is not fully transparent, and it does not document SAST or VirusTotal integration.
+              Based on its public docs as of June 2026, <strong>ExtensionAuditor</strong> offers real-time permission analysis, color-coded risk, review sentiment, and CSV export. It runs as a browser extension (Chrome, Edge, Opera, Brave) and processes data on-device. ExtensionShield takes a different approach: it publishes its scoring weights and methodology (scoring/weights.py) and adds Semgrep SAST, VirusTotal hash lookups, and a governance layer.
             </p>
             <p>
-              <strong>ExtensionShield</strong> delivers a <strong>chrome extension risk score</strong> (0–100) with three documented, near-equally weighted layers: Security (34%), Privacy (33%), and Governance (33%) — plus hard gates that override the score to BLOCK severe findings. We combine a <strong>chrome extension permissions checker</strong> with SAST (Semgrep), VirusTotal, obfuscation detection, and a dedicated governance layer — so you can <strong>audit chrome extension security</strong> and support <strong>extension governance and compliance</strong>. Reports are evidence-based and audit-ready.
+              <strong>ExtensionShield</strong> delivers a <strong>chrome extension risk score</strong> (0–100) with three documented, near-equally weighted layers: Security (34%), Privacy (33%), and Governance (33%) — plus hard gates that override the score to BLOCK severe findings. We combine a <strong>chrome extension permissions checker</strong> with SAST (Semgrep), VirusTotal, obfuscation detection, and a dedicated governance layer — so you can <strong>audit chrome extension security</strong> and inform <strong>extension governance</strong> decisions. Each finding includes evidence you can use to support a security review.
             </p>
             <ul>
               <li>Transparent three-layer scoring and methodology</li>
@@ -50,7 +50,7 @@ const CompareExtensionAuditorPage = () => {
           <div className="compare-links">
             <h3>More comparisons</h3>
             <ul>
-              <li><Link to="/compare">Best chrome extension security scanner</Link></li>
+              <li><Link to="/compare">Compare chrome extension security scanners</Link></li>
               <li><Link to="/compare/crxcavator">ExtensionShield vs CRXcavator</Link></li>
               <li><Link to="/compare/crxplorer">ExtensionShield vs CRXplorer</Link></li>
             </ul>

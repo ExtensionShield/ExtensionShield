@@ -45,6 +45,38 @@ const HONEY_SCAN = {
   reviewCount: 2,
 };
 
+/* ── FAQ: one array drives both the visible section and the FAQPage JSON-LD ─── */
+const FAQ_ITEMS = [
+  {
+    question: "Can I scan a private CRX/ZIP?",
+    answer: "Yes. Pro users can upload a private CRX or ZIP build for a pre-release security audit. Sign in and go to Upload CRX/ZIP from the Scan menu.",
+  },
+  {
+    question: "What does the scan check?",
+    answer: "The scan analyzes security (SAST, obfuscation, VirusTotal signals), privacy (permissions, host access, network endpoints), and governance (terms-of-service alignment, disclosure and privacy-policy consistency, and claimed-vs-actual behavior). You get evidence-linked findings to support your review.",
+  },
+  {
+    question: "Are my uploads private?",
+    answer: "Yes. Reports are private by default — scoped to your account and excluded from the public feed. You choose whether to share a report.",
+  },
+  {
+    question: "Does this help with Chrome Web Store policy risks?",
+    answer: "Yes. The governance layer surfaces terms-of-service alignment, disclosure and privacy-policy consistency, and claimed-vs-actual behavior — so you can review store policy risks before submission.",
+  },
+  {
+    question: "Is ExtensionShield just a Chrome extension scanner?",
+    answer: "The free scanner is the entry point. ExtensionShield is an open-source scanner with Security, Privacy, and Governance scoring, private CRX/ZIP audits, and evidence-backed decision support.",
+  },
+  {
+    question: "Is the extension scanner free?",
+    answer: "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Private CRX/ZIP build audits are a Pro feature.",
+  },
+  {
+    question: "Do I need to install anything to scan an extension?",
+    answer: "No. Paste the Chrome Web Store URL into the scanner and you typically get a risk report in well under a minute. An optional browser extension is available for one-click checks.",
+  },
+];
+
 /* ── The three risk layers ──────────────────────────────────────────────────── */
 const RISK_LAYERS = [
   {
@@ -59,13 +91,13 @@ const RISK_LAYERS = [
     Icon: Eye,
     direction: "Higher score = less exposure",
     body: "Permission and data-exposure signals: host access, cookies, clipboard access, and trackers.",
-    link: { label: "Chrome extension permissions", to: "/extension-permissions" },
+    link: { label: "Chrome extension permissions", to: "/chrome-extension-permissions" },
   },
   {
     title: "Governance",
     Icon: Scale,
     direction: "Higher score = more transparent publisher",
-    body: "Publisher and release-history signals: identity, ownership changes, and version history.",
+    body: "Publisher transparency signals: terms-of-service alignment, disclosure and privacy-policy consistency, and claimed-vs-actual behavior.",
     link: { label: "Extension governance", to: "/extension-governance" },
   },
 ];
@@ -93,7 +125,7 @@ const ScanPreviewCard = () => (
     <div className="spc-header">
       <div className="spc-header-left">
         <Lock size={11} strokeWidth={2.5} className="spc-lock-icon" />
-        <span className="spc-header-label">Real scan</span>
+        <span className="spc-header-label">Example scan</span>
       </div>
       <span className="spc-risk-pill medium">{HONEY_SCAN.risk}</span>
     </div>
@@ -136,14 +168,20 @@ const ScanPreviewCard = () => (
       <span className="spc-footer-warn">{HONEY_SCAN.reviewCount} findings need review</span>
       <span className="spc-view">View report →</span>
     </div>
+
+    <p className="spc-illustrative" style={{ margin: "8px 0 0", fontSize: "11px", opacity: 0.7 }}>
+      Illustrative example — not a live scan
+    </p>
   </Link>
 );
 
 /* ── Section 2: update-gap artifact ──────────────────────────────────────────
-   Interactive comparison: v12.0.1 (reviewed) vs v12.4.0 (needs review).
-   Same declared permissions in both versions — change signals are separate
-   evidence rows (new outbound destination, publisher change, privacy
-   disclosure change). Animation triggers on first scroll into view, replays
+   Illustrative comparison of two scans a user ran themselves: v12.0.1 (an
+   earlier scan) vs v12.4.0 (the current version). Same declared permissions in
+   both, but re-scanning surfaces things worth comparing by hand — outbound
+   endpoints in code, publisher details, and the privacy disclosure. This is
+   user guidance (re-scan and compare), not an automated change-detection or
+   monitoring feature. Animation triggers on first scroll into view, replays
    on hover and keyboard focus. Honors prefers-reduced-motion.
    ─────────────────────────────────────────────────────────────────────────── */
 const useReducedMotion = () => {
@@ -185,11 +223,11 @@ const UpdateGapContent = () => (
       </div>
     </div>
 
-    {/* Version 1 — reviewed, low risk */}
+    {/* Version 1 — an earlier scan the user ran */}
     <div className="hp-ugap-v1">
       <div className="hp-ugap-row-label hp-ugap-row-label--reviewed">
         <span className="hp-ugap-dot hp-ugap-dot--green" />
-        <span>v12.0.1 · Reviewed · low risk</span>
+        <span>v12.0.1 · Earlier scan · low risk</span>
       </div>
       <div className="hp-ugap-chips">
         <span className="hp-ugap-chip hp-ugap-chip--ok">activeTab</span>
@@ -209,11 +247,11 @@ const UpdateGapContent = () => (
       <div className="hp-ugap-divider-rule hp-ugap-divider-rule--right" />
     </div>
 
-    {/* Version 2 — same permissions, but change signals revealed */}
+    {/* Version 2 — the current version; re-scan and compare by hand */}
     <div className="hp-ugap-v2">
       <div className="hp-ugap-row-label hp-ugap-row-label--needsreview">
         <span className="hp-ugap-dot hp-ugap-dot--amber" />
-        <span>v12.4.0 · Running now</span>
+        <span>v12.4.0 · Re-scan now</span>
       </div>
       <div className="hp-ugap-unchanged">
         <CheckCircle size={11} strokeWidth={2.5} aria-hidden />
@@ -225,33 +263,33 @@ const UpdateGapContent = () => (
         <span className="hp-ugap-chip hp-ugap-chip--ok">cookies</span>
       </div>
       <div className="hp-ugap-signals">
-        <span className="hp-ugap-signals-label">Change signals</span>
+        <span className="hp-ugap-signals-label">Compare these yourself</span>
         <div className="hp-ugap-signal hp-ugap-signal--n1">
           <span className="hp-ugap-signal-glyph" aria-hidden>↗</span>
-          <span className="hp-ugap-signal-key">New endpoint in code</span>
-          <span className="hp-ugap-signal-val">api.tracker.io</span>
+          <span className="hp-ugap-signal-key">Network endpoints in code</span>
+          <span className="hp-ugap-signal-val">any new destinations?</span>
         </div>
         <div className="hp-ugap-signal hp-ugap-signal--n2">
-          <span className="hp-ugap-signal-glyph" aria-hidden>⇄</span>
-          <span className="hp-ugap-signal-key">Publisher changed</span>
-          <span className="hp-ugap-signal-val">original.dev → acquirer.corp</span>
-        </div>
-        <div className="hp-ugap-signal hp-ugap-signal--n3">
           <span className="hp-ugap-signal-glyph" aria-hidden>§</span>
           <span className="hp-ugap-signal-key">Privacy disclosure</span>
-          <span className="hp-ugap-signal-val">changed</span>
+          <span className="hp-ugap-signal-val">still consistent?</span>
+        </div>
+        <div className="hp-ugap-signal hp-ugap-signal--n3">
+          <span className="hp-ugap-signal-glyph" aria-hidden>⌁</span>
+          <span className="hp-ugap-signal-key">Code patterns</span>
+          <span className="hp-ugap-signal-val">obfuscation or risky APIs?</span>
         </div>
         <div className="hp-ugap-signal hp-ugap-signal--n4">
           <span className="hp-ugap-signal-glyph" aria-hidden>!</span>
-          <span className="hp-ugap-signal-key">Status</span>
-          <span className="hp-ugap-signal-val">Needs review</span>
+          <span className="hp-ugap-signal-key">Composite score</span>
+          <span className="hp-ugap-signal-val">moved up or down?</span>
         </div>
       </div>
     </div>
 
     <div className="hp-ugap-footer">
       <AlertTriangle size={11} strokeWidth={2.5} aria-hidden />
-      <span>Re-review recommended after meaningful changes</span>
+      <span>Re-scan periodically and compare the findings yourself</span>
     </div>
   </>
 );
@@ -291,7 +329,7 @@ const UpdateGapArtifact = () => {
       className={`hp-ugap ${reducedMotion ? "is-reduced" : "is-animated"}`}
       tabIndex={0}
       role="figure"
-      aria-label="Comparison of extension version 12.0.1 and 12.4.0. Same declared permissions in both versions. Version 12.4.0 has four change signals: a new endpoint reference in extension code (api.tracker.io), the publisher changed from original.dev to acquirer.corp, the privacy disclosure changed, and the status is now Needs review. Re-review is recommended."
+      aria-label="Illustrative comparison of two scans you run yourself: extension version 12.0.1 and 12.4.0. Declared permissions are unchanged between versions. When you re-scan, compare these by hand: network endpoints referenced in the code, whether the privacy disclosure is still consistent, code patterns such as obfuscation or risky APIs, and whether the composite score moved. Re-scan periodically and compare the findings yourself."
       onMouseEnter={replay}
       onFocus={replay}
     >
@@ -497,43 +535,11 @@ const HomePage = () => {
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Can I scan a private CRX/ZIP?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pro users can upload a private CRX or ZIP build for a pre-release security audit. Sign in and go to Upload CRX/ZIP from the Scan menu." },
-      },
-      {
-        "@type": "Question",
-        "name": "What does the scan check?",
-        "acceptedAnswer": { "@type": "Answer", "text": "The scan checks security (SAST, obfuscation, VirusTotal signals), privacy (permissions, host access, network endpoints), and governance (publisher identity, ownership history, disclosure accuracy). You get evidence-linked findings and fix suggestions." },
-      },
-      {
-        "@type": "Question",
-        "name": "Do you store uploads?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Uploads are processed to generate the report. We do not retain your private build for longer than needed to complete the scan. Reports are private by default; you choose whether to share." },
-      },
-      {
-        "@type": "Question",
-        "name": "Does this help with Chrome Web Store policy risks?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. The governance layer covers policy alignment, disclosure accuracy, and consistency—so you can address store policy risks before submission." },
-      },
-      {
-        "@type": "Question",
-        "name": "Is ExtensionShield just a Chrome extension scanner?",
-        "acceptedAnswer": { "@type": "Answer", "text": "The free scanner is the entry point. ExtensionShield is an open-source scanner with Security, Privacy, and Governance scoring, private CRX/ZIP audits, and evidence-backed decision support." },
-      },
-      {
-        "@type": "Question",
-        "name": "Is the extension scanner free?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Private CRX/ZIP build audits are a Pro feature." },
-      },
-      {
-        "@type": "Question",
-        "name": "Do I need to install anything to scan an extension?",
-        "acceptedAnswer": { "@type": "Answer", "text": "No. Paste the Chrome Web Store URL into the scanner and you get a risk report in under a minute. An optional browser extension is available for one-click checks." },
-      },
-    ],
+    "mainEntity": FAQ_ITEMS.map(({ question, answer }) => ({
+      "@type": "Question",
+      "name": question,
+      "acceptedAnswer": { "@type": "Answer", "text": answer },
+    })),
   };
 
   return (
@@ -735,7 +741,7 @@ const HomePage = () => {
                     <svg className="hero-scan-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
-                    Pre-install risk assessment: permissions, host access, network endpoints, and publisher history.
+                    Pre-install risk assessment: permissions, host access, network endpoints, and publisher transparency.
                   </p>
                 </div>
 
@@ -835,7 +841,7 @@ const HomePage = () => {
                 <div className="hp-flow-step">
                   <div className="hp-flow-step-head">
                     <span className="hp-flow-num" aria-hidden="true">02</span>
-                    <h3>We scan in ~10 seconds</h3>
+                    <h3>We scan, typically in well under a minute</h3>
                   </div>
                   <div className="hp-flow-ui hp-flow-ui--scan" aria-hidden="true">
                     <div className="hp-flow-layer-rows">
@@ -858,9 +864,9 @@ const HomePage = () => {
                         <span className="good">100</span>
                       </div>
                     </div>
-                    <div className="hp-flow-elapsed">~10 seconds</div>
+                    <div className="hp-flow-elapsed">Under a minute</div>
                   </div>
-                  <p>Three independent risk layers: permissions, code patterns, and publisher history.</p>
+                  <p>Three independent risk layers: permissions, code patterns, and publisher transparency.</p>
                 </div>
 
                 <div className="hp-flow-conn" aria-hidden="true"><span /><span /></div>
@@ -954,12 +960,13 @@ const HomePage = () => {
                 <p className="hp-eyebrow">The update gap</p>
                 <h2 id="hp-problem-title">The extension you trusted can change after install.</h2>
                 <p>
-                  Permissions are only one signal. A later version can change code behavior,
-                  network destinations, or publisher ownership — even when declared permissions
-                  stay the same.
+                  Permissions are only one signal. Extensions auto-update, and a later version can
+                  change code behavior or network destinations — even when declared permissions stay
+                  the same.
                 </p>
                 <p>
-                  ExtensionShield surfaces those change signals for re-review.
+                  A single scan reflects the version available right now. Re-scan periodically and
+                  compare the findings yourself so you can spot what changed between versions.
                 </p>
                 <p className="hp-problem-aside">
                   <Link to="/research/case-studies/honey" className="hp-problem-aside-link">
@@ -997,8 +1004,8 @@ const HomePage = () => {
                 </div>
               </div>
 
-              {/* Repo proof artifact */}
-              <div className="hp-repo" aria-hidden="true">
+              {/* Repo proof artifact — links resolve to the real source files */}
+              <div className="hp-repo">
                 <div className="hp-repo-header">
                   <svg viewBox="0 0 24 24" fill="currentColor" className="hp-repo-gh-icon" aria-hidden="true">
                     <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
@@ -1007,21 +1014,28 @@ const HomePage = () => {
                 </div>
                 <div className="hp-repo-tree">
                   <div className="hp-repo-dir">
-                    <Code2 size={12} strokeWidth={2} />
-                    <span>risk_layers<span className="hp-repo-slash">/</span></span>
+                    <Code2 size={12} strokeWidth={2} aria-hidden="true" />
+                    <span>src/extension_shield/scoring<span className="hp-repo-slash">/</span></span>
                   </div>
                   {[
-                    { name: "security.py",   desc: "SAST · obfuscation · VirusTotal" },
-                    { name: "privacy.py",    desc: "permissions · host access" },
-                    { name: "governance.py", desc: "publisher · version history" },
-                    { name: "scoring.py",    desc: "weight formula · public" },
+                    { name: "weights.py", label: "scoring/weights.py", desc: "transparent 34/33/33 weights", href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/weights.py` },
+                    { name: "gates.py",   label: "scoring/gates.py",   desc: "hard BLOCK gates",            href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/gates.py` },
+                    { name: "engine.py",  label: "scoring/engine.py",  desc: "combines the three layers",   href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/engine.py` },
+                    { name: "governance/", label: "governance/",       desc: "ToS, disclosure & consistency signals", href: `${GITHUB_URL}/tree/master/src/extension_shield/governance` },
                   ].map((f) => (
-                    <div className="hp-repo-file" key={f.name}>
+                    <a
+                      className="hp-repo-file"
+                      key={f.label}
+                      href={f.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${f.label} — ${f.desc} (opens on GitHub)`}
+                    >
                       <span className="hp-repo-tree-chr" aria-hidden="true">├─</span>
-                      <span className="hp-repo-ext">py</span>
-                      <span className="hp-repo-fname">{f.name}</span>
+                      <span className="hp-repo-ext">{f.label.endsWith("/") ? "dir" : "py"}</span>
+                      <span className="hp-repo-fname">{f.label}</span>
                       <span className="hp-repo-fdesc">{f.desc}</span>
-                    </div>
+                    </a>
                   ))}
                 </div>
                 <div className="hp-repo-footer">
@@ -1036,7 +1050,28 @@ const HomePage = () => {
             </div>
           </section>
 
-          {/* Section 6 — For security teams CTA band: temporarily hidden.
+          {/* ── Section 6 — FAQ (visible; mirrors the FAQPage JSON-LD) ─────── */}
+          <section className="hp-faq landing-separator" id="faq" aria-labelledby="hp-faq-title">
+            <div className="home-faq-inner" style={{ maxWidth: "760px", margin: "0 auto" }}>
+              <div className="hp-section-head">
+                <p className="hp-eyebrow">FAQ</p>
+                <h2 id="hp-faq-title" className="home-faq-title">Frequently asked questions</h2>
+              </div>
+              <dl style={{ margin: 0, padding: 0 }}>
+                {FAQ_ITEMS.map(({ question, answer }) => (
+                  <div
+                    key={question}
+                    style={{ padding: "0.85rem 0", borderBottom: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}
+                  >
+                    <dt style={{ fontWeight: 600, marginBottom: "0.4rem", color: "var(--theme-text-primary)" }}>{question}</dt>
+                    <dd style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--theme-text-secondary)" }}>{answer}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </section>
+
+          {/* Section 7 — For security teams CTA band: temporarily hidden.
              The /enterprise route is still served by a minimal placeholder page. */}
 
         </div>

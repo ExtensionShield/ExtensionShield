@@ -10,6 +10,7 @@ const ScanUploadPage = React.lazy(() => import("../pages/scanner/ScanUploadPage"
 const ScanProgressPage = React.lazy(() => import("../pages/scanner/ScanProgressPage"));
 const ScanResultsPageV2 = React.lazy(() => import("../pages/scanner/ScanResultsPageV2"));
 const ScanHistoryPage = React.lazy(() => import("../pages/ScanHistoryPage"));
+const NotFoundPage = React.lazy(() => import("../pages/NotFoundPage"));
 const EnterprisePage = React.lazy(() => import("../pages/EnterprisePage"));
 const SettingsPage = React.lazy(() => import("../pages/SettingsPage"));
 const PrivacyPolicyPage = React.lazy(() => import("../pages/PrivacyPolicyPage"));
@@ -95,8 +96,8 @@ export const routes = [
     path: "/scan",
     element: <ScannerPage />,
     seo: {
-      title: "Is This Chrome Extension Safe? Free Extension Risk Check | ExtensionShield",
-      description: "Free extension risk check by Chrome Web Store URL. Get risk score, permissions, privacy and governance signals. See if a Chrome extension is safe before you install.",
+      title: "Scan a Chrome Extension — Free Security & Risk Report | ExtensionShield",
+      description: "Scan any Chrome extension by Web Store URL. Get a 0–100 risk score across security, privacy, and governance, with evidence for every finding. Free, no signup.",
       canonical: "/scan"
     },
     priority: 0.9,
@@ -106,8 +107,8 @@ export const routes = [
     path: "/scan/upload",
     element: <ScanUploadPage />,
     seo: {
-      title: "Chrome Extension Security Audit (CRX/ZIP) — Pre-release Build Scan (Pro) | ExtensionShield",
-      description: "Private CRX/ZIP upload for pre-release Chrome extension security audit. Vulnerabilities, evidence per finding, fix guidance. SAST, permissions, policy checks. Private by default.",
+      title: "Scan a CRX File — Pre-release Chrome Extension Security Audit (Pro) | ExtensionShield",
+      description: "Scan a CRX or ZIP file for a pre-release Chrome extension security audit: SAST, permissions, network indicators, and policy checks — with evidence for every finding. Private by default.",
       canonical: "/scan/upload"
     },
     priority: 0.8,
@@ -119,7 +120,8 @@ export const routes = [
     seo: {
       title: "Chrome Extension Scan History | ExtensionShield",
       description: "View your Chrome extension scan history and past security reports. Track extension risk assessments and security audits.",
-      canonical: "/scan/history"
+      canonical: "/scan/history",
+      noindex: true // Per-user, auth-gated app page — keep out of the index and sitemap
     },
     priority: 0.7,
     changefreq: "weekly"
@@ -261,7 +263,7 @@ export const routes = [
     element: <ChromeExtensionSecurityScannerPage />,
     seo: {
       title: "Chrome Extension Security Scanner | Free Scan & Risk Score | ExtensionShield",
-      description: "Free Chrome extension scanner and security audit. Scan any extension for malware, risk score, permissions & threats in under 60 seconds. For developers: audit extensions before release.",
+      description: "Free Chrome extension scanner and security audit. Check any extension by Web Store URL for malware signals, a 0–100 risk score, and risky permissions — typically in well under a minute. For developers: audit extensions before release.",
       canonical: "/chrome-extension-security-scanner"
     },
     priority: 0.85,
@@ -295,7 +297,8 @@ export const routes = [
     seo: {
       title: "Browser Extension Permissions Explained | Dangerous Permissions",
       description: "Browser extension permissions explained: all-site access, cookies, history, clipboard, webRequest, scripting, and permission combinations.",
-      canonical: "/extension-permissions"
+      canonical: "/extension-permissions",
+      sitemap: false // canonicalized to /chrome-extension-permissions (near-duplicate intent)
     },
     priority: 0.85,
     changefreq: "monthly"
@@ -315,8 +318,8 @@ export const routes = [
     path: "/browser-extension-risk-assessment",
     element: <BrowserExtensionRiskAssessmentPage />,
     seo: {
-      title: "Browser Extension Risk Assessment | Enterprise Extension Security | ExtensionShield",
-      description: "Browser extension risk assessment for enterprises: govern extensions, review allowlist decisions, and get audit-ready reports. Evidence-backed compliance support for security teams.",
+      title: "Browser Extension Risk Assessment | Extension Security Review | ExtensionShield",
+      description: "Browser extension risk assessment: review permissions, host access, code signals, and publisher disclosures, with evidence attached to every finding to support security review.",
       canonical: "/browser-extension-risk-assessment"
     },
     priority: 0.8,
@@ -339,7 +342,7 @@ export const routes = [
     path: "/compare",
     element: <CompareIndexPage />,
     seo: {
-      title: "Best Browser Extension Security Tools | Scanner & Governance Comparison",
+      title: "Compare Browser Extension Security Tools | Scanner & Governance Comparison",
       description: "Compare browser extension security tools. ExtensionShield vs Spin.ai, CRXcavator, CRXplorer, and Extension Auditor for risk scoring, governance, and audits.",
       canonical: "/compare"
     },
@@ -852,10 +855,13 @@ export const routes = [
     element: <ThemeDebugPage />
   },
 
-  // ============ CATCH-ALL ============
+  // ============ CATCH-ALL (real 404 — do NOT redirect to "/") ============
+  // Rendering a noindex NotFoundPage (instead of <Navigate to="/">) avoids a
+  // soft-404: unknown URLs no longer masquerade as the homepage. The FastAPI
+  // catch-all also returns a real HTTP 404 status for unknown routes.
   {
     path: "*",
-    element: <Navigate to="/" replace />
+    element: <NotFoundPage />
   }
 ];
 

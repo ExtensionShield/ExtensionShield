@@ -14,7 +14,7 @@ const ChromeExtensionSecurityScannerPage = () => {
     <>
       <SEOHead
         title="Chrome Extension Security Scanner | Free Scan & Risk Score | ExtensionShield"
-        description="Free Chrome extension scanner and security audit. Scan any extension for malware, risk score, permissions & threats in under 60 seconds. For developers: audit extensions before release."
+        description="Free Chrome extension scanner and security audit. Check any extension by Web Store URL for malware signals, a 0–100 risk score, and risky permissions — typically in well under a minute. For developers: audit extensions before release."
         pathname="/chrome-extension-security-scanner"
         ogType="website"
         keywords="free extension scanner, Chrome extension security scanner, free extension audit, extension risk score, scan Chrome extension"

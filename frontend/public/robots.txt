@@ -5,6 +5,11 @@ User-agent: *
 Allow: /
 Disallow: /settings
 Disallow: /reports
+Disallow: /scan/results
+Disallow: /auth/
+Disallow: /debug
+# Note: /scan/history is intentionally NOT disallowed — it now sends
+# `noindex`, so Google must be allowed to crawl it to drop it from the index.
 
 # Sitemap
 Sitemap: https://extensionshield.com/sitemap.xml

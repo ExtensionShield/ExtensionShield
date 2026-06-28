@@ -7,35 +7,42 @@ import { Dialog, DialogContent, DialogTrigger } from "../../components/ui/dialog
 import { Info } from "lucide-react";
 import "./MethodologyPage.scss";
 
+const CANONICAL_DOMAIN = "https://extensionshield.com";
+
+// FAQ: same content drives both the visible list and the FAQPage JSON-LD
+const faqItems = [
+  {
+    question: "How is the extension risk score calculated?",
+    answer: "ExtensionShield combines three pipelines weighted near-equally in the smooth score: Security (34%), Privacy (33%), and Governance (33%). Security uses open-source SAST (Semgrep-based rules), Privacy analyzes data collection and tracking, and Governance covers policy alignment and disclosure consistency. Hard gates override the smooth score to BLOCK severe findings such as malware or credential capture."
+  },
+  {
+    question: "What is ThreatXtension?",
+    answer: "ThreatXtension is an open-source (MIT) Chrome extension security scanner. ExtensionShield's Security (SAST) pipeline is built on it — adapting its Semgrep ruleset and category-based risk aggregation as a baseline — while ExtensionShield's V2 scoring engine and governance pipeline are our own work."
+  },
+  {
+    question: "What does the aggregate risk score mean?",
+    answer: "The overall score (0–100) is a weighted combination of Security, Privacy, and Governance. Lower scores indicate higher risk. We show the breakdown so you can see which dimension drives the result."
+  }
+];
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": `${CANONICAL_DOMAIN}/` },
+    { "@type": "ListItem", "position": 2, "name": "Research", "item": `${CANONICAL_DOMAIN}/research` },
+    { "@type": "ListItem", "position": 3, "name": "Methodology", "item": `${CANONICAL_DOMAIN}/research/methodology` }
+  ]
+};
+
 const methodologyFaqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "How is the extension risk score calculated?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "ExtensionShield combines three pipelines weighted near-equally in the smooth score: Security (34%), Privacy (33%), and Governance (33%). Security uses open-source SAST (Semgrep-based rules), Privacy analyzes data collection and tracking, and Governance covers policy alignment and developer reputation. Hard gates override the smooth score to BLOCK severe findings such as malware or credential capture."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What is ThreatXtension?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "ThreatXtension is an open-source (MIT) Chrome extension security scanner. ExtensionShield's Security (SAST) pipeline is built on it — adapting its Semgrep ruleset and category-based risk aggregation as a baseline — while ExtensionShield's V2 scoring engine and governance pipeline are our own work."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What does the aggregate risk score mean?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "The overall score (0–100) is a weighted combination of Security, Privacy, and Governance. Lower scores indicate higher risk. We show the breakdown so you can see which dimension drives the result."
-      }
-    }
-  ]
+  "mainEntity": faqItems.map(({ question, answer }) => ({
+    "@type": "Question",
+    "name": question,
+    "acceptedAnswer": { "@type": "Answer", "text": answer }
+  }))
 };
 
 const MethodologyPage = () => {
@@ -47,7 +54,7 @@ const MethodologyPage = () => {
         title="Chrome Extension Risk Score & Security Analysis Methodology | ExtensionShield"
         description="How we calculate chrome extension risk score: static analysis, threat intelligence, and extension security analysis. Transparent methodology for auditing chrome extension security."
         pathname="/research/methodology"
-        schema={methodologyFaqSchema}
+        schema={[breadcrumbSchema, methodologyFaqSchema]}
       />
 
       <div className="methodology-page">
@@ -79,6 +86,7 @@ const MethodologyPage = () => {
                 size={280}
                 label="OVERALL"
               />
+              <span className="illustrative-label">Illustrative example</span>
             </div>
             <div className="aggregate-formula">
               <div className="formula-item">
@@ -168,7 +176,7 @@ const MethodologyPage = () => {
                     
                     <div className="pipeline-features">
                       <div className="feature-tag">Semgrep SAST</div>
-                      <div className="feature-tag">47+ Rules</div>
+                      <div className="feature-tag">37 Custom Rules</div>
                       <div className="feature-tag">Malware Detection</div>
                       <div className="feature-tag">Code Obfuscation</div>
                     </div>
@@ -240,22 +248,16 @@ const MethodologyPage = () => {
                     </svg>
                   </div>
                   <div className="pipeline-details">
-                    <div className="pipeline-badge auto-update">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      AUTO-UPDATED
-                    </div>
                     <h3>Governance</h3>
-                    <h4 className="tech-credit">Publisher &amp; version signals</h4>
+                    <h4 className="tech-credit">Policy &amp; disclosure signals</h4>
                     <p>
-                      Publisher identity, ownership history, and Chrome Web Store version history. The report surfaces the record behind the build — not just the current snapshot — so a reader can see when ownership or behavior has changed.
+                      Terms-of-service alignment, disclosure and privacy-policy consistency, and claimed-versus-actual behavior. The report surfaces evidence so a reader can see whether the extension does what it says it does.
                     </p>
 
                     <div className="pipeline-features">
-                      <div className="feature-tag">Publisher History</div>
-                      <div className="feature-tag">Ownership Changes</div>
-                      <div className="feature-tag">Version Tracking</div>
+                      <div className="feature-tag">ToS Alignment</div>
+                      <div className="feature-tag">Disclosure Consistency</div>
+                      <div className="feature-tag">Claimed vs Actual Behavior</div>
                       <div className="feature-tag">Permission Audit</div>
                     </div>
                   </div>
@@ -269,6 +271,19 @@ const MethodologyPage = () => {
             </div>
 
           </div>
+
+          {/* FAQ — same content drives the FAQPage JSON-LD above */}
+          <section id="faq" className="methodology-faq" aria-label="FAQ" style={{ marginTop: "2.5rem", paddingTop: "1.5rem", borderTop: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "1rem" }}>Frequently asked questions</h2>
+            <dl style={{ margin: 0, padding: 0 }}>
+              {faqItems.map(({ question, answer }) => (
+                <div key={question} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}>
+                  <dt style={{ fontWeight: 600, marginBottom: "0.35rem", color: "var(--theme-text-primary)" }}>{question}</dt>
+                  <dd style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--theme-text-secondary)" }}>{answer}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
           {/* Related reads */}
           <section className="methodology-related" aria-label="Related reads">
