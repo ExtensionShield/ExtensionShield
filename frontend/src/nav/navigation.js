@@ -149,8 +149,8 @@ export const footerConfig = {
   tagline: "Pre-install extension security you can trust.",
   nonAffiliation:
     "ExtensionShield is an independent tool and is not affiliated with Google, the Chrome Web Store, or any browser manufacturer.",
-  repoUrl: "https://github.com/Stanzin7/ExtensionShield",
-  repo: "Stanzin7/ExtensionShield",
+  repoUrl: "https://github.com/ExtensionShield/ExtensionShield",
+  repo: "ExtensionShield/ExtensionShield",
   discordUrl: "https://discord.gg/mgR4skWB",
   linkGroups: [
     {

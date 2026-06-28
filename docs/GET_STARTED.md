@@ -37,7 +37,7 @@ This guide walks you through setup, configuration, and daily commands. For a hig
 <summary><strong>1. Clone and install</strong></summary>
 
 ```bash
-git clone https://github.com/<your-org>/ExtensionShield.git
+git clone https://github.com/ExtensionShield/ExtensionShield.git
 cd ExtensionShield
 make install                    # Python (uv sync)
 cd frontend && npm install      # Frontend dependencies
@@ -197,6 +197,12 @@ Hooks include Black, Pylint, gitleaks, and basic file checks. Run `make secrets-
 
 ---
 
-## Additional Resources
+## Troubleshooting
 
-See [Common Issues & Improvements](COMMON_ISSUES.md) for known issues and usability suggestions.
+**Scan shows "Unknown" results?** An extension can come back as **Unknown** when there isn't enough information to analyze it confidently. Common causes:
+
+- **Limited or unavailable metadata** for the extension.
+- **Fetch limitations** while retrieving the extension or its Store listing.
+- **Unsupported extension structure** the scanner can't parse.
+
+Re-run the scan, and open the report's detailed findings to see which signals were available.

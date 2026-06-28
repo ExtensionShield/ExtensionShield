@@ -17,7 +17,7 @@ import {
 import { getScanResultsRoute } from "../utils/slug";
 import "./HomePage.scss";
 
-const GITHUB_REPO = "Stanzin7/ExtensionShield";
+const GITHUB_REPO = "ExtensionShield/ExtensionShield";
 const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
 
 /* ── Real frozen scan ────────────────────────────────────────────────────────

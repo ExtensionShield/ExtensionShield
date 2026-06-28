@@ -376,11 +376,11 @@ function AuthLoadingDots() {
 
 // Compact GitHub trust-signal badge (replaces theme toggle)
 function GitHubBadge() {
-  const { stars } = useGitHubStars("Stanzin7/ExtensionShield");
+  const { stars } = useGitHubStars("ExtensionShield/ExtensionShield");
   const label = formatStars(stars);
   return (
     <a
-      href="https://github.com/Stanzin7/ExtensionShield"
+      href="https://github.com/ExtensionShield/ExtensionShield"
       target="_blank"
       rel="noopener noreferrer"
       className="header-gh-badge"

@@ -49,8 +49,7 @@ Install the **ExtensionShield Chrome extension** to manage your extensions from 
 </td>
 <td width="44%" align="center" valign="middle">
 
-<!-- <img src="images/extensionshield-my-extensions.png" alt="ExtensionShield Chrome extension - My Extensions security audit view" width="100%" /> -->
-<img width="438" height="530" alt="Screenshot 2026-03-12 at 1 51 23 PM" src="https://github.com/user-attachments/assets/2ef32c2c-7930-4dfe-b787-45039d789043" />
+<img width="438" height="530" alt="ExtensionShield Chrome extension - My Extensions security audit view" src="https://github.com/user-attachments/assets/2ef32c2c-7930-4dfe-b787-45039d789043" />
 
 
 

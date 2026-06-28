@@ -153,7 +153,7 @@ ExtensionShield/
 <details>
 <summary><strong>Workflow</strong></summary>
 
-1. **Create a branch** from `main`:
+1. **Create a branch** from `master` (the default branch):
 
    ```bash
    git checkout -b feat/my-feature
@@ -247,7 +247,7 @@ chore: bump fastapi to 0.115.x
 
 ## Reporting Bugs
 
-Open a [GitHub Issue](https://github.com/Stanzin7/ExtensionShield/issues) with:
+Open a [GitHub Issue](https://github.com/ExtensionShield/ExtensionShield/issues) with:
 
 - Steps to reproduce
 - Expected vs. actual behavior
@@ -260,7 +260,7 @@ Open a [GitHub Issue](https://github.com/Stanzin7/ExtensionShield/issues) with:
 
 ## Requesting Features
 
-Open a [GitHub Issue](https://github.com/Stanzin7/ExtensionShield/issues) tagged `enhancement` with:
+Open a [GitHub Issue](https://github.com/ExtensionShield/ExtensionShield/issues) tagged `enhancement` with:
 
 - Problem or use case you're solving
 - Proposed solution (if any)

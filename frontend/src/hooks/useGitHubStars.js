@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
  * blocked) the hook resolves to the last cached value, or null — callers should
  * render a sensible fallback when `stars` is null.
  *
- * @param {string} repo - "owner/name", e.g. "Stanzin7/ExtensionShield"
+ * @param {string} repo - "owner/name", e.g. "ExtensionShield/ExtensionShield"
  * @returns {{ stars: number|null, loading: boolean }}
  */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours

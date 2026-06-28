@@ -1,7 +1,7 @@
 # Deploy Configuration (Cloud Only)
 
-These files are used for ExtensionShield Cloud production deployments
-and are **not included in the OSS release**.
+These files are cloud deployment helpers for ExtensionShield Cloud
+production deployments. OSS users can ignore them for local development.
 
 | File | Purpose |
 |------|---------|

@@ -247,3 +247,6 @@ supabase/.volumes/
 
 # Internal QA exports (do not commit; remove from tracking if already committed)
 docs/qa_extensionshield/
+
+# Internal audit notes (local only; never publish)
+docs/audits/

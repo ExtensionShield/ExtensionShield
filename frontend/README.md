@@ -15,7 +15,7 @@ Create a `.env` file in this directory for auth and API:
 - `VITE_SUPABASE_URL` – Supabase project URL (for sign-in)
 - `VITE_SUPABASE_ANON_KEY` – Supabase anon key
 
-See the [root README](../README.md#frontend-configuration) for full configuration steps.
+See the [Get Started guide](../docs/GET_STARTED.md) for full configuration steps.
 
 ## Scripts
 

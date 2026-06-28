@@ -20,7 +20,7 @@
 If you discover a security vulnerability in ExtensionShield, please report it responsibly via one of these channels:
 
 - **Email:** [security@extensionshield.com](mailto:security@extensionshield.com)
-- **GitHub Security Advisory:** Use the "Report a vulnerability" button on the [Security tab](../../security/advisories/new) of this repository.
+- **GitHub Security Advisory:** Use the "Report a vulnerability" button on the [Security tab](https://github.com/ExtensionShield/ExtensionShield/security/advisories/new) of this repository.
 </details>
 
 <details>
@@ -50,7 +50,7 @@ We will credit reporters in the release notes unless they prefer anonymity.
 
 | Version | Supported |
 |---------|-----------|
-| Latest `main` | Yes |
+| Latest `master` (default branch) | Yes |
 | Older releases | Best-effort only |
 
 ---
