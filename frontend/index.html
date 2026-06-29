@@ -50,9 +50,36 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
          - Backend: HTTP header takes precedence (via FastAPI middleware)
          - Fallback: Meta tag below for static hosting scenarios -->
     <!-- CSP meta tag will be injected here by Vite build plugin -->
-    <title>Free Chrome Extension Scanner & Security Audit | ExtensionShield</title>
-    <meta name="description" content="Free Chrome extension scanner and security audit for developers. Scan any extension by URL—risk score, permissions, malware check. Audit CRX/ZIP builds before release." />
-    
+    <title>Free Chrome Extension Scanner — Security, Privacy & Risk Score | ExtensionShield</title>
+    <meta name="description" content="Free, open-source Chrome extension scanner. Paste a Web Store URL to check permissions, host access, network endpoints, and a 0–100 risk score across security, privacy, and governance — with evidence for every finding." />
+
+    <!-- Site-wide structured data (Organization + WebSite). Present in the raw HTML
+         shell for every route, so crawlers that don't execute JS still see it.
+         JSON-LD is a data block (not subject to script-src CSP). -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://extensionshield.com/#organization",
+          "name": "ExtensionShield",
+          "url": "https://extensionshield.com",
+          "logo": "https://extensionshield.com/og.png",
+          "description": "Open-source Chrome and browser extension security scanner. Analyzes permissions, code signals, and publisher disclosures, and produces a transparent 0–100 risk score with evidence for every finding.",
+          "sameAs": ["https://github.com/ExtensionShield/ExtensionShield"]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://extensionshield.com/#website",
+          "name": "ExtensionShield",
+          "url": "https://extensionshield.com",
+          "publisher": { "@id": "https://extensionshield.com/#organization" }
+        }
+      ]
+    }
+    </script>
+
     <!-- Google Fonts - Distinctive Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

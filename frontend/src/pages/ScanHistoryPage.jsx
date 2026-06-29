@@ -347,6 +347,7 @@ const ScanHistoryPage = () => {
         description="View your Chrome extension scan history and past security reports. Track risk scores, findings, and monitor extension security over time."
         pathname="/scan/history"
         ogType="website"
+        noindex
       />
       <div className="history-page">
         <div className="history-content">

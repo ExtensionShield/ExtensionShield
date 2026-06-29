@@ -459,14 +459,14 @@ export const blogStrategyTopics = [
     longTailKeyword: "dangerous chrome extension permissions",
     intent: "Explain high-risk permissions and help users understand whether requested access is justified.",
     featuredSnippetAngle: "List dangerous permissions with one-sentence risk explanations.",
-    internalLinks: ["/extension-permissions", "/scan", "/extension-risk-score", "/blog"]
+    internalLinks: ["/chrome-extension-permissions", "/scan", "/extension-risk-score", "/blog"]
   },
   {
     title: "Can Chrome Extensions Steal Data?",
     longTailKeyword: "can chrome extensions steal data",
     intent: "Answer a security fear directly and show how permissions, page access, and network calls create exposure.",
     featuredSnippetAngle: "Lead with a direct yes/no answer, then list the main data paths.",
-    internalLinks: ["/extension-security", "/extension-permissions", "/scan", "/blog"]
+    internalLinks: ["/extension-security", "/chrome-extension-permissions", "/scan", "/blog"]
   },
   {
     title: "How Hackers Use Browser Extensions to Steal Data",
@@ -487,7 +487,7 @@ export const blogStrategyTopics = [
     longTailKeyword: "risky chrome extensions 2026",
     intent: "Rank for annual risk queries without publishing an unsupported blacklist.",
     featuredSnippetAngle: "List risky patterns such as all-site access, data collection, obfuscation, ownership changes, and suspicious updates.",
-    internalLinks: ["/scan", "/extension-permissions", "/extension-risk-score", "/blog"]
+    internalLinks: ["/scan", "/chrome-extension-permissions", "/extension-risk-score", "/blog"]
   },
   {
     title: "Spin.ai vs ExtensionShield",
@@ -515,7 +515,7 @@ export const blogStrategyTopics = [
     longTailKeyword: "audit CRX ZIP chrome extension before release",
     intent: "Convert developers who need pre-release extension security checks.",
     featuredSnippetAngle: "Checklist for manifest, permissions, content scripts, service worker, network access, and privacy disclosures.",
-    internalLinks: ["/scan/upload", "/extension-security", "/extension-permissions", "/blog"]
+    internalLinks: ["/scan/upload", "/extension-security", "/chrome-extension-permissions", "/blog"]
   }
 ];
 

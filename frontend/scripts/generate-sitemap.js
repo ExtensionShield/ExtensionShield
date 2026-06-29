@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 
 /**
- * Sitemap Generator
+ * Sitemap + route-manifest generator
  *
- * Generates sitemap.xml from the route configuration in src/routes/routes.jsx.
- * Single source of truth: any route with `seo` and no `:` or `*` in path is included.
+ * Single source of truth: src/routes/routes.jsx.
  *
- * Every <url> includes <lastmod> in W3C/ISO 8601 format (build time in UTC).
- * Using one consistent rule for all URLs avoids misleading Google with stale dates.
+ * 1. sitemap.xml  — every route that has `seo`, a static path (no `:`/`*`),
+ *    and is NOT marked `noindex: true` or `sitemap: false`.
+ * 2. routes-manifest.json — EVERY real route path (static exact list +
+ *    dynamic patterns as anchored regexes). The FastAPI catch-all loads this
+ *    to return a real HTTP 404 for URLs that match no known route (kills the
+ *    soft-404 where unknown URLs returned 200 + the homepage shell).
  *
- * Run: npm run generate:sitemap
- * Build runs this before vite build (see package.json).
- *
- * Uses VITE_SITE_URL environment variable or defaults to https://extensionshield.com
+ * Run: npm run generate:sitemap  (also runs automatically before vite build)
+ * Uses VITE_SITE_URL or defaults to https://extensionshield.com
  */
 
 import { readFileSync, writeFileSync } from 'fs';
@@ -25,57 +26,100 @@ const SITE_URL = process.env.VITE_SITE_URL || 'https://extensionshield.com';
 const ROUTES_PATH = join(__dirname, '../src/routes/routes.jsx');
 
 /**
- * Extract sitemap entries from routes.jsx source.
- * Includes only routes that have `seo` and a static path (no : or *).
- * Excludes redirects (routes without seo) and dynamic segments.
+ * Parse routes.jsx into a list of { path, block, hasSeo, isRedirect, noindex, priority, changefreq }.
+ * `block` is the source text from this `path:` up to the next `path:`.
  */
-function extractSitemapRoutesFromSource(source) {
-  const routes = [];
+function parseRoutes(source) {
+  const out = [];
   const pathRe = /path:\s*["']([^"']+)["']/g;
   let match;
   while ((match = pathRe.exec(source)) !== null) {
     const path = match[1];
-    if (path.includes(':') || path.includes('*')) continue;
     const start = match.index;
     const nextPath = source.indexOf('path:', start + 5);
     const block = nextPath === -1 ? source.slice(start) : source.slice(start, nextPath);
-    if (!block.includes('seo:')) continue;
-    // Exclude redirect-only routes (Navigate with no real page)
-    if (block.includes('<Navigate')) continue;
-
     const priorityMatch = block.match(/priority:\s*([\d.]+)/);
     const changefreqMatch = block.match(/changefreq:\s*["']([^"']+)["']/);
-    routes.push({
+    out.push({
       path,
+      hasSeo: block.includes('seo:'),
+      isRedirect: block.includes('<Navigate'),
+      noindex: /noindex:\s*true/.test(block) || /sitemap:\s*false/.test(block),
       priority: priorityMatch ? parseFloat(priorityMatch[1]) : 0.5,
       changefreq: changefreqMatch ? changefreqMatch[1] : 'monthly',
     });
   }
-  // Sort by path for consistent, human-readable sitemap (best practice)
+  return out;
+}
+
+/**
+ * Routes eligible for the sitemap AND for prerendering:
+ * static, indexable, SEO pages only.
+ */
+export function getSeoRoutes(source = readFileSync(ROUTES_PATH, 'utf-8')) {
+  const routes = parseRoutes(source)
+    .filter((r) => r.hasSeo && !r.isRedirect && !r.noindex)
+    .filter((r) => !r.path.includes(':') && !r.path.includes('*'));
   routes.sort((a, b) => a.path.localeCompare(b.path));
   return routes;
 }
 
-function generateSitemap() {
-  const source = readFileSync(ROUTES_PATH, 'utf-8');
-  const sitemapRoutes = extractSitemapRoutesFromSource(source);
+/**
+ * Routes to PRERENDER. Broader than the sitemap: also includes `noindex` and
+ * `sitemap:false` pages so their robots/cross-canonical tags land in raw HTML
+ * for crawlers (e.g. /scan/history noindex, /extension-permissions canonical).
+ * Still excludes redirects and dynamic (`:`/`*`) routes.
+ */
+export function getPrerenderRoutes(source = readFileSync(ROUTES_PATH, 'utf-8')) {
+  const routes = parseRoutes(source)
+    .filter((r) => r.hasSeo && !r.isRedirect)
+    .filter((r) => !r.path.includes(':') && !r.path.includes('*'));
+  routes.sort((a, b) => a.path.localeCompare(b.path));
+  return routes;
+}
 
-  // Full ISO 8601 (e.g. 2026-02-21T12:00:00.000Z) — recommended by Google/Bing for crawl signals
+/**
+ * Known-route manifest for the server's 404 logic.
+ *   static  — exact paths a bot may request (incl. app/redirect routes → 200, not 404)
+ *   dynamic — anchored regex sources for `:param` routes
+ * The catch-all `*` itself is excluded (that's the thing we 404 against).
+ */
+export function getRoutesManifest(source = readFileSync(ROUTES_PATH, 'utf-8')) {
+  const parsed = parseRoutes(source).filter((r) => r.path !== '*');
+  const staticPaths = parsed.filter((r) => !r.path.includes(':')).map((r) => r.path);
+  const dynamic = parsed
+    .filter((r) => r.path.includes(':'))
+    .map((r) => '^' + r.path.replace(/:[^/]+/g, '[^/]+').replace(/\//g, '\\/') + '\\/?$');
+  return {
+    static: Array.from(new Set(staticPaths)).sort(),
+    dynamic: Array.from(new Set(dynamic)).sort(),
+  };
+}
+
+/**
+ * Render a sitemap priority, preserving the configured value exactly.
+ * Only use the 1-decimal form when it round-trips to the same number
+ * (e.g. 0.5 -> "0.5", 1 -> "1.0"); otherwise keep full precision (e.g. 0.95).
+ */
+function formatPriority(priority) {
+  const value = priority ?? 0.5;
+  const oneDecimal = value.toFixed(1);
+  return parseFloat(oneDecimal) === value ? oneDecimal : String(value);
+}
+
+function generateSitemap(routes) {
   const lastmod = new Date().toISOString();
-  const urls = sitemapRoutes
+  const urls = routes
     .map((route) => {
       const loc = `${SITE_URL}${route.path}`;
-      const changefreq = route.changefreq || 'monthly';
-      const priority = route.priority ?? 0.5;
       return `  <url>
     <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
-    <changefreq>${changefreq}</changefreq>
-    <priority>${priority.toFixed(1)}</priority>
+    <changefreq>${route.changefreq || 'monthly'}</changefreq>
+    <priority>${formatPriority(route.priority)}</priority>
   </url>`;
     })
     .join('\n');
-
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
@@ -84,21 +128,24 @@ ${urls}
 
 function main() {
   try {
-    const sitemap = generateSitemap();
-    const outputPath = join(__dirname, '../public/sitemap.xml');
-    writeFileSync(outputPath, sitemap, 'utf-8');
-
     const source = readFileSync(ROUTES_PATH, 'utf-8');
-    const count = extractSitemapRoutesFromSource(source).length;
+    const seoRoutes = getSeoRoutes(source);
+    const manifest = getRoutesManifest(source);
 
-    console.log('✅ Sitemap generated from src/routes/routes.jsx');
-    console.log(`📍 Location: ${outputPath}`);
+    writeFileSync(join(__dirname, '../public/sitemap.xml'), generateSitemap(seoRoutes), 'utf-8');
+    writeFileSync(join(__dirname, '../public/routes-manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
+
+    console.log('✅ Sitemap + route manifest generated from src/routes/routes.jsx');
     console.log(`🌐 Site URL: ${SITE_URL}`);
-    console.log(`📊 Routes: ${count}`);
+    console.log(`📊 Sitemap URLs: ${seoRoutes.length}`);
+    console.log(`🧭 Manifest: ${manifest.static.length} static + ${manifest.dynamic.length} dynamic routes`);
   } catch (err) {
     console.error('❌ Error generating sitemap:', err.message);
     process.exit(1);
   }
 }
 
-main();
+// Only run when executed directly (so prerender.js can import the helpers).
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main();
+}

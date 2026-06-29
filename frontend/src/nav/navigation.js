@@ -157,11 +157,13 @@ export const footerConfig = {
       heading: "Product",
       links: [
         { label: "Scan an extension", path: "/scan" },
-        { label: "Private Build Audit", path: "/scan/upload" },
-        { label: "Extension Governance", path: "/extension-governance" },
+        { label: "Security Scanner", path: "/chrome-extension-security-scanner" },
+        { label: "Scan a CRX file", path: "/scan/upload" },
+        { label: "Is this extension safe?", path: "/is-this-chrome-extension-safe" },
+        { label: "Permissions explained", path: "/chrome-extension-permissions" },
+        { label: "Risk Assessment", path: "/browser-extension-risk-assessment" },
         { label: "Risk Score", path: "/extension-risk-score" },
-        { label: "Permissions", path: "/extension-permissions" },
-        { label: "Is this extension safe?", path: "/is-this-chrome-extension-safe" }
+        { label: "Extension Governance", path: "/extension-governance" }
       ]
     },
     {

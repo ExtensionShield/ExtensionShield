@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useScan } from "../../context/ScanContext";
 import databaseService from "../../services/databaseService";
@@ -470,59 +470,42 @@ const ScannerPage = () => {
     navigate(route);
   }, [navigate]);
 
+  // FAQ: same content drives the visible list below and the FAQPage JSON-LD
+  const faqItems = [
+    {
+      question: "How does Chrome extension security scanning work?",
+      answer: "ExtensionShield analyzes Chrome extensions using static code analysis (SAST), permission analysis, obfuscation checks, and threat intelligence to produce a risk score. Findings are combined into transparent Security, Privacy, and Governance signals with evidence you can review."
+    },
+    {
+      question: "What is an extension risk score?",
+      answer: "The extension risk score is a 0-100 rating that summarizes the overall risk of a Chrome extension. It is derived from code analysis, requested permissions, and threat-intelligence signals, with hard gates that block extensions where severe findings are detected."
+    },
+    {
+      question: "What permissions should I be concerned about?",
+      answer: "Review broad permissions such as 'Read and change all your data on all websites', access to your browsing history, or managing your downloads. The risk depends on whether the permission matches the extension's stated purpose and how it combines with code behavior and network access."
+    },
+    {
+      question: "Is there a free Chrome extension scanner?",
+      answer: "Yes. You can paste any Chrome Web Store URL to get a free risk score, permissions breakdown, and malware check with no signup required. Sign in to save scan history and re-check extensions later."
+    },
+    {
+      question: "Can I scan extensions before installing them?",
+      answer: "Yes. Paste a Chrome Web Store URL or extension ID to analyze an extension before you install it. The report surfaces permissions, network domains, code findings, and threat-intel signals so you can decide with evidence."
+    },
+    {
+      question: "How accurate is the extension security scanner?",
+      answer: "ExtensionShield combines static code analysis, permission analysis, obfuscation detection, and VirusTotal threat intelligence. A VirusTotal not-found result is not treated as clean, and packed or obfuscated code is disclosed honestly. The methodology is open-source and documented in our research section."
+    }
+  ];
+
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "How does Chrome extension security scanning work?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "ExtensionShield analyzes Chrome extensions using static code analysis (SAST), permission analysis, and threat intelligence to generate a comprehensive risk score. We check for malware, privacy risks, and compliance issues."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "What is an extension risk score?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "The extension risk score is a numerical rating (0-100) that indicates the overall security risk of a Chrome extension. It's calculated based on code analysis, permission requests, and threat intelligence signals."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "What permissions should I be concerned about?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Be cautious of extensions requesting broad permissions like 'Read and change all your data on all websites', 'Access your browsing history', or 'Manage your downloads'. Learn more about extension permissions in our glossary."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Is there a free Chrome extension scanner?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes. ExtensionShield offers a free extension scanner: paste any Chrome Web Store URL to get an instant security audit, risk score, permissions check, and malware scan—no signup required."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Can I scan extensions before installing them?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes! ExtensionShield allows you to scan any Chrome extension from the Chrome Web Store before installing it. Simply paste the extension URL or Chrome Web Store ID to get an instant security analysis."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How accurate is the extension security scanner?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "ExtensionShield uses multiple security analysis techniques including static code analysis, permission analysis, and threat intelligence from VirusTotal. Our methodology is transparent and documented in our research section."
-        }
-      }
-    ]
+    "mainEntity": faqItems.map(({ question, answer }) => ({
+      "@type": "Question",
+      "name": question,
+      "acceptedAnswer": { "@type": "Answer", "text": answer }
+    }))
   };
 
   const softwareAppSchema = {
@@ -544,8 +527,8 @@ const ScannerPage = () => {
   return (
     <>
       <SEOHead
-        title="Is This Chrome Extension Safe? Free Extension Risk Check | ExtensionShield"
-        description="Free extension risk check by Chrome Web Store URL. Get risk score, permissions, privacy and governance signals. See if a Chrome extension is safe before you install."
+        title="Scan a Chrome Extension — Free Security & Risk Report | ExtensionShield"
+        description="Scan any Chrome extension by Web Store URL. Get a 0–100 risk score across security, privacy, and governance, with evidence for every finding. Free, no signup."
         pathname="/scan"
         ogType="website"
         schema={[faqSchema, softwareAppSchema]}
@@ -668,7 +651,7 @@ const ScannerPage = () => {
               <svg className="scanner-scan-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
-              Checks permissions, network access, version history, and known threats.
+              Checks permissions, network access, code behavior, and known threats.
             </p>
             <button
               type="button"
@@ -932,6 +915,43 @@ const ScannerPage = () => {
             </div>
           )}
         </div>
+      </section>
+
+      <section
+        className="scanner-learn-more"
+        aria-label="Learn more about extension risk"
+        style={{ maxWidth: "880px", margin: "1rem auto 0", padding: "0 1.25rem" }}
+      >
+        <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, color: "var(--theme-text-secondary)" }}>
+          New to extension risk? Read <Link to="/research/methodology">how our scoring works</Link>{" "}
+          and <Link to="/extension-risk-score">what the risk score means</Link>. You can also see{" "}
+          <Link to="/chrome-extension-permissions">which permissions to watch for</Link>, or start with{" "}
+          <Link to="/is-this-chrome-extension-safe">our guide to checking if an extension is safe</Link>.
+        </p>
+      </section>
+
+      <section
+        id="faq"
+        className="home-faq-inner"
+        aria-label="Frequently asked questions"
+        style={{
+          maxWidth: "880px",
+          margin: "2rem auto 0",
+          padding: "1.5rem 1.25rem 0",
+          borderTop: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))"
+        }}
+      >
+        <h2 className="home-faq-title" style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "1rem" }}>
+          Frequently asked questions
+        </h2>
+        <dl style={{ margin: 0, padding: 0 }}>
+          {faqItems.map(({ question, answer }) => (
+            <div key={question} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}>
+              <dt style={{ fontWeight: 600, marginBottom: "0.35rem", color: "var(--theme-text-primary)" }}>{question}</dt>
+              <dd style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--theme-text-secondary)" }}>{answer}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       <DemoModal

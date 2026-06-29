@@ -17,8 +17,8 @@ export default function ScanUploadPage() {
   return (
     <div className="scan-upload-page">
       <SEOHead
-        title="Chrome Extension Security Audit (CRX/ZIP) — Pre-release Build Scan (Pro) | ExtensionShield"
-        description="Private CRX/ZIP upload for pre-release Chrome extension security audit. Vulnerabilities, evidence per finding, fix guidance. SAST, permissions, policy checks. Private by default."
+        title="Scan a CRX File — Pre-release Chrome Extension Security Audit (Pro) | ExtensionShield"
+        description="Scan a CRX or ZIP file for a pre-release Chrome extension security audit: SAST, permissions, network indicators, and policy checks — with evidence for every finding. Private by default."
         pathname="/scan/upload"
       />
       <section className="scan-upload-hero" aria-label="Private build upload">
@@ -73,6 +73,49 @@ export default function ScanUploadPage() {
 
           <p className="scan-upload-privacy">Reports are visible only to your account.</p>
         </div>
+      </section>
+
+      {/* Crawlable, indexable explainer — gives this page real content for the
+          "scan crx file" / "audit extension before publishing" intent. The upload
+          action above is auth-gated; this section is public. */}
+      <section className="scan-upload-learn" aria-label="About scanning a CRX file" style={{ maxWidth: 760, margin: "0 auto", padding: "0 1.5rem 4rem", lineHeight: 1.65 }}>
+        <h2>What scanning a CRX file checks</h2>
+        <p>
+          When you scan a <strong>CRX or ZIP file</strong> with ExtensionShield, it unpacks the
+          package and analyzes the build you’re about to ship — not just the Chrome Web Store
+          listing — across the same three layers as a public scan: Security, Privacy, and
+          Governance. Every finding links to the evidence behind it, and the scoring method is
+          open source.
+        </p>
+        <ul>
+          <li>Static analysis (SAST) of the bundled JavaScript for risky APIs, obfuscation, and malware patterns</li>
+          <li>Declared vs. used permissions and host access</li>
+          <li>Network endpoints and data-exfiltration indicators</li>
+          <li>Manifest, policy, and governance checks</li>
+        </ul>
+
+        <h2>CRX vs. ZIP — which do I upload?</h2>
+        <p>
+          A <strong>.crx</strong> is the packaged Chrome extension; a <strong>.zip</strong> is the
+          unpacked build you submit to the Chrome Web Store. ExtensionShield accepts either, so you
+          can audit a build <em>before</em> you publish it and catch issues a reviewer (or an
+          attacker) would.
+        </p>
+
+        <h2>When to use it</h2>
+        <p>
+          Developers auditing a release candidate, security teams reviewing a vendor-supplied
+          package, and researchers analyzing a sample. Uploads are <strong>private by default</strong> —
+          scoped to your account and excluded from the public feed — and require a free account. To
+          check an already-published extension without uploading, paste its Web Store URL into the{" "}
+          <Link to="/scan">free scanner</Link> instead.
+        </p>
+
+        <p className="scan-upload-learn-links">
+          Related: <Link to="/blog/audit-crx-zip-before-release">How to audit a CRX/ZIP before release</Link>{" "}
+          · <Link to="/research/methodology">how we score</Link>{" "}
+          · <Link to="/chrome-extension-security-scanner">Chrome extension security scanner</Link>
+        </p>
       </section>
     </div>
   );
