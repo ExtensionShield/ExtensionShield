@@ -182,6 +182,7 @@ export const footerConfig = {
       links: [
         { label: "About", path: "/about" },
         { label: "Open Source", path: "/open-source" },
+        { label: "Challenge", path: "/challenge" },
         { label: "Community", path: "/community" },
         { label: "Careers", path: "/careers" },
         { label: "Privacy Policy", path: "/privacy-policy" }

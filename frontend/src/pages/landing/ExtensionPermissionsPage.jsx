@@ -3,28 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import SEOHead from "../../components/SEOHead";
 import "../compare/ComparePage.scss";
 
-// FAQ: same content drives the visible list below and the FAQPage JSON-LD
-const faqItems = [
-  {
-    question: "Which browser extension permissions are dangerous?",
-    answer: "High-risk permissions include all-site host access, cookies, history, debugger, downloads, clipboard read, management, webRequest, scripting, and broad tab access. The danger depends on how the permissions combine with code behavior and network access."
-  },
-  {
-    question: "Is all website access always bad?",
-    answer: "No. Some extensions, such as ad blockers, need broad host access. The question is whether the permission is necessary, disclosed, and supported by safe behavior."
-  }
-];
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": faqItems.map(({ question, answer }) => ({
-    "@type": "Question",
-    "name": question,
-    "acceptedAnswer": { "@type": "Answer", "text": answer }
-  }))
-};
-
 const ExtensionPermissionsPage = () => {
   const navigate = useNavigate();
 
@@ -37,7 +15,6 @@ const ExtensionPermissionsPage = () => {
         canonicalPath="/chrome-extension-permissions"
         ogType="website"
         keywords="extension permissions explained, dangerous chrome extension permissions, browser extension permissions, chrome extension permissions checker"
-        schema={faqSchema}
       />
       <div className="compare-page">
         <div className="compare-container">
@@ -78,18 +55,6 @@ const ExtensionPermissionsPage = () => {
               <li>Scan the extension to see code, network, and governance evidence beyond the permission prompt.</li>
             </ol>
           </div>
-
-          <section id="faq" className="home-faq-inner" style={{ marginTop: "2.5rem", paddingTop: "1.5rem", borderTop: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }} aria-label="Frequently asked questions">
-            <h2 className="home-faq-title" style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "1rem" }}>Frequently asked questions</h2>
-            <dl style={{ margin: 0, padding: 0 }}>
-              {faqItems.map(({ question, answer }) => (
-                <div key={question} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}>
-                  <dt style={{ fontWeight: 600, marginBottom: "0.35rem", color: "var(--theme-text-primary)" }}>{question}</dt>
-                  <dd style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--theme-text-secondary)" }}>{answer}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
 
           <div className="compare-cta">
             <Link to="/scan">Check extension permissions</Link>

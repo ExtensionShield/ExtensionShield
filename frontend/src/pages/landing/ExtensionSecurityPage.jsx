@@ -3,32 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import SEOHead from "../../components/SEOHead";
 import "../compare/ComparePage.scss";
 
-// FAQ: same content drives the visible list below and the FAQPage JSON-LD
-const faqItems = [
-  {
-    question: "What is browser extension security?",
-    answer: "Browser extension security is the process of reviewing what an extension can access, how its code behaves, which domains it can contact, and whether it aligns with organizational policy before it is installed or allowed."
-  },
-  {
-    question: "Why are browser extensions risky?",
-    answer: "Extensions can request powerful permissions, read page content, modify websites, access browsing activity, and change after installation through automatic updates. The risk depends on permissions, code behavior, publisher trust, and the data exposed in your environment."
-  },
-  {
-    question: "How does ExtensionShield help?",
-    answer: "ExtensionShield analyzes extension security, privacy, and governance signals before install, before release, or before allowlisting. Reports include a risk score and evidence so teams can review whether to allow, block, monitor, or fix an extension."
-  }
-];
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": faqItems.map(({ question, answer }) => ({
-    "@type": "Question",
-    "name": question,
-    "acceptedAnswer": { "@type": "Answer", "text": answer }
-  }))
-};
-
 const ExtensionSecurityPage = () => {
   const navigate = useNavigate();
 
@@ -40,7 +14,6 @@ const ExtensionSecurityPage = () => {
         pathname="/extension-security"
         ogType="website"
         keywords="browser extension security, extension security audit, chrome extension security, browser extension security platform"
-        schema={faqSchema}
       />
       <div className="compare-page">
         <div className="compare-container">
@@ -78,18 +51,6 @@ const ExtensionSecurityPage = () => {
               The safest extension decision happens before installation. ExtensionShield supports public Chrome Web Store scans, private CRX/ZIP audits for developers, and enterprise governance workflows for teams evaluating extensions before they become shadow IT.
             </p>
           </div>
-
-          <section id="faq" className="home-faq-inner" style={{ marginTop: "2.5rem", paddingTop: "1.5rem", borderTop: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }} aria-label="Frequently asked questions">
-            <h2 className="home-faq-title" style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "1rem" }}>Frequently asked questions</h2>
-            <dl style={{ margin: 0, padding: 0 }}>
-              {faqItems.map(({ question, answer }) => (
-                <div key={question} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}>
-                  <dt style={{ fontWeight: 600, marginBottom: "0.35rem", color: "var(--theme-text-primary)" }}>{question}</dt>
-                  <dd style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--theme-text-secondary)" }}>{answer}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
 
           <div className="compare-cta">
             <Link to="/scan">Run a pre-install extension scan</Link>

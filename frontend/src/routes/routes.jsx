@@ -34,6 +34,10 @@ const OpenSourcePage = React.lazy(() => import("../pages/open-source/OpenSourceP
 const OpenSourceProgramsPage = React.lazy(() => import("../pages/open-source/OpenSourceProgramsPage"));
 const AboutUsPage = React.lazy(() => import("../pages/AboutUsPage"));
 
+// Challenge (student security challenge hub + per-edition brief)
+const ChallengePage = React.lazy(() => import("../pages/challenge/ChallengePage"));
+const ChallengeEditionPage = React.lazy(() => import("../pages/challenge/ChallengeEditionPage"));
+
 // Compare pages (SEO: best scanner, CRXcavator alternatives)
 const CompareIndexPage = React.lazy(() => import("../pages/compare/CompareIndexPage"));
 const CompareCrxcavatorPage = React.lazy(() => import("../pages/compare/CompareCrxcavatorPage"));
@@ -708,8 +712,8 @@ export const routes = [
     path: "/open-source/programs",
     element: <OpenSourceProgramsPage />,
     seo: {
-      title: "Open Source Programs | ExtensionShield",
-      description: "Open source programs ExtensionShield has applied to: Google Summer of Code and more. Explore project ideas and contribution opportunities.",
+      title: "Open Source Programs & Events | ExtensionShield",
+      description: "Open-source and community programs and events ExtensionShield takes part in: Google Summer of Code, the Nexus Spring of Code challenge, and more.",
       canonical: "/open-source/programs"
     },
     priority: 0.7,
@@ -736,6 +740,28 @@ export const routes = [
     },
     priority: 0.7,
     changefreq: "monthly"
+  },
+  {
+    path: "/challenge",
+    element: <ChallengePage />,
+    seo: {
+      title: "Threat Report Challenge — Browser Extension Safety | ExtensionShield",
+      description: "The ExtensionShield Threat Report Challenge: learn to spot risky browser extensions, investigate permissions and privacy signals responsibly, and submit an evidence-backed report. Free to scan, no coding required.",
+      canonical: "/challenge"
+    },
+    priority: 0.8,
+    changefreq: "weekly"
+  },
+  {
+    path: "/challenge/nexus-spring-2026",
+    element: <ChallengeEditionPage slug="nexus-spring-2026" />,
+    seo: {
+      title: "Threat Report Challenge — Nexus Spring of Code (Hackathon 2.0) | ExtensionShield",
+      description: "The ExtensionShield Threat Report Challenge at Nexus Spring of Code (Hackathon 2.0): investigate real Chrome extensions, classify risk on the evidence, and submit an evidence-backed report. Free to scan, no coding required.",
+      canonical: "/challenge/nexus-spring-2026"
+    },
+    priority: 0.75,
+    changefreq: "weekly"
   },
   {
     path: "/open-source/gsoc",

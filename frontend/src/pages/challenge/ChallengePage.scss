@@ -1,0 +1,870 @@
+/* ============================================================================
+   Challenge Page — /challenge
+   Shares the visual language of OpenSourcePage (token-driven, dark default +
+   .light overrides). Print flyer lives elsewhere; this page follows site theme.
+   ============================================================================ */
+
+.challenge-page {
+  min-height: 100vh;
+  background: var(--extensionshield-bg-primary);
+  color: var(--extensionshield-text-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.challenge-content {
+  position: relative;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 6rem 2rem 4rem;
+
+  @media (max-width: 768px) {
+    padding: 5rem 1.5rem 3rem;
+  }
+  @media (max-width: 640px) {
+    padding: 4rem 1rem 2.5rem;
+  }
+}
+
+/* ---------- Hub head (minimal, replaces the hero on /challenge) ---------- */
+.hub-head {
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin: 0 0 0.5rem;
+    color: var(--extensionshield-text-primary);
+  }
+
+  p {
+    font-size: 1rem;
+    color: var(--extensionshield-text-secondary);
+    margin: 0;
+    line-height: 1.6;
+  }
+}
+
+/* ---------- Back link ---------- */
+.challenge-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--extensionshield-text-secondary);
+  text-decoration: none;
+  margin-bottom: 2.25rem;
+
+  &:hover {
+    color: var(--extensionshield-accent);
+  }
+}
+
+/* ---------- Edition lead (left-aligned, research-first) ---------- */
+.edition-lead {
+  max-width: 740px;
+  margin-bottom: 2.25rem;
+
+  .edition-eyebrow {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--extensionshield-text-muted);
+    margin: 0 0 0.6rem;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 4.4vw, 2.55rem);
+    font-weight: 700;
+    line-height: 1.12;
+    margin: 0 0 0.85rem;
+    color: var(--extensionshield-text-primary);
+  }
+
+  .edition-lead-text {
+    font-size: clamp(1rem, 2.2vw, 1.12rem);
+    line-height: 1.7;
+    color: var(--extensionshield-text-secondary);
+    margin: 0 0 1.1rem;
+  }
+}
+
+.research-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+
+  .rl-label { color: var(--extensionshield-text-muted); }
+
+  a {
+    color: var(--extensionshield-accent);
+    text-decoration: none;
+    font-weight: 600;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+/* ---------- Inline section icons ---------- */
+.ti {
+  display: inline-flex;
+  flex: 0 0 auto;
+
+  svg { width: 18px; height: 18px; }
+
+  &--green { color: #1f9d57; }
+  &--gold { color: #e0a12e; }
+  &--blue { color: #2f6fd0; }
+}
+
+.panel--accent {
+  background: linear-gradient(135deg, var(--extensionshield-accent-subtle) 0%, var(--extensionshield-bg-card) 70%);
+  border-color: var(--extensionshield-border-accent);
+}
+
+.challenge-cta.challenge-cta--left {
+  justify-content: flex-start;
+  margin-top: 1.15rem;
+}
+
+/* ---------- Hero ---------- */
+.challenge-hero {
+  text-align: center;
+  margin-bottom: 3.5rem;
+
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.9rem);
+    font-weight: 700;
+    line-height: 1.12;
+    margin: 0 0 0.75rem;
+    color: var(--extensionshield-text-primary);
+  }
+
+  .challenge-lede {
+    font-size: clamp(1.05rem, 2.6vw, 1.3rem);
+    font-weight: 600;
+    color: var(--extensionshield-text-primary);
+    margin: 0 0 0.75rem;
+  }
+
+  .challenge-sub {
+    font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+    color: var(--extensionshield-text-secondary);
+    max-width: 620px;
+    margin: 0 auto 1.75rem;
+    line-height: 1.7;
+  }
+
+  .challenge-hosts {
+    margin: 1.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--extensionshield-text-muted);
+  }
+
+  @media (max-width: 640px) {
+    margin-bottom: 2.5rem;
+  }
+}
+
+.challenge-chips {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.hero-edition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+
+  &--green {
+    color: #1f9d57;
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.28);
+  }
+  &--blue {
+    color: #2f6fd0;
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.28);
+  }
+}
+
+.challenge-cta {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.7rem 1.4rem;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+
+  &--primary {
+    background: var(--extensionshield-accent, #22c55e);
+    color: #fff;
+    border: 1px solid transparent;
+
+    &:hover {
+      transform: translateY(-2px);
+      background: var(--extensionshield-accent-hover, #16a34a);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--extensionshield-text-primary);
+    border: 1px solid var(--extensionshield-border);
+
+    &:hover {
+      border-color: var(--extensionshield-border-accent);
+      transform: translateY(-2px);
+    }
+  }
+
+  &--sm {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* ---------- Sections ---------- */
+.challenge-section {
+  margin-bottom: 2.75rem;
+  scroll-margin-top: 90px;
+
+  > h2 {
+    font-size: clamp(1.35rem, 3.4vw, 1.7rem);
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: var(--extensionshield-text-primary);
+  }
+}
+
+.section-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--extensionshield-text-muted);
+  margin: 0 0 1rem;
+}
+
+.section-intro {
+  font-size: 1rem;
+  color: var(--extensionshield-text-secondary);
+  line-height: 1.7;
+  max-width: 640px;
+  margin: 0 0 1.5rem;
+}
+
+.challenge-note {
+  font-size: 0.875rem;
+  color: var(--extensionshield-text-muted);
+  margin: 1rem 0 0;
+}
+
+/* ---------- Edition card ---------- */
+.editions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.edition-card {
+  display: block;
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(135deg, var(--extensionshield-accent-subtle) 0%, var(--extensionshield-bg-card) 70%);
+  border: 1px solid var(--extensionshield-border-accent);
+  border-radius: 16px;
+
+  &--link {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--extensionshield-card-shadow);
+
+      .link-inline {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    color: var(--extensionshield-text-primary);
+  }
+
+  .edition-host {
+    font-size: 0.875rem;
+    color: var(--extensionshield-text-muted);
+    margin: 0 0 0.75rem;
+  }
+
+  .edition-desc {
+    font-size: 0.95rem;
+    color: var(--extensionshield-text-secondary);
+    line-height: 1.6;
+    margin: 0 0 1.25rem;
+    max-width: 560px;
+  }
+}
+
+.edition-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.edition-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--extensionshield-text-secondary);
+}
+
+.edition-status {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+
+  &--active {
+    background: var(--extensionshield-accent-subtle);
+    color: var(--extensionshield-accent);
+  }
+  &--closed {
+    background: rgba(120, 120, 120, 0.15);
+    color: var(--extensionshield-text-muted);
+  }
+}
+
+.edition-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.link-inline {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--extensionshield-accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ---------- How it starts ---------- */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.step-card {
+  position: relative;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: var(--extensionshield-bg-card);
+  border: 1px solid var(--extensionshield-border);
+  border-radius: 12px;
+
+  .step-no {
+    position: absolute;
+    top: 1rem;
+    right: 1.1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--extensionshield-text-muted);
+  }
+
+  .step-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0.6rem 0 0.4rem;
+    color: var(--extensionshield-text-primary);
+  }
+
+  p {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--extensionshield-text-secondary);
+    margin: 0 0 1rem;
+  }
+
+  .step-bar {
+    display: block;
+    width: 34px;
+    height: 3px;
+    border-radius: 2px;
+  }
+}
+
+/* ---------- Two-column panels ---------- */
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  padding: 1.5rem 1.6rem;
+  background: var(--extensionshield-bg-card);
+  border: 1px solid var(--extensionshield-border);
+  border-radius: 14px;
+
+  &--soft {
+    background: var(--extensionshield-bg-secondary);
+  }
+
+  &--prize {
+    background: var(--extensionshield-bg-card);
+    border-color: var(--extensionshield-border-accent);
+  }
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: var(--extensionshield-text-primary);
+}
+
+.panel-text {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--extensionshield-text-secondary);
+  margin: 0;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+
+  .panel-title {
+    margin: 0;
+  }
+}
+
+.tag-optional {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--extensionshield-text-muted);
+  border: 1px solid var(--extensionshield-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+
+  &--rec {
+    color: var(--extensionshield-accent);
+    border-color: var(--extensionshield-border-accent);
+    background: var(--extensionshield-accent-subtle);
+  }
+}
+
+/* Lead paragraph inside a panel (extension + sign-in sections) */
+.ext-lead {
+  margin-bottom: 1.15rem !important;
+  max-width: 620px;
+}
+
+/* Sign-in-to-enter points */
+.enter-points {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.35rem;
+}
+
+.enter-point {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--extensionshield-border);
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .ti { margin-top: 9px; }
+
+  b {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--extensionshield-text-primary);
+  }
+
+  p {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--extensionshield-text-secondary);
+    margin: 0.2rem 0 0;
+  }
+}
+
+.enter-submit {
+  margin: 0.75rem 0 1rem !important;
+}
+
+/* Challenge details */
+.details-list {
+  margin: 0;
+  padding: 0;
+}
+
+.details-row {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--extensionshield-border);
+  font-size: 0.88rem;
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  dt {
+    flex: 0 0 40%;
+    max-width: 190px;
+    font-weight: 700;
+    color: var(--extensionshield-text-primary);
+  }
+
+  dd {
+    flex: 1;
+    margin: 0;
+    line-height: 1.5;
+    color: var(--extensionshield-text-secondary);
+
+    a {
+      color: var(--extensionshield-accent);
+      text-decoration: none;
+      &:hover { text-decoration: underline; }
+    }
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 0.15rem;
+
+    dt { flex-basis: auto; max-width: none; }
+  }
+}
+
+/* ---------- Mission list ---------- */
+.mission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mission-item {
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--extensionshield-border);
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .mission-num {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--extensionshield-accent-subtle);
+    color: var(--extensionshield-accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 5px;
+  }
+
+  b {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--extensionshield-text-primary);
+  }
+
+  p {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--extensionshield-text-secondary);
+    margin: 0.15rem 0 0;
+  }
+}
+
+/* ---------- Risk list ---------- */
+.risk-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.risk-row {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--extensionshield-border);
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .risk-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    margin-top: 7px;
+  }
+
+  .risk-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .risk-level {
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .risk-rec {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  .risk-body {
+    flex: 1;
+  }
+
+  p {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--extensionshield-text-secondary);
+    margin: 0.25rem 0 0;
+  }
+
+  &--low {
+    .risk-dot { background: #1f9d57; }
+    .risk-level { color: #1f9d57; }
+    .risk-rec { background: rgba(34, 197, 94, 0.14); color: #1f7d47; }
+  }
+  &--medium {
+    .risk-dot { background: #d9a125; }
+    .risk-level { color: #b5850f; }
+    .risk-rec { background: rgba(217, 161, 37, 0.16); color: #9a6f10; }
+  }
+  &--high {
+    .risk-dot { background: #e07b2e; }
+    .risk-level { color: #c1631a; }
+    .risk-rec { background: rgba(224, 123, 46, 0.16); color: #b45c14; }
+  }
+  &--critical {
+    .risk-dot { background: #d64545; }
+    .risk-level { color: #cc3b3b; }
+    .risk-rec { background: rgba(214, 69, 69, 0.14); color: #a32d2d; }
+  }
+}
+
+.risk-note {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--extensionshield-text-muted);
+  margin: 1rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--extensionshield-border);
+}
+
+/* ---------- Judges ---------- */
+.judges-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem 1.5rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+
+  .judge-item {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+
+    .ti { margin-top: 6px; }
+  }
+
+  .judge-item b {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--extensionshield-text-primary);
+    margin-bottom: 0.2rem;
+  }
+
+  .judge-item p {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--extensionshield-text-secondary);
+    margin: 0;
+  }
+}
+
+/* ---------- Extension features ---------- */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-item {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+
+    .ti { margin-top: 5px; }
+  }
+
+  .feature-item b {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--extensionshield-text-primary);
+    margin-bottom: 0.2rem;
+  }
+
+  .feature-item span {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--extensionshield-text-secondary);
+  }
+}
+
+/* ---------- Prizes ---------- */
+.medals {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+
+  span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border-radius: 8px;
+    background: var(--extensionshield-bg-secondary);
+    border: 1px solid var(--extensionshield-border);
+    color: var(--extensionshield-text-secondary);
+  }
+}
+
+/* ---------- Final CTA ---------- */
+.challenge-final {
+  text-align: left;
+  padding: 2rem 2rem;
+  background: var(--extensionshield-bg-card);
+  border: 1px solid var(--extensionshield-border);
+  border-radius: 16px;
+  box-shadow: var(--extensionshield-card-shadow);
+
+  h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: var(--extensionshield-text-primary);
+  }
+
+  p {
+    font-size: 0.92rem;
+    color: var(--extensionshield-text-secondary);
+    max-width: 560px;
+    margin: 0 0 1.5rem;
+    line-height: 1.6;
+  }
+}
+
+/* ---------- Light mode tweaks ---------- */
+.light {
+  .step-card,
+  .panel,
+  .challenge-final {
+    box-shadow: 0 4px 20px rgba(38, 35, 31, 0.06);
+  }
+
+  .edition-card {
+    box-shadow: 0 4px 20px rgba(38, 35, 31, 0.06);
+  }
+}

@@ -35,16 +35,6 @@ const breadcrumbSchema = {
   ]
 };
 
-const methodologyFaqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": faqItems.map(({ question, answer }) => ({
-    "@type": "Question",
-    "name": question,
-    "acceptedAnswer": { "@type": "Answer", "text": answer }
-  }))
-};
-
 const MethodologyPage = () => {
   const [openSourceModalOpen, setOpenSourceModalOpen] = useState(false);
 
@@ -54,7 +44,7 @@ const MethodologyPage = () => {
         title="Chrome Extension Risk Score & Security Analysis Methodology | ExtensionShield"
         description="How we calculate chrome extension risk score: static analysis, threat intelligence, and extension security analysis. Transparent methodology for auditing chrome extension security."
         pathname="/research/methodology"
-        schema={[breadcrumbSchema, methodologyFaqSchema]}
+        schema={[breadcrumbSchema]}
       />
 
       <div className="methodology-page">
@@ -272,19 +262,6 @@ const MethodologyPage = () => {
             </div>
 
           </div>
-
-          {/* FAQ — same content drives the FAQPage JSON-LD above */}
-          <section id="faq" className="methodology-faq" aria-label="FAQ" style={{ marginTop: "2.5rem", paddingTop: "1.5rem", borderTop: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "1rem" }}>Frequently asked questions</h2>
-            <dl style={{ margin: 0, padding: 0 }}>
-              {faqItems.map(({ question, answer }) => (
-                <div key={question} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}>
-                  <dt style={{ fontWeight: 600, marginBottom: "0.35rem", color: "var(--theme-text-primary)" }}>{question}</dt>
-                  <dd style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--theme-text-secondary)" }}>{answer}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
 
           {/* Related reads */}
           <section className="methodology-related" aria-label="Related reads">

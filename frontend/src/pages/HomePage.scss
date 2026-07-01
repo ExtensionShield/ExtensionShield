@@ -800,6 +800,125 @@
   }
 }
 
+/* ── FAQ — "Quiet Ledger": hairline disclosure accordion ────────────────────── */
+.hp-faq {
+  padding: var(--hp-section-py) var(--hp-px);
+}
+
+.hp-faq-list {
+  margin: 0;
+  padding: 0;
+}
+
+.hp-faq-item {
+  border-bottom: 1px solid var(--extensionshield-border);
+
+  &:first-child {
+    border-top: 1px solid var(--extensionshield-border);
+  }
+}
+
+.hp-faq-dt {
+  margin: 0;
+}
+
+.hp-faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 1.125rem 0.25rem;
+  font-family: inherit;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--extensionshield-text-primary);
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--extensionshield-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--extensionshield-accent);
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
+}
+
+.hp-faq-q-text {
+  flex: 1 1 auto;
+}
+
+.hp-faq-chevron {
+  flex: 0 0 auto;
+  color: var(--extensionshield-text-muted);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.hp-faq-q:hover .hp-faq-chevron {
+  color: var(--extensionshield-accent);
+}
+
+.hp-faq-item.is-open {
+  .hp-faq-chevron {
+    transform: rotate(180deg);
+    color: var(--extensionshield-accent);
+  }
+}
+
+/* Grid-rows expand: answers stay in the DOM (SEO + faqSchema) but collapse to 0. */
+.hp-faq-a {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+  margin: 0;
+}
+
+.hp-faq-item.is-open .hp-faq-a {
+  grid-template-rows: 1fr;
+}
+
+.hp-faq-a-inner {
+  overflow: hidden;
+  min-height: 0; /* required, or the row won't collapse */
+}
+
+.hp-faq-a-text {
+  margin: 0;
+  padding: 0 0.25rem 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--extensionshield-text-secondary);
+  max-width: 64ch;
+}
+
+.hp-faq-foot {
+  margin: 1.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--extensionshield-text-secondary);
+}
+
+.hp-faq-foot-link {
+  color: var(--extensionshield-accent);
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hp-faq-a { transition: none; }
+  .hp-faq-chevron { transition: none; }
+}
+
 /* GitHub star badge */
 .gh-star-badge {
   display: inline-flex;
@@ -2862,6 +2981,11 @@
 
 /* ── Small mobile ──────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
+  .hp-faq-q {
+    font-size: 1rem;
+    padding: 1rem 0.25rem;
+  }
+
   .stats-bar {
     flex-wrap: wrap;
     gap: 0.75rem;

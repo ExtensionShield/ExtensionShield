@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  AlertTriangle, ArrowRight, CheckCircle,
+  AlertTriangle, ArrowRight, CheckCircle, ChevronDown,
   Code2, Download, Eye, Github, Lock, Scale, ShieldCheck, Star,
 } from "lucide-react";
 import { useScan } from "../context/ScanContext";
@@ -419,6 +419,9 @@ const HomePage = () => {
   const rafRef = useRef(null);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const demoTriggerRef = useRef(null);
+
+  // FAQ accordion: index of the open item (0 = first open by default; null = all closed)
+  const [faqOpen, setFaqOpen] = useState(null);
 
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState([]);
   const [autocompleteIndex, setAutocompleteIndex] = useState(0);
@@ -1054,20 +1057,47 @@ const HomePage = () => {
           <section className="hp-faq landing-separator" id="faq" aria-labelledby="hp-faq-title">
             <div className="home-faq-inner" style={{ maxWidth: "760px", margin: "0 auto" }}>
               <div className="hp-section-head">
-                <p className="hp-eyebrow">FAQ</p>
                 <h2 id="hp-faq-title" className="home-faq-title">Frequently asked questions</h2>
               </div>
-              <dl style={{ margin: 0, padding: 0 }}>
-                {FAQ_ITEMS.map(({ question, answer }) => (
-                  <div
-                    key={question}
-                    style={{ padding: "0.85rem 0", borderBottom: "1px solid var(--theme-border, rgba(148, 163, 184, 0.2))" }}
-                  >
-                    <dt style={{ fontWeight: 600, marginBottom: "0.4rem", color: "var(--theme-text-primary)" }}>{question}</dt>
-                    <dd style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--theme-text-secondary)" }}>{answer}</dd>
-                  </div>
-                ))}
+              <dl className="hp-faq-list">
+                {FAQ_ITEMS.map(({ question, answer }, i) => {
+                  const isOpen = faqOpen === i;
+                  return (
+                    <div key={question} className={`hp-faq-item${isOpen ? " is-open" : ""}`}>
+                      <dt className="hp-faq-dt">
+                        <button
+                          type="button"
+                          className="hp-faq-q"
+                          aria-expanded={isOpen}
+                          aria-controls={`faq-panel-${i}`}
+                          id={`faq-btn-${i}`}
+                          onClick={() => setFaqOpen(isOpen ? null : i)}
+                        >
+                          <span className="hp-faq-q-text">{question}</span>
+                          <ChevronDown className="hp-faq-chevron" size={18} strokeWidth={2} aria-hidden />
+                        </button>
+                      </dt>
+                      <dd
+                        id={`faq-panel-${i}`}
+                        role="region"
+                        aria-labelledby={`faq-btn-${i}`}
+                        className="hp-faq-a"
+                      >
+                        <div className="hp-faq-a-inner">
+                          <p className="hp-faq-a-text">{answer}</p>
+                        </div>
+                      </dd>
+                    </div>
+                  );
+                })}
               </dl>
+              <p className="hp-faq-foot">
+                Still have a question?{" "}
+                <a className="hp-faq-foot-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                  Read the source on GitHub
+                </a>
+                .
+              </p>
             </div>
           </section>
 

@@ -13,11 +13,21 @@ const PROGRAMS = [
     id: "gsoc",
     name: "Google Summer of Code",
     description: "Project ideas for GSoC contributors. ExtensionShield ideas: extension security, SAST, and community tooling.",
-    status: "Applied",
-    statusVariant: "applied", // applied | rejected | accepted
+    status: "",
+    statusVariant: "", // applied | rejected | accepted | partner
     path: "/gsoc/ideas",
     icon: "☀️",
     iconClass: "gsoc",
+  },
+  {
+    id: "nexus-spring",
+    name: "Nexus Spring of Code",
+    description: "A 60-day open-source program where maintainers bring real projects and contributors ship production-ready code. ExtensionShield runs the Threat Report Challenge as part of NSoC'26.",
+    status: "",
+    statusVariant: "",
+    path: "/challenge",
+    icon: "🛡️",
+    iconClass: "nexus",
   },
   // Add more programs here, e.g.:
   // { id: "outreachy", name: "Outreachy", description: "...", status: "Rejected", statusVariant: "rejected", path: "/open-source/outreachy", icon: "🌍", iconClass: "outreachy" },
@@ -27,10 +37,10 @@ const OpenSourceProgramsPage = () => {
   return (
     <>
       <SEOHead
-        title="Open Source Programs 2026 | ExtensionShield"
-        description="Open source programs ExtensionShield has applied to for 2026: Google Summer of Code and more. Explore project ideas and contribution opportunities."
+        title="Open Source Programs & Events 2026 | ExtensionShield"
+        description="Open-source and community programs and events ExtensionShield takes part in for 2026: Google Summer of Code, the Nexus Spring of Code challenge, and more. Explore project ideas and how to get involved."
         pathname="/open-source/programs"
-        keywords="open source programs 2026, Google Summer of Code, GSoC, extension security, open source contribution"
+        keywords="open source programs 2026, Google Summer of Code, GSoC, Nexus Spring of Code, extension security challenge, open source contribution"
       />
 
       <div className="open-source-programs-page">
@@ -38,11 +48,11 @@ const OpenSourceProgramsPage = () => {
 
         <div className="open-source-programs-content">
           <header className="open-source-programs-header">
-            <div className="oss-badge">🌱 Open Source Programs</div>
-            <h1>Programs Applied for 2026</h1>
+            <div className="oss-badge">🌱 Programs &amp; Events</div>
+            <h1>Programs &amp; Events for 2026</h1>
             <p>
-              ExtensionShield has applied to the following open source and mentorship programs for 2026.
-              Select a program to view project ideas and how to get involved.
+              Programs and events ExtensionShield takes part in for 2026 — from mentorship programs
+              we&apos;ve applied to, to challenges we run with partners. Select one to learn more.
             </p>
           </header>
 
@@ -53,9 +63,11 @@ const OpenSourceProgramsPage = () => {
                 <div className="program-content">
                   <h3>{program.name}</h3>
                   <p>{program.description}</p>
-                  <span className={`program-status program-status--${program.statusVariant}`}>
-                    {program.status}
-                  </span>
+                  {program.status ? (
+                    <span className={`program-status program-status--${program.statusVariant}`}>
+                      {program.status}
+                    </span>
+                  ) : null}
                 </div>
                 <span className="arrow">→</span>
               </Link>
