@@ -8,28 +8,26 @@ This project is licensed under the MIT License. See the LICENSE file for the ful
 Third-party attributions
 -----------------------
 
-ExtensionShield is a derivative work. It began as a fork of ThreatXtension and
-retains substantial portions of that project's source code and data, alongside
-ideas, rules, and schema patterns adapted from it. The notes below describe what
-was carried over and on what license basis.
+ExtensionShield is a derivative work. It began as a copied and rebranded working
+tree of ThreatXtension (not a GitHub fork — the repositories share no git
+history) and retains substantial portions of that project's source code and
+data, alongside ideas, rules, and schemas adapted or ported from it. The notes
+below describe what was carried over and on what license basis.
 
 - ThreatXtension (https://github.com/barvhaim/ThreatXtension)
-  Authors: the ThreatXtension contributors (GitHub: barvhaim).
 
   License status (important):
   ThreatXtension's README declares the "MIT License" and links to a LICENSE
-  file, but the upstream repository does not actually publish a LICENSE file,
-  and GitHub reports its license as unspecified. There is therefore a
-  declared-but-unformalized MIT intent, with no upstream copyright-holder name
-  and no canonical license text to reproduce here. ExtensionShield relies in
-  good faith on that stated MIT intent. We note this as a residual risk: because
-  no formal grant or copyright line was published upstream, the permission is
-  weaker than a conventional MIT project, and exposure scales with the amount of
-  code reused (see scope below). We would replace this reliance with an explicit
-  grant if upstream formalizes a LICENSE or a maintainer requests changes.
+  file, but the upstream repository does not currently publish a separate
+  LICENSE file, and GitHub reports its license as unspecified. There is
+  therefore a declared-but-unformalized MIT intent, with no upstream
+  copyright-holder name and no canonical license text to reproduce here.
+  ExtensionShield relies in good faith on that stated MIT intent, and would
+  update this attribution to an explicit grant if upstream publishes a LICENSE
+  file or a maintainer requests changes.
 
   Scope of derivation (carried over, not merely "inspired by"):
-  The upstream Python package was forked and renamed (threatxtension ->
+  The upstream Python package was copied and renamed (threatxtension ->
   extension_shield). The following are reproduced verbatim or near-verbatim and
   remain present in this codebase:
 
@@ -49,10 +47,9 @@ was carried over and on what license basis.
         - src/extension_shield/cli/main.py
         - the mcp_server, api, and workflow layers
 
-      Where the file format allows comments, these files carry an in-file
-      provenance header pointing back to ThreatXtension and to this NOTICE; the
-      verbatim JSON data files (which cannot carry comments) are attributed
-      here.
+      Some carried-over source files include in-file provenance headers pointing
+      back to ThreatXtension and to this NOTICE; the verbatim JSON data files
+      (which cannot carry comments) are attributed here.
 
     * Security-score aggregation: the original risk-points-by-category logic
       originates from ThreatXtension. ExtensionShield additionally adds a V2
@@ -66,16 +63,21 @@ was carried over and on what license basis.
       tracking) were adapted from ThreatXtension's Semgrep ruleset; see the
       in-file section header.
 
-    * Supabase migration and schema files in supabase/migrations/ and
-      supabase/schemas/ were derived from ThreatXtension's SQLite schema (with
-      deliberate changes such as TEXT -> JSONB and timestamp text ->
-      timestamptz); see the per-file provenance comments.
+    * The scan_results and statistics Supabase schema/migration files in
+      supabase/schemas/ and supabase/migrations/ were ported from
+      ThreatXtension's SQLite schema (column names/order based on upstream, with
+      deliberate type changes such as TEXT -> JSONB and timestamp text ->
+      timestamptz); see the per-file provenance comments. Other Supabase tables
+      (e.g. page_views_daily) are ExtensionShield-original and are not part of
+      ThreatXtension's upstream schema.
 
   Work that is original to ExtensionShield (not derived from upstream) includes
   the V2 ScoringEngine and governance layers (extension_shield.scoring,
-  extension_shield.governance), the cloud/auth/telemetry API surface, and the
-  web frontend. ExtensionShield as a whole should nonetheless be understood as a
-  derivative of ThreatXtension, not an independent reimplementation.
+  extension_shield.governance), the cloud/auth/telemetry API surface
+  (ExtensionShield Cloud), the browser-extension package, and a substantially
+  redesigned frontend. ExtensionShield as a whole should nonetheless be
+  understood as a derivative of ThreatXtension, not an independent
+  reimplementation.
 
 Other dependencies are governed by their respective licenses; see
 pyproject.toml and frontend/package.json.

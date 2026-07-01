@@ -1,6 +1,6 @@
 -- 003_page_views_daily.sql
 -- Privacy-first analytics: daily page view counts (no PII, no user_id).
--- Schema derived from the ThreatXtension SQLite schema (MIT per upstream README; no LICENSE file published upstream).
+-- ExtensionShield-original table; not part of ThreatXtension's upstream SQLite schema (which defines only scan_results and statistics).
 
 create table if not exists public.page_views_daily (
   day text not null,

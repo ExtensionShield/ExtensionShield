@@ -17,7 +17,7 @@ const faqItems = [
   },
   {
     question: "What is ThreatXtension?",
-    answer: "ThreatXtension is an open-source (MIT) Chrome extension security scanner. ExtensionShield's Security (SAST) pipeline is built on it — adapting its Semgrep ruleset and category-based risk aggregation as a baseline — while ExtensionShield's V2 scoring engine and governance pipeline are our own work."
+    answer: "ThreatXtension is an open-source Chrome extension security scanner (MIT per its README; no separate upstream LICENSE file is published). ExtensionShield began as a derivative of ThreatXtension: our Security (SAST) pipeline builds on its Semgrep ruleset and category-based risk aggregation, while ExtensionShield's V2 scoring engine and governance pipeline are our own work."
   },
   {
     question: "What does the aggregate risk score mean?",
@@ -138,7 +138,7 @@ const MethodologyPage = () => {
                           <button
                             type="button"
                             className="pipeline-open-source-trigger"
-                            aria-label="Open source credit — built on ThreatXtension"
+                            aria-label="Open source credit — based on ThreatXtension"
                           >
                             <Info className="pipeline-open-source-trigger-icon" aria-hidden />
                           </button>
@@ -152,9 +152,10 @@ const MethodologyPage = () => {
                             </div>
                             <h3>Built on Open Source</h3>
                             <p>
-                              Pipeline 1 is our Security (SAST) pipeline. It builds on <strong>ThreatXtension</strong>,
-                              an open-source (MIT) Chrome extension security scanner: we adapted its Semgrep ruleset and
-                              risk-point aggregation as our baseline and extended it with ExtensionShield's own rules and V2 scoring.
+                              ExtensionShield began as a derivative of <strong>ThreatXtension</strong>
+                              (open-source, MIT per its README). Pipeline 1, our Security (SAST) pipeline, builds
+                              directly on its Semgrep ruleset and risk-point aggregation; the V2 scoring engine and
+                              governance pipeline are ExtensionShield's own.
                             </p>
                             <div className="credit-links">
                               <a href="https://github.com/barvhaim/ThreatXtension" target="_blank" rel="noopener noreferrer" className="credit-link">
@@ -170,7 +171,7 @@ const MethodologyPage = () => {
                     </div>
                     <h3>Security Analysis</h3>
                     <h4 className="tech-credit">
-                      Built on <a href="https://github.com/barvhaim/ThreatXtension" target="_blank" rel="noopener noreferrer">ThreatXtension</a> (MIT)
+                      Based on <a href="https://github.com/barvhaim/ThreatXtension" target="_blank" rel="noopener noreferrer">ThreatXtension</a> (MIT per its README)
                     </h4>
                     <p>Static application security testing (SAST) with custom Semgrep rules detecting malicious patterns, obfuscation, and data exfiltration.</p>
                     

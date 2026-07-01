@@ -251,12 +251,12 @@ rules:
           navigator\.sendBeacon\s*\(\s*["']https?://[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}[^\s"\'`)]*["']
 
   ##########################################################################
-  # MALWARE-DETECTION RULES — adapted from ThreatXtension
-  # (MIT per upstream README; no LICENSE file is published upstream)
+  # MALWARE-DETECTION RULES — adapted from ThreatXtension's Semgrep ruleset.
+  # Substantially the upstream rule set, plus ExtensionShield additions.
+  # MIT per upstream README; no separate upstream LICENSE file is published.
   # Source: https://github.com/barvhaim/ThreatXtension
-  # Credential theft, cookie theft, C2/exfiltration, keylogger, clipboard,
-  # URL hijacking, and tracking. Adapted into the ExtensionShield ruleset
-  # after auditing coverage against the ThreatXtension baseline.
+  # Covers: credential theft, cookie theft, C2/exfiltration, keylogger,
+  # clipboard, URL hijacking, and tracking.
   # Attribution: see docs/NOTICE.
   ##########################################################################
   - id: credential.theft.storage_access
