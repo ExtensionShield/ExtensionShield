@@ -170,6 +170,36 @@ def _rate_limit(limit: str):
     return _noop
 
 
+def _format_byte_limit(max_bytes: int) -> str:
+    """Return a human-readable upload limit for API error messages."""
+    if max_bytes % (1024 * 1024) == 0:
+        mb = max_bytes // (1024 * 1024)
+        return f"{mb}MB"
+    return f"{max_bytes} bytes"
+
+
+async def _read_upload_with_limit(file: UploadFile, max_bytes: int) -> bytes:
+    """Read an UploadFile without accepting payloads larger than max_bytes."""
+    chunk_size = 1024 * 1024
+    chunks = []
+    total = 0
+
+    while True:
+        remaining = max_bytes - total + 1
+        chunk = await file.read(min(chunk_size, remaining))
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size is {_format_byte_limit(max_bytes)}.",
+            )
+        chunks.append(chunk)
+
+    return b"".join(chunks)
+
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
@@ -2464,14 +2494,9 @@ async def upload_and_scan(
             detail="Invalid file type. Only .crx and .zip files are supported"
         )
 
-    # Validate file size (max 100MB)
-    max_size = 100 * 1024 * 1024  # 100MB
-    file_content = await file.read()
-    if len(file_content) > max_size:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File too large. Maximum size is {max_size / (1024*1024):.0f}MB"
-        )
+    # Validate file size before saving/analysis. Read with a bounded loop rather than
+    # slurping an arbitrary body into memory first.
+    file_content = await _read_upload_with_limit(file, settings.upload_max_bytes)
 
     # Validate MIME type (additional security check)
     import mimetypes

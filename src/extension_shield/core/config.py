@@ -22,6 +22,8 @@ EnvName = Literal["local", "dev", "prod"]
 StorageBackend = Literal["local", "supabase"]
 DbBackend = Literal["sqlite", "postgres", "supabase"]
 
+DEFAULT_UPLOAD_MAX_BYTES = 104857600  # 100 MiB
+
 
 def _normalize_env(value: Optional[str]) -> Optional[str]:
     if value is None:
@@ -122,7 +124,8 @@ class Settings:
     admin_api_key: Optional[str]
     telemetry_admin_key: Optional[str]
 
-    # Zip extract limits (zip-bomb protection)
+    # Upload and zip extract limits (DoS/zip-bomb protection)
+    upload_max_bytes: int
     zip_extract_max_files: int
     zip_extract_max_uncompressed_bytes: int
 
@@ -180,6 +183,8 @@ def get_settings() -> Settings:
     - ADMIN_API_KEY, TELEMETRY_ADMIN_KEY (optional, for admin endpoints)
     - STORAGE_BACKEND: local|supabase (currently only local FS is used)
     - DB_BACKEND: sqlite|supabase (Postgres via Supabase; sqlite is dev fallback)
+    - UPLOAD_MAX_BYTES: max accepted CRX/ZIP upload size before request rejection
+    - ZIP_EXTRACT_MAX_FILES, ZIP_EXTRACT_MAX_UNCOMPRESSED_BYTES: zip-bomb protection
     """
 
     env = _parse_env_name(
@@ -207,7 +212,16 @@ def get_settings() -> Settings:
     admin_api_key = os.environ.get("ADMIN_API_KEY")
     telemetry_admin_key = os.environ.get("TELEMETRY_ADMIN_KEY")
 
-    # Zip-bomb protection: max file count and max total uncompressed size
+    # Upload and zip-bomb protection: reject large uploads before saving/analysis,
+    # then bound extracted archive complexity separately.
+    _upload_max_bytes = os.environ.get("UPLOAD_MAX_BYTES", str(DEFAULT_UPLOAD_MAX_BYTES))
+    try:
+        upload_max_bytes = int(_upload_max_bytes)
+    except ValueError:
+        upload_max_bytes = DEFAULT_UPLOAD_MAX_BYTES
+    if upload_max_bytes <= 0:
+        upload_max_bytes = DEFAULT_UPLOAD_MAX_BYTES
+
     _zip_max_files = os.environ.get("ZIP_EXTRACT_MAX_FILES", "10000")
     _zip_max_bytes = os.environ.get("ZIP_EXTRACT_MAX_UNCOMPRESSED_BYTES", "524288000")  # 500 MiB
     try:
@@ -256,6 +270,7 @@ def get_settings() -> Settings:
         supabase_jwt_aud=supabase_jwt_aud,
         admin_api_key=admin_api_key,
         telemetry_admin_key=telemetry_admin_key,
+        upload_max_bytes=upload_max_bytes,
         zip_extract_max_files=zip_extract_max_files,
         zip_extract_max_uncompressed_bytes=zip_extract_max_uncompressed_bytes,
     )
