@@ -51,6 +51,18 @@ class RealScanService {
     return { ...this.getUserHeaders(), ...this.getAuthHeaders() };
   }
 
+  // Admin force-rescan token. An admin sets it once via the browser console:
+  //   localStorage.setItem('es_rescan_admin_token', '<RESCAN_ADMIN_TOKEN>')
+  // It is sent only on force rescans and the server still verifies it matches
+  // RESCAN_ADMIN_TOKEN, so possession alone grants nothing without the server env.
+  getAdminRescanToken() {
+    try {
+      return (localStorage.getItem("es_rescan_admin_token") || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
   // Extract extension ID from Chrome Web Store URL
   extractExtensionId(url) {
     const match = url.match(/\/detail\/(?:[^/]+\/)?([a-z]{32})/);
@@ -93,15 +105,21 @@ class RealScanService {
     }
   }
 
-  // Trigger a scan for an extension URL
-  async triggerScan(url) {
+  // Trigger a scan for an extension URL. Pass { force: true } to bypass the cached
+  // fast path and force a fresh deep scan — server-gated: honored only in dev or
+  // when the admin rescan token matches RESCAN_ADMIN_TOKEN, ignored otherwise.
+  async triggerScan(url, { force = false } = {}) {
+    const headers = {
+      "Content-Type": "application/json",
+      ...this.getRequestHeaders(),
+    };
+    const adminToken = force ? this.getAdminRescanToken() : "";
+    if (adminToken) headers["X-Admin-Rescan-Token"] = adminToken;
+
     const { response, body } = await fetchJson(`${this.baseURL}/api/scan/trigger`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...this.getRequestHeaders(),
-      },
-      body: JSON.stringify({ url }),
+      headers,
+      body: JSON.stringify(force ? { url, force: true } : { url }),
     });
 
     if (response.ok) {
