@@ -30,6 +30,10 @@ scan_source: Dict[str, Optional[str]] = {}
 class ScanRequest(BaseModel):
     """Request model for triggering a scan."""
     url: str
+    # Temporary force-rescan: bypass the cached-result fast path so a scan is
+    # recomputed even if the store version is unchanged. Gated server-side
+    # (dev mode or a matching admin token); ignored otherwise.
+    force: Optional[bool] = False
 
 
 class ScanStatusResponse(BaseModel):

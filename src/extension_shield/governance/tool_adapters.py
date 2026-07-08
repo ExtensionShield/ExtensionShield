@@ -38,6 +38,7 @@ from .signal_pack import (
     PermissionAnalysisResult,
     ChromeStatsSignalPack,
     NetworkSignalPack,
+    sanitize_code_snippet,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,12 +78,12 @@ class BaseToolAdapter:
         )
     
     def _truncate_snippet(self, text: Optional[str], max_len: int = 200) -> Optional[str]:
-        """Truncate text to max length."""
-        if not text:
-            return None
-        if len(text) <= max_len:
-            return text
-        return text[:max_len - 3] + "..."
+        """Return a real, truncated code snippet or None (drops fake placeholders).
+
+        Delegates to the shared sanitizer so fake evidence like "requires login"
+        never surfaces as a user-facing code snippet or feeds a gate.
+        """
+        return sanitize_code_snippet(text, max_len)
 
 
 # =============================================================================
@@ -506,10 +507,16 @@ class WebstoreStatsAdapter(BaseToolAdapter):
             logger.debug("No webstore metadata to adapt")
             return
         
-        # Parse user count
-        users = metadata.get("users", "0")
+        # Parse user count. The webstore metadata key is `user_count` (not
+        # `users`); reading the wrong key made `installs` default to 0 for EVERY
+        # extension, so a 300k-user wallet looked like 0 installs — falsely
+        # tripping the "very few users" penalty and depressing confidence. Read
+        # the correct key, with `users` kept only as a legacy fallback.
+        users = metadata.get("user_count")
+        if users in (None, ""):
+            users = metadata.get("users")
         installs = None
-        if users:
+        if users not in (None, ""):
             try:
                 # Handle formats like "1,000,000+" or "10000"
                 users_clean = str(users).replace(",", "").replace("+", "")

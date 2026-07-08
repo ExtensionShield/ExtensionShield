@@ -159,6 +159,214 @@ function resolveInsufficientData(
 }
 
 /**
+ * Resolve analysis coverage for display.
+ *
+ * A scan whose primary code analyzer (SAST) did not run must NEVER be shown as
+ * "Full coverage" — that would make a "code was not analyzed" result look
+ * confidently complete. Precedence:
+ *   - limited: no substantive analyzer ran at all (insufficient_data)
+ *   - partial: a coverage cap fired, OR SAST cannot be confirmed to have run
+ *   - full:    SAST is positively confirmed to have run and no cap fired
+ *
+ * When SAST coverage cannot be positively confirmed we return `partial` rather
+ * than over-claiming `full`. This is intentionally conservative: under-claiming
+ * coverage is safe; over-claiming it is a trust failure.
+ */
+export function resolveCoverage(
+  raw: RawScanResult | null | undefined
+): { level: 'full' | 'partial' | 'limited'; label: string; tone: 'good' | 'warn' } {
+  if (!raw) return { level: 'partial', label: 'Partial coverage', tone: 'warn' };
+
+  const sv2 = getScoringV2(raw);
+
+  if (resolveInsufficientData(raw, sv2)) {
+    return { level: 'limited', label: 'Limited coverage', tone: 'warn' };
+  }
+
+  const capApplied = Boolean(
+    (raw as { scoring_v2?: { coverage_cap_applied?: boolean } }).scoring_v2?.coverage_cap_applied ||
+    sv2?.coverage_cap_applied ||
+    raw.governance_bundle?.scoring_v2?.coverage_cap_applied
+  );
+
+  // Positive evidence that SAST (the primary code analyzer) actually ran.
+  const sast = (raw.sast_results || {}) as {
+    files_scanned?: number;
+    filesScanned?: number;
+    sast_findings?: Record<string, unknown>;
+    sastFindings?: Record<string, unknown>;
+  };
+  const filesScanned = Number(sast.files_scanned ?? sast.filesScanned ?? 0);
+  const findings = sast.sast_findings || sast.sastFindings;
+  const findingsCount = findings && typeof findings === 'object' ? Object.keys(findings).length : 0;
+  const sastRan = filesScanned > 0 || findingsCount > 0;
+
+  if (capApplied || !sastRan) {
+    return { level: 'partial', label: 'Partial coverage', tone: 'warn' };
+  }
+  return { level: 'full', label: 'Full coverage', tone: 'good' };
+}
+
+/**
+ * Explicit per-analyzer status for the coverage/evidence UI. Never infers "clean"
+ * from a missing analyzer: SAST that did not run is "not run", VirusTotal with no
+ * hash hit is "unknown", not "clean". Reads the persisted signal pack
+ * (governance_bundle.signal_pack) which records what each analyzer actually did.
+ */
+export function resolveAnalyzerStatus(
+  raw: RawScanResult | null | undefined
+): Array<{ key: string; label: string; status: string; ok: boolean }> {
+  const anyRaw = (raw || {}) as {
+    governance_bundle?: { signal_pack?: Record<string, unknown> };
+    sast_results?: { files_scanned?: number; scan_error?: boolean };
+    virustotal_analysis?: { enabled?: boolean };
+  };
+  const sp = (anyRaw.governance_bundle?.signal_pack || {}) as Record<string, any>;
+  const out: Array<{ key: string; label: string; status: string; ok: boolean }> = [];
+
+  // SAST
+  const sast = sp.sast || {};
+  const sastFiles = Number(sast.files_scanned ?? anyRaw.sast_results?.files_scanned ?? 0);
+  if (sast.scan_error || anyRaw.sast_results?.scan_error) {
+    out.push({ key: 'sast', label: 'Code analysis (SAST)', status: 'failed to run', ok: false });
+  } else if (sastFiles > 0) {
+    out.push({ key: 'sast', label: 'Code analysis (SAST)', status: `ran on ${sastFiles} file${sastFiles === 1 ? '' : 's'}`, ok: true });
+  } else {
+    out.push({ key: 'sast', label: 'Code analysis (SAST)', status: 'did not run — code not analyzed', ok: false });
+  }
+
+  // VirusTotal
+  const vt = sp.virustotal || {};
+  const vtEnabled = vt.enabled ?? anyRaw.virustotal_analysis?.enabled;
+  const vtEngines = Number(vt.total_engines ?? 0);
+  const vtMal = Number(vt.malicious_count ?? 0);
+  if (vtEnabled === false) {
+    out.push({ key: 'vt', label: 'Malware scan (VirusTotal)', status: 'disabled / no API key', ok: false });
+  } else if (vtEngines > 0 && vtMal > 0) {
+    out.push({ key: 'vt', label: 'Malware scan (VirusTotal)', status: `${vtMal} engine(s) flagged malicious`, ok: false });
+  } else if (vtEngines > 0) {
+    out.push({ key: 'vt', label: 'Malware scan (VirusTotal)', status: `checked (${vtEngines} engines, no detections)`, ok: true });
+  } else {
+    out.push({ key: 'vt', label: 'Malware scan (VirusTotal)', status: 'unknown — hash not in database', ok: false });
+  }
+
+  // Network
+  const net = sp.network || {};
+  out.push(net.enabled
+    ? { key: 'network', label: 'Network / exfiltration', status: 'analyzed', ok: true }
+    : { key: 'network', label: 'Network / exfiltration', status: 'did not run', ok: false });
+
+  return out;
+}
+
+/**
+ * Resolve store-listing provenance/trust. A result should never over-reassure
+ * when the listing itself is unverified. Surfaces the honest edge cases:
+ *   - foreign:    published on the Edge (non-Chrome) store
+ *   - unverified: fabricated/placeholder Chrome URL, or no listing metadata
+ *   - verified:   a real Chrome Web Store listing with captured metadata
+ * `notes` explains *why*, for progressive disclosure in the UI.
+ */
+export function resolveProvenance(
+  raw: RawScanResult | null | undefined
+): {
+  level: 'verified' | 'unverified' | 'foreign';
+  label: string;
+  tone: 'good' | 'warn';
+  store: 'chrome' | 'edge' | 'unknown';
+  notes: string[];
+} {
+  const notes: string[] = [];
+  if (!raw) {
+    return { level: 'unverified', label: 'Unverified listing', tone: 'warn', store: 'unknown', notes: ['No scan data available.'] };
+  }
+
+  const anyRaw = raw as unknown as {
+    url?: string;
+    metadata?: { user_count?: unknown; rating?: unknown; version?: unknown; last_updated?: unknown };
+    manifest?: { update_url?: string; version?: string };
+  };
+  const url = typeof anyRaw.url === 'string' ? anyRaw.url : '';
+  const updateUrl = anyRaw.manifest?.update_url || '';
+  const meta = anyRaw.metadata || {};
+
+  // Parse the listing URL strictly: a malformed URL, a non-http(s) scheme, or a
+  // host that is not an actual store cannot support a "Verified listing" claim.
+  let parsedUrl: URL | null = null;
+  if (url) {
+    try {
+      parsedUrl = new URL(url);
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') parsedUrl = null;
+    } catch {
+      parsedUrl = null;
+    }
+  }
+  const urlHost = parsedUrl?.hostname.toLowerCase() ?? '';
+  const urlIsChromeHost =
+    urlHost === 'chromewebstore.google.com' ||
+    (urlHost === 'chrome.google.com' && (parsedUrl?.pathname.toLowerCase().startsWith('/webstore') ?? false));
+  const urlIsEdgeStore = urlHost === 'microsoftedge.microsoft.com';
+
+  // Verification requires a real store DETAIL page (optional slug + 32-char
+  // [a-p] extension ID) — homepages, search, and category pages identify no
+  // listing. The literal slug "x" is the fabricated placeholder. (Kept in sync
+  // with isUnverifiedStoreUrl in signalMapper.js.)
+  let detailMatch: RegExpMatchArray | null = null;
+  if (parsedUrl) {
+    if (urlHost === 'chromewebstore.google.com') {
+      detailMatch = parsedUrl.pathname.match(/^\/detail\/(?:([^/]+)\/)?([a-p]{32})\/?$/i);
+    } else if (urlHost === 'chrome.google.com') {
+      detailMatch = parsedUrl.pathname.match(/^\/webstore\/detail\/(?:([^/]+)\/)?([a-p]{32})\/?$/i);
+    }
+  }
+  const urlIsChromeStoreDetail =
+    Boolean(detailMatch) && (detailMatch?.[1] || '').toLowerCase() !== 'x';
+
+  let store: 'chrome' | 'edge' | 'unknown' = 'unknown';
+  if (/edge\.microsoft\.com/i.test(updateUrl) || urlIsEdgeStore) store = 'edge';
+  else if (/clients2\.google\.com/i.test(updateUrl) || urlIsChromeHost) store = 'chrome';
+
+  // The URL only supports verification when it parses and is an actual Chrome
+  // Web Store detail page (placeholder slug excluded by the regex check).
+  const placeholderUrl = !parsedUrl || !urlIsChromeStoreDetail;
+  const missingMetadata = meta.user_count == null && meta.rating == null && meta.version == null;
+
+  // Version mismatch: the listing metadata does not describe the scanned build,
+  // so the listing cannot honestly be presented as verified for this scan.
+  const manifestVersion = anyRaw.manifest?.version;
+  const metaVersion = meta.version;
+  const versionMismatch = Boolean(
+    manifestVersion && metaVersion && String(manifestVersion) !== String(metaVersion)
+  );
+  if (versionMismatch) {
+    notes.push(`Scanned build (v${manifestVersion}) differs from the listed version (v${metaVersion}).`);
+  }
+
+  // Staleness: an extension not updated in over a year is worth flagging in the
+  // disclosure notes (it already feeds the Maintenance score factor; this only
+  // surfaces it — it does not change the listing-trust level).
+  const lastUpdated = (meta as { last_updated?: unknown }).last_updated;
+  if (typeof lastUpdated === 'string' && lastUpdated.trim()) {
+    const parsed = new Date(lastUpdated);
+    if (!Number.isNaN(parsed.getTime()) && Date.now() - parsed.getTime() > 365 * 24 * 60 * 60 * 1000) {
+      notes.push(`Not updated since ${lastUpdated} — may be unmaintained.`);
+    }
+  }
+
+  if (store === 'edge') {
+    notes.push('Published on the Microsoft Edge Add-ons store, not the Chrome Web Store.');
+    return { level: 'foreign', label: 'Edge listing', tone: 'warn', store, notes };
+  }
+  if (placeholderUrl) notes.push('Store listing could not be verified (missing, malformed, or non-store URL).');
+  if (missingMetadata) notes.push('No store listing metadata (installs, rating, version) was captured.');
+
+  if (placeholderUrl || missingMetadata || versionMismatch) {
+    return { level: 'unverified', label: 'Unverified listing', tone: 'warn', store, notes };
+  }
+  return { level: 'verified', label: 'Verified listing', tone: 'good', store, notes };
+}
+
+/**
  * Map decision string to normalized Decision type
  */
 function normalizeDecision(decision?: string | null): Decision {
@@ -252,16 +460,54 @@ const SAST_HUMAN_TITLE: Record<string, string> = {
   'form-data-access': 'Reads data you type into forms',
 };
 
+// Friendly labels for the custom Semgrep rule behaviors (keyed on the specific
+// last segment of the dotted rule id, e.g. `...credential.theft.chrome_identity_api`).
+// Titles describe the behavior plainly — never the scary rule taxonomy.
+const SAST_BEHAVIOR_TITLE: Record<string, string> = {
+  chrome_identity_api: 'Uses Chrome sign-in (identity)',
+  fetch_credentials_include: 'Sends authenticated network requests',
+  chrome_runtime_external: 'Messages other extensions',
+  external_api_calls: 'Calls external APIs',
+  document_cookie_access: 'Reads cookies',
+  chrome_cookies_api: 'Reads cookies',
+  storage_access: 'Uses local storage',
+  indexeddb_storage: 'Uses local storage',
+  websocket_connection: 'Opens a websocket connection',
+  keylogger: 'Listens to keyboard input',
+  password_extraction: 'Reads password fields',
+  password_input_hooks: 'Hooks password inputs',
+  form_serialization: 'Reads form field values',
+  submit_intercept: 'Intercepts form submissions',
+  dynamic_script_loading: 'Loads and runs remote code',
+  server_list: 'Contains hardcoded server list',
+  periodic_beacon: 'Beacons to external servers',
+  image_steganography: 'May hide data in images',
+  base64_encoded_data: 'Sends encoded data',
+  dns_tunneling: 'May tunnel data over DNS',
+  url_and_userid: 'Sends user id to a URL',
+  override_fetch_xhr: 'Intercepts network requests',
+  cookie_exfiltration: 'Sends cookies externally',
+  clipboard_hijack: 'Reads and replaces clipboard',
+  silent_payment: 'May trigger silent payments',
+  random_domain_pattern: 'Contacts unusual-looking domains',
+};
+
+function humanizeSastCheckId(checkId: string): string {
+  if (!checkId || typeof checkId !== 'string') return 'Code finding';
+  if (SAST_HUMAN_TITLE[checkId]) return SAST_HUMAN_TITLE[checkId];
+  // Custom rules are dotted paths (src.extension_shield.config.<cat>.<sub>.<behavior>).
+  // Humanize the specific behavior (last segment), not the whole path.
+  const suffix = checkId.split('.').pop() || checkId;
+  if (SAST_BEHAVIOR_TITLE[suffix]) return SAST_BEHAVIOR_TITLE[suffix];
+  return suffix.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function humanizeGateId(gateId: string): string {
   return GATE_HUMAN_TITLE[gateId] || GATE_HUMAN_TITLE[gateId.toUpperCase()] || gateId.replace(/_/g, ' ').toLowerCase();
 }
 
 function humanizeFactorName(name: string): string {
   return FACTOR_HUMAN_TITLE[name] || name.replace(/([A-Z])/g, ' $1').trim();
-}
-
-function humanizeSastCheckId(checkId: string): string {
-  return SAST_HUMAN_TITLE[checkId] || checkId.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function humanizeFactorSummary(factor: RawFactorScore, layer: string): string {
@@ -552,9 +798,45 @@ function assertExists<T>(value: T | undefined | null, name: string): T {
  * Priority: raw.scoring_v2 > raw.governance_bundle.scoring_v2
  */
 function getScoringV2(raw: RawScanResult): RawScoringV2 | null {
-  if (raw.scoring_v2) return raw.scoring_v2;
-  if (raw.governance_bundle?.scoring_v2) return raw.governance_bundle.scoring_v2;
-  return null;
+  const top = raw.scoring_v2 ?? null;
+  const bundle = raw.governance_bundle?.scoring_v2 ?? null;
+  if (!top) return bundle;
+  if (!bundle) return top;
+  // Persisted rows flatten the top-level copy: its *_layer objects and
+  // gate_results are stripped, while the governance-bundle copy keeps the full
+  // per-layer detail (factors, gate results). Keep top-level fields as the base
+  // (it carries decision_authority / insufficient_data), but graft the layer
+  // detail back in so factors, per-layer bands, and gate overrides work on
+  // real payloads instead of silently rendering empty.
+  if (top.security_layer || top.privacy_layer || top.governance_layer) return top;
+  return {
+    ...bundle,
+    ...top,
+    security_layer: top.security_layer ?? bundle.security_layer,
+    privacy_layer: top.privacy_layer ?? bundle.privacy_layer,
+    governance_layer: top.governance_layer ?? bundle.governance_layer,
+    gate_results: top.gate_results ?? bundle.gate_results,
+  };
+}
+
+/**
+ * Select the real top contributing factors for a layer tile.
+ *
+ * Factors are stored in a fixed order (SAST, VirusTotal, ...), so slicing the
+ * first N surfaces default labels ("SAST"/"VirusTotal") even when they scored
+ * zero and did not contribute. This keeps only factors that actually added risk
+ * (severity or contribution > 0), ranked by contribution. Returns [] when the
+ * layer is clean — the tile then shows just its score, no misleading chips.
+ */
+export function topContributingFactors(
+  factors: FactorVM[] | null | undefined,
+  limit = 2
+): FactorVM[] {
+  if (!Array.isArray(factors)) return [];
+  return factors
+    .filter((f) => f && f.name && (((f.severity ?? 0) > 0) || ((f.riskContribution ?? 0) > 0)))
+    .sort((a, b) => (b.riskContribution ?? b.severity ?? 0) - (a.riskContribution ?? a.severity ?? 0))
+    .slice(0, Math.max(0, limit));
 }
 
 /**

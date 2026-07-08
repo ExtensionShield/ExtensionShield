@@ -1,5 +1,6 @@
 import databaseService from '../services/databaseService';
 import { enrichScanWithSignals, SIGNAL_LEVELS } from './signalMapper';
+import { extractFindingsByLayer, normalizeScanResultSafe } from './normalizeScanResult';
 
 /**
  * Parse metadata from scan result (handles both string and object formats)
@@ -20,6 +21,43 @@ export function parseMetadata(fullResult) {
     }
   }
   return metadata;
+}
+
+function parseObjectField(value) {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof value === 'object' ? value : {};
+}
+
+function dedupeFindings(findings) {
+  const seen = new Set();
+  return (Array.isArray(findings) ? findings : []).filter((finding) => {
+    const key = String(finding?.title || '').trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function countReportFindings(rawScanResult) {
+  const viewModel = normalizeScanResultSafe(rawScanResult);
+  if (!viewModel) return null;
+
+  const findingsByLayer = extractFindingsByLayer(rawScanResult);
+  return ['security', 'privacy', 'governance'].reduce((total, layer) => {
+    const layerFindings = [
+      ...(viewModel.keyFindings?.filter((finding) => finding.layer === layer) || []),
+      ...(findingsByLayer[layer] || []),
+    ];
+    return total + dedupeFindings(layerFindings).length;
+  }, 0);
 }
 
 /**
@@ -65,6 +103,7 @@ export async function enrichScan(scan, options = {}) {
 
   // If metadata is already available in scan, use it directly (avoids N+1 queries)
   const metadata = parseMetadata(scan);
+  const summary = parseObjectField(scan.summary);
   // Extract risk and signals from new API mapping if available
   const riskAndSignals = scan.risk_and_signals || {};
   const riskScore = riskAndSignals.risk ?? scan.security_score ?? scan.score ?? 0;
@@ -99,20 +138,25 @@ export async function enrichScan(scan, options = {}) {
   if (skipFullFetch) {
     const scanDataForSignals = {
       ...scan,
+      summary,
       metadata: metadata || {},
       sast_results: scan.sast_results || metadata?.sast_results,
       permissions_analysis: scan.permissions_analysis || metadata?.permissions_analysis,
       virustotal_analysis: scan.virustotal_analysis || metadata?.virustotal_analysis || scan.virustotal_analysis,
       manifest: scan.manifest || metadata?.manifest,
-      scoring_v2: scan.scoring_v2 || scan.summary?.scoring_v2,
-      report_view_model: scan.report_view_model || scan.summary?.report_view_model,
-      governance_bundle: scan.governance_bundle || scan.summary?.governance_bundle,
+      scoring_v2: scan.scoring_v2 || summary?.scoring_v2,
+      report_view_model: scan.report_view_model || summary?.report_view_model,
+      governance_bundle: scan.governance_bundle || summary?.governance_bundle,
     };
 
     // Always enrich with available data when skipFullFetch is true
     // This ensures we return a valid scan object even if metadata or scoring_v2 is missing
     const enriched = enrichScanWithSignals(baseScan, scanDataForSignals);
-    return enriched;
+    const reportFindingsCount = countReportFindings(scanDataForSignals);
+    return {
+      ...enriched,
+      findings_count: reportFindingsCount ?? enriched.findings_count,
+    };
   }
 
   // Original behavior: fetch full result if skipFullFetch is false
@@ -143,14 +187,22 @@ export async function enrichScan(scan, options = {}) {
       fullResult
     );
 
-    return enriched;
+    const reportFindingsCount = countReportFindings(fullResult);
+    return {
+      ...enriched,
+      findings_count: reportFindingsCount ?? enriched.findings_count,
+    };
   } catch (err) {
     // If fetch fails, use what we have and create fallback
     // This ensures we always return a valid scan object, never null
     // console.warn(`Could not fetch full result for ${scan.extension_id}, using available data:`, err); // prod: no console
     const fallbackData = { metadata, ...scan };
     const enriched = enrichScanWithSignals(baseScan, fallbackData);
-    return enriched;
+    const reportFindingsCount = countReportFindings(fallbackData);
+    return {
+      ...enriched,
+      findings_count: reportFindingsCount ?? enriched.findings_count,
+    };
   }
 }
 
@@ -181,8 +233,6 @@ export async function enrichScans(scans, options = {}) {
         }),
   };
 
-  // console.log(`[enrichScans] Enriching ${scans.length} scans, skipFullFetch=${enrichmentOptions.skipFullFetch}`); // prod: no console
-
   const enrichmentPromises = scans.map((scan) => enrichScan(scan, enrichmentOptions));
   const results = await Promise.allSettled(enrichmentPromises);
   
@@ -200,7 +250,5 @@ export async function enrichScans(scans, options = {}) {
     })
     .filter(scan => scan && scan.extension_id); // Only filter out scans without extension_id
   
-  // console.log(`[enrichScans] Successfully enriched ${enriched.length} of ${scans.length} scans`); // prod: no console
   return enriched;
 }
-

@@ -344,6 +344,16 @@ class RuleResult(BaseModel):
     citations: List[str] = Field(default_factory=list, description="Citation IDs for policies/standards")
     explanation: str = Field(description="Why rule was triggered and verdict rendered")
     recommended_action: str = Field(description="Action to take based on verdict")
+    advisory: bool = Field(
+        default=False,
+        description=(
+            "Advisory (policy-hygiene) rule. Its verdict is surfaced as a review "
+            "note but must NOT escalate the final verdict above the evidence-based "
+            "V2 decision (e.g. broad host access, minification, generic manifest/"
+            "permission warnings, missing-policy). Non-advisory rules are "
+            "evidence-backed and may escalate."
+        ),
+    )
     triggered_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When rule was evaluated")
 
 

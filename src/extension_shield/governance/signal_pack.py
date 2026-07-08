@@ -24,6 +24,35 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
+# Snippets that are not real matched code and must never be shown as evidence
+# or consumed by gates (e.g. a placeholder returned instead of the source line).
+_PLACEHOLDER_SNIPPETS = frozenset({"requires login", "requires_login", "n/a", "none", "null"})
+# Characters that indicate a string is actual source code (not a prose phrase).
+_CODE_CHARS = set("(){}[];=<>.:/\\\"'`+*&|")
+
+
+def sanitize_code_snippet(text: Optional[str], max_len: int = 200) -> Optional[str]:
+    """Return a real code snippet, or None when the snippet is fake/non-code.
+
+    A finding's code snippet must be the actual matched source. Some analyzer
+    paths emit a placeholder instead (e.g. "requires login"); such values must
+    never surface as user-facing code evidence and must never feed a gate. When
+    no real snippet is available we return None so callers can fall back to the
+    file/line reference and mark the code evidence as unavailable.
+    """
+    if not text or not isinstance(text, str):
+        return None
+    stripped = text.strip()
+    if not stripped or stripped.lower() in _PLACEHOLDER_SNIPPETS:
+        return None
+    # A short phrase with no code punctuation is prose, not matched code.
+    if len(stripped) <= 40 and not any(ch in _CODE_CHARS for ch in stripped):
+        return None
+    if len(stripped) <= max_len:
+        return stripped
+    return stripped[: max_len - 3] + "..."
+
+
 # =============================================================================
 # EVIDENCE MODELS
 # =============================================================================

@@ -433,6 +433,17 @@ def analyze(url: Optional[str], file: Optional[str], output: Optional[str], verb
         output_path = Path(output)
         save_results_json(result, output_path)
 
+    # Persistence note: `analyze` is a one-shot CLI run — it does NOT write to the
+    # scan database or the recent-scans list. Use `--output` to keep the JSON, or
+    # scan through the running API (`extension-shield serve` + POST /api/scan/trigger)
+    # to persist to SQLite/Supabase and appear in recent scans.
+    if not output:
+        console.print(
+            "[dim]Note: CLI analysis is not persisted to the database or recent "
+            "scans. Re-run with --output <file.json> to save, or scan via the API "
+            "(extension-shield serve) to persist.[/dim]"
+        )
+
 
 @cli.command()
 @click.option(

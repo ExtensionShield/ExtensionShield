@@ -2,7 +2,7 @@
  * LayerModal status + triage tests (presentation correctness).
  *
  * Truthful statuses:
- *  - "Issue"/"High risk" only when the check ran and found something (severity >= 0.4)
+ *  - "Issue"/"High severity" only when the check ran and found something (severity >= 0.4)
  *  - "Not analyzed" when coverage is absent (never "Clear")
  *  - "Clear" only when the check ran and found nothing material
  * Triage ordering: issues (most severe first) -> not analyzed -> cleared.
@@ -44,9 +44,9 @@ describe('LayerModal status mapping', () => {
     expect(result.tone).toBe('warn');
   });
 
-  it('a severe finding (>=0.7) is a red "High risk"', () => {
+  it('a severe finding (>=0.7) is a red "High severity"', () => {
     const result = humanizeFactor({ name: 'ToSViolations', severity: 0.8 });
-    expect(result.status).toBe('High risk');
+    expect(result.status).toBe('High severity');
     expect(result.statusType).toBe('issues');
     expect(result.tone).toBe('bad');
   });

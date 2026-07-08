@@ -120,6 +120,60 @@ def build_report_view_model_safe(
         return {}
 
 
+def refresh_governance_decision(payload: Optional[Dict[str, Any]]) -> bool:
+    """Refresh a stale governance final_verdict in-place from the persisted bundle.
+
+    The governance decision (governance_bundle.decision) is stamped with a
+    decision_version. When that stamp is missing or differs from the current
+    DECISION_VERSION, the stored verdict predates a decision-logic change and is
+    recomputed deterministically from the bundle's own inputs (no re-download).
+    Mirrors the scoring_version self-heal for scoring_v2. Returns True if the
+    stored final_verdict changed.
+    """
+    if not isinstance(payload, dict):
+        return False
+    gb = payload.get("governance_bundle")
+    if not isinstance(gb, dict):
+        return False
+    decision = gb.get("decision")
+    if not isinstance(decision, dict):
+        return False
+
+    from extension_shield.governance.decision_refresh import (
+        DECISION_VERSION,
+        recompute_final_decision,
+    )
+
+    if decision.get("decision_version") == DECISION_VERSION:
+        return False  # already current — no recompute
+
+    # Conservative insufficient-data input: the scoring engine's own flag if
+    # available, OR the previously-stored decision flag (so a prior review
+    # downgrade is never silently lost).
+    top_sv2 = payload.get("scoring_v2") or {}
+    insufficient = bool(top_sv2.get("insufficient_data", False)) or bool(
+        decision.get("insufficient_data", False)
+    )
+
+    refreshed = recompute_final_decision(gb, insufficient_data=insufficient)
+    if not refreshed:
+        return False
+
+    prev = decision.get("final_verdict")
+    decision.update(refreshed)
+    changed = refreshed["final_verdict"] != prev
+    if changed:
+        logger.info(
+            "[UPGRADE] refreshed stale governance final_verdict %s -> %s "
+            "(decision_version -> %s) for extension_id=%s",
+            prev,
+            refreshed["final_verdict"],
+            refreshed["decision_version"],
+            payload.get("extension_id"),
+        )
+    return changed
+
+
 def upgrade_legacy_payload(payload: Optional[Dict[str, Any]], extension_id: str) -> Dict[str, Any]:
     """Upgrade legacy payloads to include scoring_v2 and report_view_model."""
     if payload is None:
@@ -128,6 +182,11 @@ def upgrade_legacy_payload(payload: Optional[Dict[str, Any]], extension_id: str)
             extension_id,
         )
         return {}
+
+    # Self-heal a stale governance final_verdict before any scoring fast-path
+    # returns, so the authoritative verdict reflects current decision logic even
+    # when scoring_v2 is already current (the two are versioned independently).
+    refresh_governance_decision(payload)
     has_scoring_v2_before = bool(
         payload.get("scoring_v2")
         or (payload.get("governance_bundle") or {}).get("scoring_v2")
@@ -139,6 +198,44 @@ def upgrade_legacy_payload(payload: Optional[Dict[str, Any]], extension_id: str)
         and report_view_model_before.get("consumer_insights")
     )
     upgraded = False
+
+    # ------------------------------------------------------------------
+    # Single authoritative source. The governance node computes the canonical
+    # scoring_v2 from the full signal pack (VirusTotal / SAST coverage included)
+    # and stores it under governance_bundle.scoring_v2 (the "single source of
+    # truth"). A GET-time recompute rebuilds from the top-level analysis fields,
+    # which are frequently empty on hydrated rows (the real analyzer output lives
+    # under summary/governance_bundle) — silently degrading a good 80 into a
+    # false "insufficient data / 65" and making /api/recent and
+    # /api/scan/results disagree. If a current-version governance-bundle scoring
+    # exists but the top-level copy is stale/degraded, adopt the governance copy
+    # as the top-level scoring_v2 and skip the recompute.
+    gb_scoring = (payload.get("governance_bundle") or {}).get("scoring_v2") or {}
+    top_scoring = payload.get("scoring_v2") or {}
+    gb_is_current = (
+        isinstance(gb_scoring, dict)
+        and gb_scoring.get("overall_score") is not None
+        and bool(gb_scoring.get("decision"))
+        and gb_scoring.get("scoring_version") == ScoringEngine.VERSION
+    )
+    top_is_current = (
+        isinstance(top_scoring, dict)
+        and top_scoring.get("scoring_version") == ScoringEngine.VERSION
+    )
+    if gb_is_current and not top_is_current:
+        adopted = dict(gb_scoring)
+        # The governance-bundle copy omits a few top-level-only fields; carry
+        # them over so the UI keeps decision-authority / insufficient-data.
+        for _k in ("decision_authority", "insufficient_data", "insufficient_data_reason"):
+            if adopted.get(_k) is None and top_scoring.get(_k) is not None:
+                adopted[_k] = top_scoring.get(_k)
+        payload["scoring_v2"] = adopted
+        has_scoring_v2_before = True
+        logger.info(
+            "[UPGRADE] extension_id=%s adopted governance_bundle.scoring_v2 as authoritative (overall=%s, no degrading recompute)",
+            extension_id,
+            adopted.get("overall_score"),
+        )
 
     force_recompute = False
     try:
@@ -187,16 +284,29 @@ def upgrade_legacy_payload(payload: Optional[Dict[str, Any]], extension_id: str)
     try:
         manifest = payload.get("manifest") or {}
         metadata = payload.get("metadata") or {}
+        _summary = payload.get("summary") or {}
+
+        # Source analyzer output with a summary fallback: on hydrated rows the
+        # top-level virustotal_analysis / sast_results are frequently empty while
+        # the real output is nested under summary. Reading only the top level made
+        # the recompute lose VirusTotal coverage and report false "insufficient
+        # data". Never drop present analyzer coverage during recompute.
+        def _analyzer(field: str) -> Dict[str, Any]:
+            top = payload.get(field)
+            if top:
+                return top
+            nested = _summary.get(field) if isinstance(_summary, dict) else None
+            return nested or {}
 
         analysis_results = {
-            "permissions_analysis": payload.get("permissions_analysis") or {},
-            "javascript_analysis": payload.get("sast_results") or {},
-            "webstore_analysis": payload.get("webstore_analysis") or {},
-            "virustotal_analysis": payload.get("virustotal_analysis") or {},
-            "entropy_analysis": payload.get("entropy_analysis") or {},
-            "impact_analysis": payload.get("impact_analysis") or {},
-            "privacy_compliance": payload.get("privacy_compliance") or {},
-            "executive_summary": payload.get("summary") or {},
+            "permissions_analysis": _analyzer("permissions_analysis"),
+            "javascript_analysis": _analyzer("sast_results"),
+            "webstore_analysis": _analyzer("webstore_analysis"),
+            "virustotal_analysis": _analyzer("virustotal_analysis"),
+            "entropy_analysis": _analyzer("entropy_analysis"),
+            "impact_analysis": _analyzer("impact_analysis"),
+            "privacy_compliance": _analyzer("privacy_compliance"),
+            "executive_summary": _summary,
         }
 
         signal_pack_builder = SignalPackBuilder()

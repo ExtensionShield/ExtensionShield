@@ -11,6 +11,7 @@ const ResultsSidebarTile = ({
   score = null,
   band = 'NA',
   findingsCount = 0,
+  contributors = [],
   icon = null,
   onClick = null
 }) => {
@@ -42,6 +43,10 @@ const ResultsSidebarTile = ({
     }
   };
 
+  const topContributors = (Array.isArray(contributors) ? contributors : [])
+    .filter((factor) => factor && factor.name)
+    .slice(0, 2);
+
   return (
     <div
       className={`results-sidebar-tile band-${band.toLowerCase()} ${onClick ? 'is-clickable' : ''}`}
@@ -51,8 +56,14 @@ const ResultsSidebarTile = ({
       onKeyDown={(e) => onClick && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick())}
     >
       <div className="tile-header">
-        <span className="tile-icon">{getLayerIcon()}</span>
-        <h3 className="tile-title">{title}</h3>
+        <div className="tile-heading">
+          <span className="tile-icon">{getLayerIcon()}</span>
+          <h3 className="tile-title">{title}</h3>
+        </div>
+        <span className="tile-score">
+          {score === null ? '—' : Math.round(score)}
+          <small>/100</small>
+        </span>
         {onClick && <ChevronRight className="tile-chevron" size={16} />}
       </div>
 
@@ -68,6 +79,16 @@ const ResultsSidebarTile = ({
           </span>
         )}
       </div>
+
+      {topContributors.length > 0 && (
+        <div className="tile-contributors">
+          {topContributors.map((factor, index) => (
+            <span key={`${factor.name}-${index}`} className="tile-contributor-chip">
+              {factor.name}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="tile-progress">
         <div

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import {
   Dialog,
   DialogContent,
@@ -44,16 +45,67 @@ function bandToneClass(band) {
 }
 
 const InfoTooltip = ({ text }) => {
+  const triggerRef = React.useRef(null);
+  const [visible, setVisible] = React.useState(false);
+  const [position, setPosition] = React.useState({ top: 0, left: 0 });
+
+  const updatePosition = React.useCallback(() => {
+    if (!triggerRef.current || typeof window === 'undefined') return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const tooltipHalfWidth = 120;
+    setPosition({
+      top: Math.max(16, rect.top - 8),
+      left: Math.min(
+        Math.max(rect.left + rect.width / 2, tooltipHalfWidth + 12),
+        window.innerWidth - tooltipHalfWidth - 12
+      ),
+    });
+  }, []);
+
+  const showTooltip = () => {
+    updatePosition();
+    setVisible(true);
+  };
+
+  const hideTooltip = () => setVisible(false);
+
+  React.useEffect(() => {
+    if (!visible) return undefined;
+    const onReposition = () => updatePosition();
+    window.addEventListener('scroll', onReposition, true);
+    window.addEventListener('resize', onReposition);
+    return () => {
+      window.removeEventListener('scroll', onReposition, true);
+      window.removeEventListener('resize', onReposition);
+    };
+  }, [updatePosition, visible]);
+
   return (
-    <span
-      className="lm-info-trigger"
-      role="button"
-      aria-label="More info"
-      tabIndex={0}
-    >
-      <Info size={13} strokeWidth={2} />
-      <span className="lm-info-tooltip" role="tooltip">{text}</span>
-    </span>
+    <>
+      <span
+        className="lm-info-trigger"
+        role="button"
+        aria-label="More info"
+        tabIndex={0}
+        ref={triggerRef}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={showTooltip}
+        onBlur={hideTooltip}
+      >
+        <Info size={13} strokeWidth={2} />
+      </span>
+      {visible && typeof document !== 'undefined' && createPortal(
+        <span
+          className="lm-info-tooltip lm-info-tooltip--portal"
+          role="tooltip"
+          style={{ top: position.top, left: position.left }}
+        >
+          {text}
+        </span>,
+        document.body
+      )}
+    </>
   );
 };
 

@@ -1522,7 +1522,9 @@ async def run_analysis_workflow(url: str, extension_id: str):
             
             # Build scoring_v2 payload for API response (include gate/override breakdown for QA)
             scoring_v2_payload = {
-                "scoring_version": "v2",
+                # Stamp the real engine version (not a stale "v2" literal): a
+                # mismatch here made every GET force a degraded recompute.
+                "scoring_version": ScoringEngine.VERSION,
                 "weights_version": "v1",
                 "security_score": scoring_result.security_score,
                 "privacy_score": scoring_result.privacy_score,
@@ -1787,15 +1789,27 @@ def _build_scoring_v2_for_payload(payload: Dict[str, Any], extension_id: str) ->
     try:
         manifest = payload.get("manifest") or {}
         metadata = payload.get("metadata") or {}
+        _summary = payload.get("summary") or {}
+
+        # Summary fallback: on hydrated rows the top-level analyzer fields are
+        # often empty while the real output lives under summary. Never lose
+        # VirusTotal/SAST coverage during this legacy rebuild.
+        def _analyzer(field):
+            top = payload.get(field)
+            if top:
+                return top
+            nested = _summary.get(field) if isinstance(_summary, dict) else None
+            return nested or {}
+
         analysis_results = {
-            "permissions_analysis": payload.get("permissions_analysis") or {},
-            "javascript_analysis": payload.get("sast_results") or {},
-            "webstore_analysis": payload.get("webstore_analysis") or {},
-            "virustotal_analysis": payload.get("virustotal_analysis") or {},
-            "entropy_analysis": payload.get("entropy_analysis") or {},
-            "impact_analysis": payload.get("impact_analysis") or {},
-            "privacy_compliance": payload.get("privacy_compliance") or {},
-            "executive_summary": payload.get("summary") or {},
+            "permissions_analysis": _analyzer("permissions_analysis"),
+            "javascript_analysis": _analyzer("sast_results"),
+            "webstore_analysis": _analyzer("webstore_analysis"),
+            "virustotal_analysis": _analyzer("virustotal_analysis"),
+            "entropy_analysis": _analyzer("entropy_analysis"),
+            "impact_analysis": _analyzer("impact_analysis"),
+            "privacy_compliance": _analyzer("privacy_compliance"),
+            "executive_summary": _summary,
         }
 
         signal_pack_builder = SignalPackBuilder()
@@ -2352,7 +2366,35 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
             and live_version is not None
             and cached_version != live_version
         )
-        if not version_changed:
+
+        # Model-version rescan: if the stored scoring was produced by an older
+        # scoring engine, the cached result is stale and must be recomputed even
+        # when the store version is unchanged. Safe/ungated (it only refreshes
+        # our own scoring, no new external calls beyond a normal scan).
+        cached_scoring_version = (
+            (cached_payload.get("scoring_v2") or {}).get("scoring_version")
+            or ((cached_payload.get("governance_bundle") or {}).get("scoring_v2") or {}).get("scoring_version")
+        )
+        model_stale = (
+            isinstance(cached_scoring_version, str)
+            and bool(cached_scoring_version)
+            and cached_scoring_version != ScoringEngine.VERSION
+        )
+
+        # Temporary force-rescan: honored only in dev, or with a matching admin
+        # token header. Never for anonymous prod callers (prevents abuse).
+        force_requested = bool(getattr(scan_request, "force", False))
+        _settings = get_settings()
+        _admin_token = os.getenv("RESCAN_ADMIN_TOKEN") or ""
+        _req_token = request.headers.get("X-Admin-Rescan-Token", "") if request is not None else ""
+        force_allowed = force_requested and (
+            (not _settings.is_prod())
+            or (bool(_admin_token) and _req_token == _admin_token)
+        )
+        if force_requested and not force_allowed:
+            logger.info("[FORCE_RESCAN] force ignored for %s (not permitted in this environment)", extension_id)
+
+        if (not version_changed) and (not model_stale) and (not force_allowed):
             # Bump extension to top of recent scans (for both auth and anonymous users)
             try:
                 db.touch_scan_result(extension_id)
@@ -2377,6 +2419,10 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
                 "already_scanned": True,
                 "scan_type": "lookup",
             }
+        logger.info(
+            "[CACHED_PATH] Rescan for %s (version_changed=%s, model_stale=%s [%s->%s], force=%s); starting deep rescan",
+            extension_id, version_changed, model_stale, cached_scoring_version, ScoringEngine.VERSION, force_allowed,
+        )
         logger.info(
             "[CACHED_PATH] Version change detected for %s (%s -> %s); starting deep rescan",
             extension_id,

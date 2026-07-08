@@ -66,7 +66,7 @@ def _checkvisaslots_signal_pack() -> SignalPack:
     # Descriptive (non-source) SAST findings for each observed behavior category.
     findings = [
         SastFindingNormalized(
-            check_id="credential-autofill",
+            check_id="credential.theft.password_input_hooks",
             file_path="js/content.js",
             line_number=1,
             severity="HIGH",
@@ -74,7 +74,7 @@ def _checkvisaslots_signal_pack() -> SignalPack:
             code_snippet="loginDetails: fills #signInName and #password on b2clogin login",
         ),
         SastFindingNormalized(
-            check_id="security-question-autofill",
+            check_id="credential.theft.form_serialization",
             file_path="js/content.js",
             line_number=2,
             severity="HIGH",
@@ -90,7 +90,7 @@ def _checkvisaslots_signal_pack() -> SignalPack:
             code_snippet="html2canvas(...).then(c => c.toDataURL('image/png'))",
         ),
         SastFindingNormalized(
-            check_id="xhr-interception",
+            check_id="banking.net_sniff.override_fetch_xhr",
             file_path="js/page.js",
             line_number=4,
             severity="HIGH",
@@ -98,7 +98,7 @@ def _checkvisaslots_signal_pack() -> SignalPack:
             code_snippet="XMLHttpRequest.prototype.send = function(...)",
         ),
         SastFindingNormalized(
-            check_id="external-exfil-fetch",
+            check_id="c2.exfiltration.url_and_userid",
             file_path="js/sw.js",
             line_number=5,
             severity="HIGH",

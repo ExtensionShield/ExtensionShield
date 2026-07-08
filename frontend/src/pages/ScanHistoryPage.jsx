@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import databaseService from "../services/databaseService";
 import {
-  getRiskColorClass,
-  getRiskDisplayLabel,
   getSignalColorClass,
   getSignalDisplayLabel,
+  resolveScanVerdict,
+  resolveRowProvenance,
 } from "../utils/signalMapper";
+import RiskVerdictBadge from "../components/report/RiskVerdictBadge";
 import { enrichScans } from "../utils/scanEnrichment";
 import { EXTENSION_ICON_PLACEHOLDER, getExtensionIconUrl } from "../utils/constants";
 import { getScanResultsRoute } from "../utils/slug";
@@ -94,36 +95,6 @@ const SignalChip = ({ type, signal }) => {
         <span className="signal-value">{getSignalDisplayLabel(signal)}</span>
       </div>
     </SignalTooltip>
-  );
-};
-
-const RiskBadge = ({ level, score }) => {
-  const colorClass = getRiskColorClass(level);
-
-  const getBorderColor = () => {
-    if (score === null || score === undefined) return "rgba(107, 114, 128, 0.3)";
-    if (score >= 75) return "#10B981";
-    if (score >= 50) return "#F59E0B";
-    return "#EF4444";
-  };
-
-  const getTextColor = () => {
-    if (score === null || score === undefined) return "#6B7280";
-    if (score >= 75) return "#10B981";
-    if (score >= 50) return "#F59E0B";
-    return "#EF4444";
-  };
-
-  return (
-    <div
-      className={`risk-badge ${colorClass}`}
-      style={{
-        borderColor: getBorderColor(),
-        color: getTextColor(),
-      }}
-    >
-      <span className="risk-level">{getRiskDisplayLabel(level)}</span>
-    </div>
   );
 };
 
@@ -546,7 +517,7 @@ const ScanHistoryPage = () => {
                               )}
                             </td>
                             <td>
-                              <RiskBadge level={scan.risk_level} score={scan.score} />
+                              <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} warnings={resolveRowProvenance(scan).warnings} />
                             </td>
                             <td className="signals-cell">
                               <div className="signals-container">

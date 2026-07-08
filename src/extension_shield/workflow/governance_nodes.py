@@ -39,6 +39,7 @@ from extension_shield.governance import (
 )
 from extension_shield.scoring.engine import ScoringEngine
 from extension_shield.scoring.decision import OrgPolicy, resolve as resolve_decision
+from extension_shield.governance.decision_refresh import DECISION_VERSION
 from extension_shield.workflow.node_types import CLEANUP_NODE
 
 
@@ -334,15 +335,22 @@ def governance_node(state: dict) -> Command:
         blocking_gates = [g for g in gate_results if g.triggered and g.decision == "BLOCK"]
         warning_gates = [g for g in gate_results if g.triggered and g.decision == "WARN"]
 
+        # Only EVIDENCE-BACKED governance rules may escalate the final verdict
+        # above the V2 (behavior/evidence-based) decision. Advisory policy-hygiene
+        # rules — broad host access, minification/obfuscation, generic
+        # manifest/permission warnings, missing-policy — are surfaced as review
+        # notes in rule_results but must not, on their own, make the verdict
+        # stricter than V2. This keeps a clean V2 ALLOW from being downgraded by
+        # vague signals while preserving genuine threat-intel / dataflow blocks.
         baseline_block_reasons = [
             (r.recommended_action or r.explanation)
             for r in rule_results.rule_results
-            if r.verdict == "BLOCK"
+            if r.verdict == "BLOCK" and not getattr(r, "advisory", False)
         ]
         baseline_review_reasons = [
             (r.recommended_action or r.explanation)
             for r in rule_results.rule_results
-            if r.verdict == "NEEDS_REVIEW"
+            if r.verdict == "NEEDS_REVIEW" and not getattr(r, "advisory", False)
         ]
 
         org_cfg = state.get("org_policy") or {}
@@ -434,6 +442,10 @@ def governance_node(state: dict) -> Command:
                 "final_authority": final_decision.authority,
                 "final_reasons": final_decision.reasons,
                 "insufficient_data": final_decision.insufficient_data,
+                # Version stamp so a stored verdict can be detected as stale and
+                # refreshed on read after decision-logic changes (see
+                # governance/decision_refresh.py + api/payload_helpers.py).
+                "decision_version": DECISION_VERSION,
                 # From rules engine (detail/audit)
                 "verdict": report.decision.verdict,
                 "rationale": report.decision.rationale,

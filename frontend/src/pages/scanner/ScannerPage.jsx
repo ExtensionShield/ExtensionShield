@@ -5,11 +5,12 @@ import { useScan } from "../../context/ScanContext";
 import databaseService from "../../services/databaseService";
 import realScanService from "../../services/realScanService";
 import {
-  getRiskColorClass,
-  getRiskDisplayLabel,
   getSignalColorClass,
   getSignalDisplayLabel,
+  resolveScanVerdict,
+  resolveRowProvenance,
 } from "../../utils/signalMapper";
+import RiskVerdictBadge from "../../components/report/RiskVerdictBadge";
 import { enrichScans } from "../../utils/scanEnrichment";
 import { EXTENSION_ICON_PLACEHOLDER, getExtensionIconUrl } from "../../utils/constants";
 import { getScanResultsRoute } from "../../utils/slug";
@@ -102,37 +103,6 @@ const SignalChip = ({ type, signal }) => {
         <span className="signal-value">{displayLabel}</span>
       </div>
     </SignalTooltip>
-  );
-};
-
-// Risk badge component with colored border
-const RiskBadge = ({ level, score }) => {
-  const colorClass = getRiskColorClass(level);
-  
-  const getBorderColor = () => {
-    if (score === null || score === undefined) return 'rgba(107, 114, 128, 0.3)';
-    if (score >= 75) return '#10B981';
-    if (score >= 50) return '#F59E0B';
-    return '#EF4444';
-  };
-
-  const getTextColor = () => {
-    if (score === null || score === undefined) return '#6B7280';
-    if (score >= 75) return '#10B981';
-    if (score >= 50) return '#F59E0B';
-    return '#EF4444';
-  };
-
-  return (
-    <div 
-      className={`risk-badge ${colorClass}`}
-      style={{ 
-        borderColor: getBorderColor(),
-        color: getTextColor()
-      }}
-    >
-      <span className="risk-level">{getRiskDisplayLabel(level)}</span>
-    </div>
   );
 };
 
@@ -248,7 +218,7 @@ const ScannerPage = () => {
         setAllScans([]);
         return;
       }
-      const enrichedScans = await enrichScans(history, { skipFullFetch: true });
+      const enrichedScans = await enrichScans(history, { skipFullFetch: false });
       if (enrichedScans.length > 0) {
         setAllScans(enrichedScans);
       } else {
@@ -654,7 +624,7 @@ const ScannerPage = () => {
             {!loading && allScans.length > 0 && (
               <div className="table-section-heading">
                 <h2 className="table-section-title">Recent scans</h2>
-                <p className="table-section-subtitle">Click View to open the evidence report.</p>
+                <p className="table-section-subtitle">Select a scan to open the report.</p>
               </div>
             )}
           </div>
@@ -728,7 +698,7 @@ const ScannerPage = () => {
                             <line x1="16" y1="13" x2="8" y2="13" />
                             <line x1="16" y1="17" x2="8" y2="17" />
                           </svg>
-                          Evidence
+                          Report
                           {sortConfig.key === "findings_count" && (
                             <span className="sort-arrow">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
                           )}
@@ -791,7 +761,7 @@ const ScannerPage = () => {
                           )}
                         </td>
                         <td>
-                          <RiskBadge level={scan.risk_level} score={scan.score} />
+                          <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} warnings={resolveRowProvenance(scan).warnings} />
                         </td>
                         <td className="signals-cell">
                           <div className="signals-container">
@@ -805,19 +775,6 @@ const ScannerPage = () => {
                             <span className="findings-count">
                               {scan.findings_count || 0} finding{scan.findings_count !== 1 ? "s" : ""}
                             </span>
-                            <button
-                              className="view-report-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewReport(scan);
-                              }}
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                <circle cx="12" cy="12" r="3" />
-                              </svg>
-                              View
-                            </button>
                           </div>
                         </td>
                       </tr>

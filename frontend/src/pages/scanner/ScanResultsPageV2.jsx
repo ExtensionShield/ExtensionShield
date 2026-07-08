@@ -1,15 +1,35 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
 import {
   DonutScore,
-  ResultsSidebarTile,
   EvidenceDrawer,
-  SummaryPanel,
   LayerModal,
   ResultFeedback,
+  AnalyzerCoverage,
+  SimilarExtensions,
 } from "../../components/report";
+import {
+  Shield,
+  Lock,
+  Landmark,
+  ChevronRight,
+  ChevronDown,
+  ExternalLink,
+  AlertTriangle,
+  ListChecks,
+} from "lucide-react";
+import {
+  resolveVerdictDisplay,
+  resolveIssueOverview,
+  findingSeverityLevel,
+  severityLabel,
+  severityBadge,
+  severityTone,
+  findingCategory,
+  preciseFindingTitle,
+  evidenceCountLabel,
+} from "../../utils/reportDisplay";
 import FileViewerModal from "../../components/FileViewerModal";
 import StatusMessage from "../../components/StatusMessage";
 import SEOHead from "../../components/SEOHead";
@@ -18,8 +38,8 @@ import { useScan } from "../../context/ScanContext";
 import realScanService from "../../services/realScanService";
 import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extractFindingsByLayer } from "../../utils/normalizeScanResult";
 import { getExtensionIconUrl, EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
-import { normalizeExtensionId, isUUID } from "../../utils/extensionId";
-import { generateSlug } from "../../utils/slug";
+import { isUUID } from "../../utils/extensionId";
+import { doesScanResultMatchIdentifier } from "../../utils/scanResultIdentity";
 import "./ScanResultsPageV2.scss";
 
 /** True if text is an unresolved Chrome i18n placeholder (e.g. __MSG_appDesc__). */
@@ -101,19 +121,11 @@ const ScanResultsPageV2 = () => {
     currentExtensionId,
   } = useScan();
 
-  const hasCachedResultsForThisScan = (() => {
-    if (!scanResults || !scanId) return false;
-    if (currentExtensionId === scanId) return true;
-    if (scanResults.extension_id === scanId) return true;
-    if (normalizeExtensionId(scanResults.extension_id || "") === scanId) return true;
-    // Slug-based matching: compare against stored slug or regenerated slug from name
-    if (scanResults.slug === scanId) return true;
-    const derivedSlug = generateSlug(scanResults.extension_name || scanResults.metadata?.title || "");
-    if (derivedSlug && derivedSlug === scanId) return true;
-    // After fetch, currentExtensionId is set to the resolved extension_id
-    if (currentExtensionId && currentExtensionId === scanResults.extension_id) return true;
-    return false;
-  })();
+  const hasCachedResultsForThisScan = doesScanResultMatchIdentifier(
+    scanResults,
+    scanId,
+    currentExtensionId
+  );
 
   const [isLoading, setIsLoading] = useState(false);
   const [rawData, setRawData] = useState(null);
@@ -144,6 +156,14 @@ const ScanResultsPageV2 = () => {
   // Responsive donut size for small screens
   const [donutSize, setDonutSize] = useState(300);
   const [publisherDetailsOpen, setPublisherDetailsOpen] = useState(false);
+  // Sidebar cards are open on desktop and collapsed by default on mobile (≤768px).
+  const [issueOverviewOpen, setIssueOverviewOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth > 768
+  );
+  const [quickNavOpen, setQuickNavOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth > 768
+  );
+  const [expandedFinding, setExpandedFinding] = useState(null);
   const publisherDetailsRef = useRef(null);
 
   useEffect(() => {
@@ -454,23 +474,6 @@ const ScanResultsPageV2 = () => {
       ? `https://chromewebstore.google.com/detail/_/${extensionIdForStore}`
       : null);
 
-  // Top 3 findings for Quick Summary preview (one line each)
-  const topThreeFindings = [
-    ...dedupeFindings(allSecurityFindings),
-    ...dedupeFindings(allPrivacyFindings),
-    ...dedupeFindings(allGovernanceFindings),
-  ]
-    .slice(0, 3)
-    .map(f => ({ title: f.title, summary: f.summary }));
-
-  // Use factorsByLayer: issue count = factors with severity >= 0.4 (same as LayerModal)
-  const getIssueCount = (layerFactors) =>
-    (layerFactors || []).filter((f) => (f.severity ?? 0) >= 0.4).length;
-
-  const securityIssueCount = getIssueCount(factorsByLayer?.security);
-  const privacyIssueCount = getIssueCount(factorsByLayer?.privacy);
-  const governanceIssueCount = getIssueCount(factorsByLayer?.governance);
-  const totalFindingsCount = securityIssueCount + privacyIssueCount + governanceIssueCount;
 
   // Brief transition: scanResults loaded but viewModel not yet set
   if (!viewModel && scanResults && !normalizationError) {
@@ -556,6 +559,78 @@ const ScanResultsPageV2 = () => {
     />
   );
 
+  // --- Redesign display model (verdict-first, evidence-backed) -------------
+  // The verdict (ALLOW / NEEDS_REVIEW / BLOCK) is the single source of truth for
+  // the hero badge, headline, and body. Never "Safe" once review/block.
+  const verdict = resolveVerdictDisplay(scores?.decision);
+
+  // Only count evidence the EvidenceDrawer can actually open — i.e. IDs present in
+  // the evidence index. IDs that cannot be resolved are never counted or shown.
+  const resolveEvidence = (ids) =>
+    (Array.isArray(ids) ? ids : []).filter((id) => id && evidenceIndex && evidenceIndex[id]);
+
+  // Key findings: dedup across layers, apply calm/precise wording, resolve evidence,
+  // then sort by severity.
+  const keyFindingsList = [
+    ...dedupeFindings(allSecurityFindings),
+    ...dedupeFindings(allPrivacyFindings),
+    ...dedupeFindings(allGovernanceFindings),
+  ]
+    .filter((f) => f && f.title)
+    .map((f) => {
+      const resolvableEvidenceIds = resolveEvidence(f.evidenceIds);
+      return {
+        ...f,
+        level: findingSeverityLevel(f),
+        displayTitle: preciseFindingTitle(f.title),
+        category: findingCategory(f),
+        resolvableEvidenceIds,
+        evidenceCount: resolvableEvidenceIds.length,
+      };
+    })
+    .sort((a, b) => {
+      const order = { high: 3, medium: 2, low: 1, info: 0 };
+      return (order[b.level] || 0) - (order[a.level] || 0);
+    });
+  const topFindings = keyFindingsList.slice(0, 5);
+  const issueOverview = resolveIssueOverview(keyFindingsList);
+
+  // One consistent issue-count source: the same deduped findings rendered on the
+  // page. Layer-card counts and the Issue Overview both derive from keyFindingsList,
+  // so per-layer counts always sum to the overview total.
+  const layerFindingCount = (key) => keyFindingsList.filter((f) => f.layer === key).length;
+
+  // Per-layer short explanation: backend layer one-liner if present, else a calm
+  // band-based fallback (never fabricated prose).
+  const layerDetails = scanResults?.report_view_model?.layer_details || {};
+  const bandExplain = (band) =>
+    band === "GOOD" ? "No significant issues in this area."
+    : band === "WARN" ? "Some patterns in this area need review."
+    : band === "BAD" ? "High-severity issues found in this area."
+    : "Limited data for this area.";
+  const layerCards = [
+    { key: "security", label: "Security", Icon: Shield, score: scores?.security?.score, band: scores?.security?.band || "NA", count: layerFindingCount("security"), explain: layerDetails?.security?.one_liner || bandExplain(scores?.security?.band) },
+    { key: "privacy", label: "Privacy", Icon: Lock, score: scores?.privacy?.score, band: scores?.privacy?.band || "NA", count: layerFindingCount("privacy"), explain: layerDetails?.privacy?.one_liner || bandExplain(scores?.privacy?.band) },
+    { key: "governance", label: "Governance", Icon: Landmark, score: scores?.governance?.score, band: scores?.governance?.band || "NA", count: layerFindingCount("governance"), explain: layerDetails?.governance?.one_liner || bandExplain(scores?.governance?.band) },
+  ];
+  // Similar extensions are OPTIONAL context and never influence the verdict.
+  // Only rendered if the payload actually carries them.
+  const similarItems = Array.isArray(scanResults?.similar_extensions)
+    ? scanResults.similar_extensions
+    : Array.isArray(scanResults?.metadata?.similar_extensions)
+    ? scanResults.metadata.similar_extensions
+    : [];
+
+  const quickNavItems = [
+    { id: "overview", label: "Overview" },
+    { id: "layers", label: "Security · Privacy · Governance" },
+    { id: "key-findings", label: "Key Findings" },
+    { id: "analyzer-coverage", label: "Analyzer Coverage" },
+  ];
+
+  const formatScanDate = (ts) =>
+    ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+
   return (
     <>
       {resultsSEOHead}
@@ -584,278 +659,364 @@ const ScanResultsPageV2 = () => {
         );
       })()}
 
-      {/* Main 2-column Layout: Left (Extension + Quick Summary) | Right (Score + Tiles) */}
-      <main className="results-v2-main">
-        <div className="results-v2-grid">
-          {/* Left Column: Extension Card + Quick Summary with Top 3 findings */}
-          <div className="results-v2-left">
-            {/* Extension Details Card - Score donut inside, to the right */}
-            <div className={`extension-card${publisherDetailsOpen ? " extension-card--popover-open" : ""}`}>
-              <ResultFeedback scanId={scanId} />
-              <div className="extension-card-inner">
-                <div className="extension-card-left">
-                  <div className="extension-card-header">
-                    {showHeroIcon && heroIconUrl && (
-                      <img
-                        src={heroIconUrl}
-                        alt=""
-                        className="extension-card-icon"
-                        loading="lazy"
-                        onError={(e) => { e.target.onerror = null; e.target.src = EXTENSION_ICON_PLACEHOLDER; }}
-                      />
-                    )}
-                    <h1 className="extension-card-title">{meta?.name || "Extension Analysis"}</h1>
-                  </div>
-                  <div className="extension-card-details">
+      {/* Breadcrumb */}
+      <nav className="report-breadcrumb" aria-label="Breadcrumb">
+        <Link to="/">Home</Link>
+        <ChevronRight size={14} aria-hidden="true" />
+        <Link to="/scan">Scan Results</Link>
+        <ChevronRight size={14} aria-hidden="true" />
+        <span className="report-breadcrumb-current">{meta?.name || "Report"}</span>
+      </nav>
+
+      <main className="report-v2">
+        <div className="report-grid">
+          {/* HERO — verdict-first: the verdict is the single source of truth */}
+          <section
+            className={`report-hero verdict-${verdict.tone}${publisherDetailsOpen ? " extension-card--popover-open" : ""}`}
+            id="overview"
+          >
+            <ResultFeedback scanId={scanId} />
+            <div className="report-hero-inner">
+              <div className="report-hero-info">
+                <div className="report-hero-title-row">
+                  {showHeroIcon && heroIconUrl && (
+                    <img
+                      src={heroIconUrl}
+                      alt=""
+                      className="extension-card-icon"
+                      loading="lazy"
+                      onError={(e) => { e.target.onerror = null; e.target.src = EXTENSION_ICON_PLACEHOLDER; }}
+                    />
+                  )}
+                  <h1 className="extension-card-title">{meta?.name || "Extension Analysis"}</h1>
+                </div>
+                <div className="extension-card-details">
+                  {meta?.users != null && (
                     <span className="ext-detail">
-                      {showHeroIcon && heroIconUrl && (
-                        <img src={heroIconUrl} alt="" className="ext-detail-icon" onError={(e) => { e.target.onerror = null; e.target.src = EXTENSION_ICON_PLACEHOLDER; }} />
-                      )}
-                      {meta?.name || "Extension"}
+                      <span className="ext-detail-icon">👥</span>
+                      {meta.users.toLocaleString()} users
                     </span>
-                    {meta?.users && (
+                  )}
+                  {meta?.rating != null && (
+                    <span className="ext-detail">
+                      <span className="ext-detail-icon">⭐</span>
+                      {meta.rating.toFixed(1)} rating
+                    </span>
+                  )}
+                  {meta?.version && (
+                    <span className="ext-detail ext-detail-muted">
+                      <span className="ext-detail-icon">🏷️</span>
+                      Version {meta.version}
+                    </span>
+                  )}
+                  {meta?.scanTimestamp && (
+                    <span className="ext-detail ext-detail-muted">
+                      <span className="ext-detail-icon">📅</span>
+                      Last scanned {formatScanDate(meta.scanTimestamp)}
+                    </span>
+                  )}
+                  {viewModel?.publisherDisclosures?.last_updated_iso && (
+                    <span className="ext-detail ext-detail-muted">
+                      <span className="ext-detail-icon">↻</span>
+                      Updated {viewModel.publisherDisclosures.last_updated_iso}
+                    </span>
+                  )}
+                  {viewModel?.publisherDisclosures?.user_count != null && meta?.users == null && (
+                    <span className="ext-detail ext-detail-muted">
+                      <span className="ext-detail-icon">👥</span>
+                      {viewModel.publisherDisclosures.user_count >= 1000
+                        ? `${(viewModel.publisherDisclosures.user_count / 1000).toFixed(0)}k users`
+                        : `${viewModel.publisherDisclosures.user_count} users`}
+                    </span>
+                  )}
+                </div>
+                {getDisplayDescription(scanResults) && (
+                  <p className="extension-card-description">
+                    {shortOverview(getDisplayDescription(scanResults))}
+                    {chromeStoreUrl && (
                       <>
-                        <span className="ext-divider" />
-                        <span className="ext-detail">
-                          <span className="ext-detail-icon">👥</span>
-                          {meta.users.toLocaleString()} users
-                        </span>
+                        {" "}
+                        <a
+                          href={chromeStoreUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="description-webstore-link"
+                        >
+                          Web Store
+                        </a>
                       </>
                     )}
-                    {meta?.rating != null && (
-                      <>
-                        <span className="ext-divider" />
-                        <span className="ext-detail">
-                          <span className="ext-detail-icon">⭐</span>
-                          {meta.rating.toFixed(1)} rating
-                        </span>
-                      </>
-                    )}
-                    {meta?.scanTimestamp && (
-                      <>
-                        <span className="ext-divider" />
-                        <span className="ext-detail ext-detail-muted">
-                          <span className="ext-detail-icon">📅</span>
-                          Last scanned {new Date(meta.scanTimestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      </>
-                    )}
-                    {viewModel?.publisherDisclosures?.last_updated_iso && (
-                      <>
-                        <span className="ext-divider" />
-                        <span className="ext-detail ext-detail-muted">
-                          <span className="ext-detail-icon">↻</span>
-                          Updated {viewModel.publisherDisclosures.last_updated_iso}
-                        </span>
-                      </>
-                    )}
-                    {viewModel?.publisherDisclosures?.user_count != null && meta?.users == null && (
-                      <>
-                        <span className="ext-divider" />
-                        <span className="ext-detail ext-detail-muted">
-                          <span className="ext-detail-icon">👥</span>
-                          {viewModel.publisherDisclosures.user_count >= 1000
-                            ? `${(viewModel.publisherDisclosures.user_count / 1000).toFixed(0)}k users`
-                            : `${viewModel.publisherDisclosures.user_count} users`}
-                        </span>
-                      </>
-                    )}
-                    {viewModel?.publisherDisclosures?.rating_count != null && meta?.ratingCount == null && (
-                      <>
-                        <span className="ext-divider" />
-                        <span className="ext-detail ext-detail-muted">
-                          <span className="ext-detail-icon">⭐</span>
-                          {viewModel.publisherDisclosures.rating_count.toLocaleString()} ratings
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  {getDisplayDescription(scanResults) && (
-                    <p className="extension-card-description">
-                      {shortOverview(getDisplayDescription(scanResults))}
-                      {chromeStoreUrl && (
-                        <>
-                          {" "}
+                  </p>
+                )}
+                {(chromeStoreUrl || viewModel?.publisherDisclosures) && (() => {
+                  const pd = viewModel?.publisherDisclosures;
+                  const traderLabel = pd?.trader_status === "TRADER" ? "Trader" : pd?.trader_status === "NON_TRADER" ? "Non-trader" : "Unknown";
+                  const traderDescription = pd?.trader_status === "TRADER"
+                    ? "This developer is registered as a trader in the EU. Consumer rights apply to purchases from this developer."
+                    : pd?.trader_status === "NON_TRADER"
+                    ? "This developer has not identified itself as a trader. Consumer rights may not apply to contracts with this developer."
+                    : "Trader status unknown. Unable to determine if consumer rights apply.";
+                  const getHost = (url) => {
+                    try { return new URL(url).host; } catch { return url; }
+                  };
+                  const linkChips = [
+                    pd?.developer_website_url && { key: "website", href: pd.developer_website_url, label: "Website", icon: "↗" },
+                    pd?.support_email && { key: "support", href: `mailto:${pd.support_email}`, label: "Support", icon: "✉" },
+                    pd?.privacy_policy_url && { key: "privacy", href: pd.privacy_policy_url, label: "Privacy", icon: "🔒" },
+                  ].filter(Boolean);
+                  const allChips = pd ? [{ key: "trader", label: traderLabel, icon: "◉", title: traderDescription, link: false }, ...linkChips] : [];
+                  return (
+                    <div className="publisher-disclosures">
+                      <div className="publisher-disclosures-header">
+                        <span className="publisher-disclosures-label">Publisher</span>
+                        {pd && <button
+                          type="button"
+                          className="publisher-info-icon"
+                          onClick={() => setPublisherDetailsOpen((o) => !o)}
+                          aria-expanded={publisherDetailsOpen}
+                          aria-haspopup="dialog"
+                          title="About this publisher"
+                          ref={publisherDetailsRef}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="16" x2="12" y2="12" />
+                            <line x1="12" y1="8" x2="12.01" y2="8" />
+                          </svg>
+                        </button>}
+                        {pd && publisherDetailsOpen && (
+                          <>
+                            <div
+                              className="publisher-details-backdrop"
+                              role="presentation"
+                              onClick={() => setPublisherDetailsOpen(false)}
+                              onKeyDown={(e) => e.key === "Escape" && setPublisherDetailsOpen(false)}
+                            />
+                            <div className="publisher-info-popover" role="dialog" aria-label="Publisher information">
+                              <p>
+                                <span className="publisher-info-label">Trader status:</span>
+                                <span className="publisher-info-value">{traderLabel}</span>
+                              </p>
+                              <p className="publisher-info-description">{traderDescription}</p>
+                              {pd.privacy_policy_url && (
+                                <p>
+                                  <span className="publisher-info-label">Privacy:</span>
+                                  <a href={pd.privacy_policy_url} target="_blank" rel="noopener noreferrer">{getHost(pd.privacy_policy_url)}</a>
+                                </p>
+                              )}
+                              <p className="publisher-info-note">
+                                Information from Chrome Web Store disclosures. Not a security guarantee.
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {(allChips.length > 0 || chromeStoreUrl) && (
+                      <div className="publisher-disclosures-chips">
+                        {allChips.map((c) =>
+                          c.link !== false ? (
+                            <a
+                              key={c.key}
+                              href={c.href}
+                              target={c.key !== "support" ? "_blank" : undefined}
+                              rel={c.key !== "support" ? "noopener noreferrer" : undefined}
+                              className="publisher-chip publisher-chip-link"
+                            >
+                              <span className="publisher-chip-icon" aria-hidden>{c.icon}</span>
+                              <span>{c.label}</span>
+                            </a>
+                          ) : (
+                            <span
+                              key={c.key}
+                              className="publisher-chip"
+                              title={c.title}
+                            >
+                              <span className="publisher-chip-icon" aria-hidden>{c.icon}</span>
+                              <span>{c.label}</span>
+                            </span>
+                          )
+                        )}
+                        {chromeStoreUrl && (
                           <a
                             href={chromeStoreUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="description-webstore-link"
+                            className="publisher-chip publisher-chip-link"
+                            aria-label="View in Chrome Web Store"
+                            title="View in Chrome Web Store"
                           >
-                            Web Store
-                          </a>
-                        </>
-                      )}
-                    </p>
-                  )}
-                  {(chromeStoreUrl || viewModel?.publisherDisclosures) && (() => {
-                    const pd = viewModel?.publisherDisclosures;
-                    const traderLabel = pd?.trader_status === "TRADER" ? "Trader" : pd?.trader_status === "NON_TRADER" ? "Non-trader" : "Unknown";
-                    const traderDescription = pd?.trader_status === "TRADER" 
-                      ? "This developer is registered as a trader in the EU. Consumer rights apply to purchases from this developer."
-                      : pd?.trader_status === "NON_TRADER"
-                      ? "This developer has not identified itself as a trader. Consumer rights may not apply to contracts with this developer."
-                      : "Trader status unknown. Unable to determine if consumer rights apply.";
-                    const getHost = (url) => {
-                      try { return new URL(url).host; } catch { return url; }
-                    };
-                    const linkChips = [
-                      pd?.developer_website_url && { key: "website", href: pd.developer_website_url, label: "Website", icon: "↗" },
-                      pd?.support_email && { key: "support", href: `mailto:${pd.support_email}`, label: "Support", icon: "✉" },
-                      pd?.privacy_policy_url && { key: "privacy", href: pd.privacy_policy_url, label: "Privacy", icon: "🔒" },
-                    ].filter(Boolean);
-                    const allChips = pd ? [{ key: "trader", label: traderLabel, icon: "◉", title: traderDescription, link: false }, ...linkChips] : [];
-                    return (
-                      <div className="publisher-disclosures">
-                        <div className="publisher-disclosures-header">
-                          <span className="publisher-disclosures-label">Publisher</span>
-                          {pd && <button
-                            type="button"
-                            className="publisher-info-icon"
-                            onClick={() => setPublisherDetailsOpen((o) => !o)}
-                            aria-expanded={publisherDetailsOpen}
-                            aria-haspopup="dialog"
-                            title="About this publisher"
-                            ref={publisherDetailsRef}
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="12" y1="16" x2="12" y2="12" />
-                              <line x1="12" y1="8" x2="12.01" y2="8" />
+                            <svg className="publisher-chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                              <polyline points="15 3 21 3 21 9" />
+                              <line x1="10" y1="14" x2="21" y2="3" />
                             </svg>
-                          </button>}
-                          {pd && publisherDetailsOpen && (
-                            <>
-                              <div
-                                className="publisher-details-backdrop"
-                                role="presentation"
-                                onClick={() => setPublisherDetailsOpen(false)}
-                                onKeyDown={(e) => e.key === "Escape" && setPublisherDetailsOpen(false)}
-                              />
-                              <div className="publisher-info-popover" role="dialog" aria-label="Publisher information">
-                                <p>
-                                  <span className="publisher-info-label">Trader status:</span>
-                                  <span className="publisher-info-value">{traderLabel}</span>
-                                </p>
-                                <p className="publisher-info-description">{traderDescription}</p>
-                                {pd.privacy_policy_url && (
-                                  <p>
-                                    <span className="publisher-info-label">Privacy:</span>
-                                    <a href={pd.privacy_policy_url} target="_blank" rel="noopener noreferrer">{getHost(pd.privacy_policy_url)}</a>
-                                  </p>
-                                )}
-                                <p className="publisher-info-note">
-                                  Information from Chrome Web Store disclosures. Not a security guarantee.
-                                </p>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        {(allChips.length > 0 || chromeStoreUrl) && (
-                        <div className="publisher-disclosures-chips">
-                          {allChips.map((c) =>
-                            c.link !== false ? (
-                              <a
-                                key={c.key}
-                                href={c.href}
-                                target={c.key !== "support" ? "_blank" : undefined}
-                                rel={c.key !== "support" ? "noopener noreferrer" : undefined}
-                                className="publisher-chip publisher-chip-link"
-                              >
-                                <span className="publisher-chip-icon" aria-hidden>{c.icon}</span>
-                                <span>{c.label}</span>
-                              </a>
-                            ) : (
-                              <span
-                                key={c.key}
-                                className="publisher-chip"
-                                title={c.title}
-                              >
-                                <span className="publisher-chip-icon" aria-hidden>{c.icon}</span>
-                                <span>{c.label}</span>
-                              </span>
-                            )
-                          )}
-                          {chromeStoreUrl && (
-                            <a
-                              href={chromeStoreUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="publisher-chip publisher-chip-link"
-                              aria-label="View in Chrome Web Store"
-                              title="View in Chrome Web Store"
-                            >
-                              <svg className="publisher-chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                <polyline points="15 3 21 3 21 9" />
-                                <line x1="10" y1="14" x2="21" y2="3" />
-                              </svg>
-                              <span>Web Store</span>
-                            </a>
-                          )}
-                        </div>
+                            <span>Web Store</span>
+                          </a>
                         )}
                       </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="report-hero-verdict">
+                <DonutScore
+                  score={overallScore}
+                  band={overallBand}
+                  size={donutSize}
+                />
+              </div>
+
+              <div className="report-hero-copy">
+                <h2 className="report-hero-headline">{verdict.headline}</h2>
+                <p className="report-hero-body">{verdict.body}</p>
+              </div>
+            </div>
+          </section>
+
+          <div className="report-main">
+            {/* Layer cards: Security / Privacy / Governance */}
+            <section className="report-layers" id="layers" aria-label="Security, privacy, and governance breakdown">
+              {layerCards.map(({ key, label, Icon, score, band, count, explain }) => (
+                <button
+                  type="button"
+                  key={key}
+                  className={`layer-card band-${String(band).toLowerCase()}`}
+                  onClick={() => openLayerModal(key)}
+                >
+                  <div className="layer-card-head">
+                    <span className="layer-card-name"><Icon size={16} aria-hidden="true" /> {label}</span>
+                    <span className="layer-card-score">
+                      {score ?? "—"}<span className="layer-card-score-max">/100</span>
+                    </span>
+                  </div>
+                  {count > 0 ? (
+                    <span className="layer-card-issues">{count} {count === 1 ? "issue" : "issues"}</span>
+                  ) : (
+                    <span className="layer-card-issues layer-card-issues--none">No issues</span>
+                  )}
+                  <div className="layer-card-bar">
+                    <span className="layer-card-bar-fill" style={{ width: `${Math.max(0, Math.min(100, score ?? 0))}%` }} />
+                  </div>
+                  <p className="layer-card-explain">{explain}</p>
+                  <span className="layer-card-link">View details <ChevronRight size={14} aria-hidden="true" /></span>
+                </button>
+              ))}
+            </section>
+
+            {/* Key Findings */}
+            <section className="report-findings" id="key-findings">
+              <div className="report-section-head">
+                <h2 className="report-section-title">Key Findings</h2>
+                <span className="report-section-sub">Issues that need your attention</span>
+              </div>
+              {topFindings.length === 0 ? (
+                <p className="report-findings-empty">No issues were found in this area.</p>
+              ) : (
+                <ul className="findings-list">
+                  {topFindings.map((f, i) => {
+                    const tone = severityTone(f.level);
+                    const open = expandedFinding === i;
+                    const evCount = f.evidenceCount || 0;
+                    return (
+                      <li className="finding-row" key={`${f.displayTitle}-${i}`}>
+                        <div className="finding-main">
+                          <AlertTriangle size={16} className={`finding-icon tone-${tone}`} aria-hidden="true" />
+                          <div className="finding-text">
+                            <span className="finding-title">{f.displayTitle}</span>
+                            {f.summary && open && <span className="finding-summary">{f.summary}</span>}
+                          </div>
+                        </div>
+                        <span className={`finding-severity tone-${tone}`} title={severityLabel(f.level)}>
+                          {severityBadge(f.level)}
+                        </span>
+                        <span className="finding-category">{f.category}</span>
+                        <span className="finding-evidence">{evidenceCountLabel(evCount)}</span>
+                        <div className="finding-actions">
+                          {evCount > 0 && (
+                            <button
+                              type="button"
+                              className="finding-view-evidence"
+                              onClick={() => openEvidenceDrawer(f.resolvableEvidenceIds)}
+                            >
+                              View evidence <ExternalLink size={13} aria-hidden="true" />
+                            </button>
+                          )}
+                          {f.summary && (
+                            <button
+                              type="button"
+                              className={`finding-expand${open ? " is-open" : ""}`}
+                              aria-expanded={open}
+                              aria-label="Toggle finding details"
+                              onClick={() => setExpandedFinding(open ? null : i)}
+                            >
+                              <ChevronDown size={16} aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                      </li>
                     );
-                  })()}
-                </div>
-                <div className="extension-card-score">
-                  <DonutScore
-                    score={overallScore}
-                    band={overallBand}
-                    size={donutSize}
-                  />
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {/* Analyzer Coverage — honest, always-visible coverage states */}
+            <AnalyzerCoverage rawScanResult={scanResults} />
+          </div>
+
+          {/* Right sidebar: Issue Overview, Quick Navigation, Similar Extensions */}
+          <aside className="report-sidebar">
+            <div className="sidebar-card">
+              <button
+                type="button"
+                className="sidebar-card-head"
+                aria-expanded={issueOverviewOpen}
+                onClick={() => setIssueOverviewOpen((o) => !o)}
+              >
+                <span className="sidebar-card-title">Issue Overview</span>
+                <ChevronDown size={16} className="sidebar-card-chevron" aria-hidden="true" />
+              </button>
+              <div className={`sidebar-card-body${issueOverviewOpen ? " is-open" : ""}`}>
+                <ul className="issue-overview-list">
+                  <li><span className="io-dot tone-bad" aria-hidden="true" /><span className="io-label">High</span><span className="io-count">{issueOverview.high}</span></li>
+                  <li><span className="io-dot tone-warn" aria-hidden="true" /><span className="io-label">Medium</span><span className="io-count">{issueOverview.medium}</span></li>
+                  <li><span className="io-dot tone-neutral" aria-hidden="true" /><span className="io-label">Low</span><span className="io-count">{issueOverview.low}</span></li>
+                  <li><span className="io-dot tone-info" aria-hidden="true" /><span className="io-label">Info</span><span className="io-count">{issueOverview.info}</span></li>
+                </ul>
+                <div className="issue-overview-total">
+                  <span>Total issues</span>
+                  <span>{issueOverview.total}</span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Summary + Top 3 findings */}
-            <SummaryPanel
-              scores={scores}
-              factorsByLayer={factorsByLayer}
-              rawScanResult={scanResults}
-              keyFindings={keyFindings}
-              onViewEvidence={openEvidenceDrawer}
-              topFindings={topThreeFindings}
-              onViewRiskyPermissions={() => openLayerModal('security')}
-              onViewNetworkDomains={() => openLayerModal('privacy')}
-            />
-          </div>
-
-          {/* Right Column: Security/Privacy/Governance cards */}
-          <div className="results-v2-right">
-            {totalFindingsCount > 0 && (
-              <div className="results-v2-findings-count" aria-live="polite">
-                <span className="results-v2-findings-count-num">{totalFindingsCount}</span>
-                <span className="results-v2-findings-count-label">
-                  {totalFindingsCount === 1 ? 'issue' : 'issues'}
-                </span>
-              </div>
-            )}
-            <div className="results-v2-sidebar">
-            <ResultsSidebarTile
-              title="Security"
-              score={scores?.security?.score}
-              band={scores?.security?.band || 'NA'}
-              findingsCount={securityIssueCount}
-              onClick={() => openLayerModal('security')}
-            />
-            <ResultsSidebarTile
-              title="Privacy"
-              score={scores?.privacy?.score ?? null}
-              band={scores?.privacy?.band || 'NA'}
-              findingsCount={privacyIssueCount}
-              onClick={() => openLayerModal('privacy')}
-            />
-            <ResultsSidebarTile
-              title="Governance"
-              score={scores?.governance?.score ?? null}
-              band={scores?.governance?.band || 'NA'}
-              findingsCount={governanceIssueCount}
-              onClick={() => openLayerModal('governance')}
-            />
+            <div className="sidebar-card">
+              <button
+                type="button"
+                className="sidebar-card-head"
+                aria-expanded={quickNavOpen}
+                onClick={() => setQuickNavOpen((o) => !o)}
+              >
+                <span className="sidebar-card-title">Quick Navigation</span>
+                <ChevronDown size={16} className="sidebar-card-chevron" aria-hidden="true" />
+              </button>
+              <nav className={`sidebar-card-body${quickNavOpen ? " is-open" : ""}`} aria-label="Report sections">
+                <ul className="quick-nav-list">
+                  {quickNavItems.map((item) => (
+                    <li key={item.id}>
+                      <a href={`#${item.id}`} className="quick-nav-link">
+                        <ListChecks size={14} aria-hidden="true" /> {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             </div>
-          </div>
+
+            <SimilarExtensions items={similarItems} />
+          </aside>
         </div>
       </main>
 

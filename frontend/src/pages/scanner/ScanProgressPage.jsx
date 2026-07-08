@@ -6,6 +6,7 @@ import realScanService from "../../services/realScanService";
 import { getScanResultsRoute } from "../../utils/slug";
 import SEOHead from "../../components/SEOHead";
 import { normalizeExtensionId } from "../../utils/extensionId";
+import { doesScanResultMatchIdentifier } from "../../utils/scanResultIdentity";
 import { logger } from "../../utils/logger";
 import ScanActivityIndicator from "../../components/ScanActivityIndicator";
 import "./ScanProgressPage.scss";
@@ -37,6 +38,7 @@ const ScanProgressPage = () => {
     setScanResults,
     setCurrentExtensionId,
     scanResults,
+    currentExtensionId,
   } = useScan();
   
   const [extensionName, setExtensionName] = useState(null);
@@ -77,10 +79,10 @@ const ScanProgressPage = () => {
   // When results were already loaded (e.g. fetch-first cached path), skip polling and go to results.
   useEffect(() => {
     if (!scanId || !scanResults) return;
-    if (scanResults.extension_id !== scanId && scanResults.extension_slug !== scanId) return;
+    if (!doesScanResultMatchIdentifier(scanResults, scanId, currentExtensionId)) return;
     const route = getScanResultsRoute(scanId, scanResults.extension_name);
     if (route) navigate(route, { replace: true });
-  }, [scanId, scanResults, navigate]);
+  }, [scanId, scanResults, currentExtensionId, navigate]);
 
   // Poll scan status while on this page (supports direct refresh/back navigation)
   // Stops polling once scan completes or fails to save server resources.
@@ -89,7 +91,7 @@ const ScanProgressPage = () => {
   useEffect(() => {
     if (!scanId) return;
     // If we already have results for this scan (e.g. fetch-first), don't poll.
-    if (scanResults && (scanResults.extension_id === scanId || scanResults.extension_slug === scanId)) return;
+    if (doesScanResultMatchIdentifier(scanResults, scanId, currentExtensionId)) return;
 
     let cancelled = false;
     let intervalId = null;
@@ -166,7 +168,7 @@ const ScanProgressPage = () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [scanId, navigate, setError, setScanResults, setCurrentExtensionId]);
+  }, [scanId, navigate, setError, setScanResults, setCurrentExtensionId, scanResults, currentExtensionId]);
 
   // Reset state when scanId changes or on mount
   useEffect(() => {
@@ -361,4 +363,3 @@ const ScanProgressPage = () => {
 };
 
 export default ScanProgressPage;
-

@@ -37,10 +37,12 @@ const EvidenceDrawer = ({
     };
   }, [open, onClose]);
 
-  // Get evidence items
+  // Get evidence items — only those that actually resolve in the evidence index.
+  // An ID with no entry cannot be opened, so it is dropped rather than shown as an
+  // empty row (keeps the drawer count honest).
   const evidenceItems = evidenceIds
-    .map(id => ({ id, ...evidenceIndex[id] }))
-    .filter(item => item.id);
+    .map(id => (evidenceIndex[id] ? { id, ...evidenceIndex[id] } : null))
+    .filter(Boolean);
 
   const truncateSnippet = (snippet, maxLength = 500) => {
     if (!snippet) return null;

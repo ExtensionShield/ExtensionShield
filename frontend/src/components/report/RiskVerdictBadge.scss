@@ -1,0 +1,30 @@
+// RiskVerdictBadge — verdict badge + separate provenance chip.
+// The .risk-badge / .risk-level appearance is inherited from the host page's
+// existing styles; this file only styles the wrapper and the provenance chip.
+
+.risk-verdict-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.risk-verdict-badge .provenance-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.light .risk-verdict-badge .provenance-chip {
+  border-color: rgba(38, 35, 31, 0.15);
+  background: rgba(38, 35, 31, 0.05);
+  color: var(--extensionshield-text-muted, #6b7280);
+}
