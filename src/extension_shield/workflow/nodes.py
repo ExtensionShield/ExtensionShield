@@ -89,7 +89,15 @@ def extension_metadata_node(state: WorkflowState) -> Command:
         logger.info("Extracting metadata for extension URL: %s", chrome_extension_url)
         metadata_extractor = ExtensionMetadata(extension_url=chrome_extension_url)
         metadata = metadata_extractor.fetch_metadata()
-        
+
+        # fetch_metadata() often doesn't populate extension_id on URL-based Web
+        # Store scans; derive it from the workflow id (authoritative) so the
+        # chrome-stats fetch below actually runs instead of silently skipping.
+        if metadata is not None and not metadata.get("extension_id"):
+            wf_id = state.get("workflow_id")
+            if wf_id and is_chrome_extension_id(wf_id):
+                metadata["extension_id"] = wf_id
+
         # Also fetch chrome-stats metadata if we have an extension ID
         if metadata and metadata.get("extension_id"):
             try:
@@ -355,10 +363,12 @@ def extension_analyzer_node(state: WorkflowState) -> Command:
     metadata = state.get("extension_metadata")
 
     # Ensure the extension id reaches the analyzers (ChromeStats requires it and
-    # otherwise logs "Extension ID not provided" even for Web Store scans). The
-    # id is known from the scan context/state; carry it into metadata.
-    state_extension_id = state.get("extension_id")
-    if state_extension_id:
+    # otherwise logs "Extension ID not provided" even for Web Store scans). The id
+    # is carried in the state as `workflow_id` (set by run_analysis_workflow) —
+    # earlier code read a never-populated "extension_id" key, so ChromeStats was
+    # always skipped.
+    state_extension_id = state.get("extension_id") or state.get("workflow_id")
+    if state_extension_id and is_chrome_extension_id(state_extension_id):
         metadata = dict(metadata or {})
         metadata.setdefault("extension_id", state_extension_id)
 
