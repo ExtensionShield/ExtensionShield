@@ -105,6 +105,23 @@ class TestPartialCoverageGuard:
         assert result.decision == Decision.NEEDS_REVIEW
         assert result.overall_score <= 65
 
+    def test_sast_missing_always_flags_partial_coverage(self):
+        """SAST did not run but VT+network did: the coverage flag MUST be set so
+        the UI can honestly show "Partial coverage" instead of "Full coverage",
+        and the verdict must not ALLOW.
+
+        Regression (recent-scans trust fix): previously coverage_cap_applied was
+        only set on the SAST-missing branch when the score exceeded 80, so a
+        SAST-missing scan that already computed <= 80 silently reported as fully
+        covered. The flag must now be emitted for every SAST-missing scan.
+        """
+        engine = ScoringEngine()
+        pack = _build(sast=False, vt=True, network=True)
+        result = engine.calculate_scores(pack, make_test_manifest())
+        assert result.coverage_cap_applied is True
+        assert result.coverage_cap_reason and "sast" in result.coverage_cap_reason.lower()
+        assert result.decision != Decision.ALLOW
+
     @pytest.mark.parametrize(
         "sast,vt,network,expect_allow",
         [

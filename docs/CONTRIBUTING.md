@@ -88,7 +88,7 @@ npm install
 
 # Copy environment config
 cp .env.example .env
-# Edit .env with your Supabase credentials (see .env.example)
+# Optional: enable Supabase credentials only if you are testing cloud auth locally
 
 # Start the dev server (port 5173)
 npm run dev
@@ -141,7 +141,6 @@ ExtensionShield/
 │   ├── src/pages/          # Route pages
 │   └── src/services/       # API clients, auth
 ├── tests/                  # Python tests (pytest)
-├── supabase/               # Database schemas and migrations
 ├── scripts/                # Utility and deployment scripts
 └── docs/                   # Documentation
 ```

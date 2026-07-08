@@ -98,7 +98,12 @@ class ScoringEngine:
         explanation = engine.get_explanation()
     """
     
-    VERSION = "2.0.0"
+    # Bumped 2.0.0 -> 2.1.0 for the SAST/governance recalibration (over-broad
+    # CRITICAL/ERROR rule downgrades, CRITICAL_SAST corroboration, restricted-
+    # permission gate rework). Rows stamped with an older version are treated as
+    # model_stale so they are re-scored on read and rescanned on trigger, instead
+    # of serving pre-recalibration verdicts.
+    VERSION = "2.1.0"
     
     def __init__(
         self,
@@ -364,11 +369,19 @@ class ScoringEngine:
                 "ran; cannot clear as safe without malware/exfiltration coverage"
             )
             extra_review_reasons.append(coverage_cap_reason)
-        elif sast_missing_coverage and overall_score > 80:
-            # SAST-only coverage gap (other analyzers present): cap at 80 + review.
-            overall_score = 80
+        elif sast_missing_coverage:
+            # SAST-only coverage gap (other analyzers present). The cap only lowers
+            # scores above 80, but the coverage flag + review reason MUST be emitted
+            # for EVERY SAST-missing scan (even when the score is already <= 80) so
+            # the UI can honestly surface "Partial coverage" instead of "Full
+            # coverage". A missing code analyzer must never render as a confident,
+            # fully-covered result. (Recent-scans trust fix.)
+            if overall_score > 80:
+                overall_score = 80
+                coverage_cap_reason = "SAST coverage missing; score capped at 80"
+            else:
+                coverage_cap_reason = "SAST coverage missing; code was not analyzed"
             coverage_cap_applied = True
-            coverage_cap_reason = "SAST coverage missing; score capped at 80"
             extra_review_reasons.append(coverage_cap_reason)
 
         # SAST scan failure (D2): a Semgrep crash/timeout means the primary code

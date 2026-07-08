@@ -79,18 +79,13 @@ has_supabase_db_connection() {
   return 1
 }
 
-# Run migrations if Supabase is configured (non-blocking: start API first so healthcheck passes)
+# SQLite (the OSS default) creates its schema automatically — no migration step.
+# Supabase migrations are a Cloud-only feature and are NOT bundled in the OSS
+# distribution; manage the Supabase schema out-of-band (e.g. the Supabase CLI).
 if [ -n "${DB_BACKEND:-}" ] && [ "${DB_BACKEND:-}" != "supabase" ]; then
-  echo "⏭️  Skipping Supabase migrations: DB_BACKEND=${DB_BACKEND}"
-elif ! has_supabase_db_connection; then
-  echo "⏭️  Skipping Supabase migrations: no valid direct Postgres connection env set (DATABASE_URL / SUPABASE_DB_URL / PG*)"
-elif [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-  echo "🔄 Running Supabase migrations in background (API will start immediately)..."
-  (
-    python scripts/cloud_only/run_supabase_migrations.py && echo "✅ Migrations completed."
-  ) || echo "❌ Migrations failed (app is running; retry on next deploy or run manually)." &
+  echo "⏭️  Skipping migrations: DB_BACKEND=${DB_BACKEND} (SQLite manages its own schema)"
 else
-  echo "⏭️  Skipping Supabase migrations: Supabase env not set"
+  echo "⏭️  Skipping Supabase migrations: not bundled in the OSS build (manage the Supabase schema via the Supabase CLI)"
 fi
 
 echo "✅ Starting uvicorn server on port ${PORT:-8007}..."

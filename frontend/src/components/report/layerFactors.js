@@ -49,7 +49,7 @@ export function humanizeFactor(factor) {
   if (severity >= 0.4) {
     statusType = 'issues';
     tone = severity >= 0.7 ? 'bad' : 'warn';
-    status = severity >= 0.7 ? 'High risk' : 'Issue';
+    status = severity >= 0.7 ? 'High severity' : 'Issue';
   } else if (isNotAnalyzed(factor)) {
     statusType = 'unknown';
     tone = 'neutral';

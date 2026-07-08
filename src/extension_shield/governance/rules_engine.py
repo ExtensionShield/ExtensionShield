@@ -727,6 +727,7 @@ class RulesEngine:
             citations=rule.get("citations", []),
             explanation=explanation,
             recommended_action=rule.get("recommended_action", ""),
+            advisory=bool(rule.get("advisory", False)),
             triggered_at=datetime.now(timezone.utc),
         )
 

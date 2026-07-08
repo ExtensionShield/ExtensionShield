@@ -12,7 +12,7 @@ import TopDriversRow from "../../components/report/TopDriversRow";
 import { SummaryPanel, LayerModal, ReportScoreCard, EvidenceDrawer } from "../../components/report";
 import realScanService from "../../services/realScanService";
 import databaseService from "../../services/databaseService";
-import { getRiskLevel } from "../../utils/signalMapper";
+import { resolveScanVerdict, resolveVerdictBadge } from "../../utils/signalMapper";
 import {
   normalizeScanResultSafe,
   isDevelopmentMode,
@@ -127,6 +127,23 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
     ...findingsByLayer.governance,
   ]);
 
+  const topFindings = [
+    ...allSecurityFindings,
+    ...allPrivacyFindings,
+    ...allGovernanceFindings,
+  ]
+    .sort((a, b) => {
+      const severityOrder = { high: 3, medium: 2, low: 1 };
+      return (severityOrder[b?.severity] || 0) - (severityOrder[a?.severity] || 0);
+    })
+    .slice(0, 4)
+    .map((finding) => ({
+      title: finding.title,
+      summary: finding.summary,
+      severity: finding.severity,
+      evidenceIds: finding.evidenceIds,
+    }));
+
   return (
     <div className="report-detail-page">
       <div className="report-content">
@@ -188,7 +205,10 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
             factorsByLayer={factorsByLayer}
             rawScanResult={rawScanResult}
             keyFindings={report?.keyFindings || []}
+            topFindings={topFindings}
             onViewEvidence={handleEvidenceClick}
+            onViewRiskyPermissions={() => openLayerModal('privacy')}
+            onViewNetworkDomains={() => openLayerModal('privacy')}
           />
         </div>
 
@@ -460,7 +480,14 @@ const VersionHistorySection = ({ scanHistory }) => {
           const isLatest = index === 0;
           const previousScan = scanHistory[index + 1];
           const scoreDelta = previousScan ? getScoreDelta(scan.score, previousScan.score) : null;
-          const riskLevel = getRiskLevel(scan.score);
+          // Verdict-driven label: a NEEDS_REVIEW capped at a high score must read
+          // "Review", never a green score-band "LOW". Falls back to the band
+          // without ever upgrading to Safe when no verdict is available.
+          const verdictBadge = resolveVerdictBadge({
+            decision: scan.decision,
+            level: scan.risk_level,
+            score: scan.score,
+          });
 
           return (
             <div key={scan.timestamp || index} className={`version-item ${isLatest ? 'latest' : ''}`}>
@@ -477,7 +504,7 @@ const VersionHistorySection = ({ scanHistory }) => {
                 </div>
                 
                 <div className="version-stats">
-                  <div className={`score-pill risk-${riskLevel.toLowerCase()}`}>
+                  <div className={`score-pill ${verdictBadge.colorClass}`}>
                     <span className="score-value">{scan.score ?? '—'}</span>
                     <span className="score-label">/100</span>
                     {scoreDelta && (
@@ -487,9 +514,9 @@ const VersionHistorySection = ({ scanHistory }) => {
                       </span>
                     )}
                   </div>
-                  
-                  <span className={`risk-label risk-${riskLevel.toLowerCase()}`}>
-                    {riskLevel}
+
+                  <span className={`risk-label ${verdictBadge.colorClass}`}>
+                    {verdictBadge.label}
                   </span>
                 </div>
 
@@ -669,6 +696,9 @@ const ReportDetailPage = () => {
         score: results?.overall_security_score || results?.securityScore || 0,
         timestamp: results?.timestamp,
         risk_level: results?.overall_risk || results?.riskLevel,
+        // Authoritative verdict so the timeline label is verdict-driven,
+        // not a score-band "LOW" for a capped NEEDS_REVIEW.
+        decision: resolveScanVerdict(rawResults),
         permissions_count: results?.permissions?.length || 0,
         findings_count: results?.total_findings || results?.totalFindings || 0
       }];
@@ -1112,31 +1142,45 @@ const ReportDetailPage = () => {
           {/* Actions Tab */}
           <TabsContent value="actions" className="tab-content">
             <div className="actions-content">
-              {scanResults?.securityScore >= 80 ? (
-                <div className="action-card success">
-                  <span className="action-icon">✅</span>
-                  <div className="action-text">
-                    <h4>Safe to Use</h4>
-                    <p>This extension appears safe. No immediate action required.</p>
+              {(() => {
+                // The recommended action is driven by the authoritative verdict,
+                // never the score band: an 80-capped NEEDS_REVIEW must not read
+                // "Safe to Use. No immediate action required."
+                const finalVerdict =
+                  reportViewModel?.scores?.decision || resolveScanVerdict(rawScanData);
+                if (finalVerdict === 'BLOCK') {
+                  return (
+                    <div className="action-card danger">
+                      <span className="action-icon">⛔</span>
+                      <div className="action-text">
+                        <h4>Do Not Install</h4>
+                        <p>This extension was blocked by security checks. Avoid installing it unless a manual security review clears it.</p>
+                      </div>
+                    </div>
+                  );
+                }
+                if (finalVerdict === 'ALLOW') {
+                  return (
+                    <div className="action-card success">
+                      <span className="action-icon">✅</span>
+                      <div className="action-text">
+                        <h4>Safe to Use</h4>
+                        <p>All checks passed. No immediate action required.</p>
+                      </div>
+                    </div>
+                  );
+                }
+                // NEEDS_REVIEW / WARN — or no verdict at all. Never reassure by default.
+                return (
+                  <div className="action-card warning">
+                    <span className="action-icon">⚡</span>
+                    <div className="action-text">
+                      <h4>Review Before Installing</h4>
+                      <p>This scan has unresolved findings or incomplete analysis coverage. Review the capabilities and evidence before installing.</p>
+                    </div>
                   </div>
-                </div>
-              ) : scanResults?.securityScore >= 50 ? (
-                <div className="action-card warning">
-                  <span className="action-icon">⚡</span>
-                  <div className="action-text">
-                    <h4>Review Recommended</h4>
-                    <p>Consider reviewing the capabilities before installing.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="action-card danger">
-                  <span className="action-icon">⚠️</span>
-                  <div className="action-text">
-                    <h4>Proceed with Caution</h4>
-                    <p>This extension has concerning characteristics.</p>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div className="action-list">
                 <div className="action-item">

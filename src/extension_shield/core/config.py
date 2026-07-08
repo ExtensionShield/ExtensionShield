@@ -195,7 +195,7 @@ def get_settings() -> Settings:
     )
 
     extension_storage_path = os.environ.get("EXTENSION_STORAGE_PATH", "extensions_storage")
-    database_path = os.environ.get("DATABASE_PATH", "project-atlas.db")
+    database_path = os.environ.get("DATABASE_PATH", "ExtensionShield.db")
 
     supabase_url = os.environ.get("SUPABASE_URL")
     # Only use service role key for backend writes (never anon key)
@@ -276,5 +276,4 @@ def get_settings() -> Settings:
     )
     settings.validate()
     return settings
-
 

@@ -16,6 +16,7 @@ rules:
       facts.host_access_patterns contains "*://*/*"
     verdict: "NEEDS_REVIEW"
     confidence: 0.95
+    advisory: true  # broad host access alone must not escalate past V2
     recommended_action: "Require explicit business justification from developer before allowing org-wide"
     citations: ["ENTERPRISE_GOV_BASELINE::GUIDE_1", "NIST-SP-800-53::AC-3"]
     evidence_refs: []
@@ -40,15 +41,23 @@ rules:
   - rule_id: "ENTERPRISE_GOV_BASELINE::R3"
     name: "Data Transfer Without Store Declaration"
     description: |
-      Code performs data transfer (detected by SAST/behavioral analysis) but 
-      Chrome Web Store listing declares no data categories
+      Code performs data transfer (detected by SAST/behavioral analysis) but
+      the Chrome Web Store listing declares no data categories. This is a
+      disclosure GAP, not proof of exfiltration.
     condition: |
       extraction.status == "ok" AND
       signals contains type="DATAFLOW_TRACE" AND
       declared_data_categories is empty
-    verdict: "BLOCK"
+    # NEEDS_REVIEW, not BLOCK: DATAFLOW_TRACE is first-party agnostic (it fires on
+    # a storage permission + any network endpoint, even an extension POSTing to its
+    # own backend), and a benign developer who simply did not populate recognized
+    # disclosure phrases yields empty declared_data_categories. Hard-blocking on a
+    # missing declaration alone false-BLOCKs benign first-party extensions. This now
+    # mirrors R4 (declaration unknown -> review); a hard BLOCK requires concrete
+    # dangerous behavior, which the V2 SAST/exfil hard gates already enforce.
+    verdict: "NEEDS_REVIEW"
     confidence: 0.9
-    recommended_action: "Block installation — undisclosed data exfiltration risk"
+    recommended_action: "Require the developer to declare data categories on the Chrome Web Store listing before approval; a missing declaration alone is not evidence of exfiltration"
     citations: ["ENTERPRISE_GOV_BASELINE::GUIDE_2", "CWS_LIMITED_USE::SECTION_5"]
     evidence_refs: []
 
@@ -112,6 +121,7 @@ rules:
        facts.security_findings.obfuscation_detected is not empty)
     verdict: "NEEDS_REVIEW"
     confidence: 0.7
+    advisory: true  # minification/obfuscation alone must not escalate past V2
     recommended_action: "Require source code transparency or additional dynamic analysis"
     citations: ["ENTERPRISE_GOV_BASELINE::GUIDE_4"]
     evidence_refs: []
@@ -145,6 +155,7 @@ rules:
       manifest.permissions contains "unlimitedStorage"
     verdict: "NEEDS_REVIEW"
     confidence: 0.8
+    advisory: true  # generic permission (storage/clipboard) warning; not evidence of danger
     recommended_action: "Verify justification for each dangerous permission"
     citations: ["ENTERPRISE_GOV_BASELINE::GUIDE_6"]
     evidence_refs: []
@@ -157,6 +168,7 @@ rules:
       privacy_policy_url is empty
     verdict: "NEEDS_REVIEW"
     confidence: 0.7
+    advisory: true  # missing/undetected privacy policy is a review note, not an override
     recommended_action: "Require developer to publish privacy policy"
     citations: ["ENTERPRISE_GOV_BASELINE::GUIDE_7"]
     evidence_refs: []

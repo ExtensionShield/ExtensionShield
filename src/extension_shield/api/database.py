@@ -72,7 +72,7 @@ class Database:
 
         Args:
             db_path: Path to SQLite database file. If None, uses DATABASE_PATH
-                     environment variable or defaults to 'project-atlas.db'.
+                     environment variable or defaults to 'ExtensionShield.db'.
                      Used only when DB_BACKEND=sqlite (dev fallback).
         """
         if db_path is None:

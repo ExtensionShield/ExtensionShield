@@ -143,7 +143,7 @@ rules:
 
   - id: banking.exfil.generic_channels
     message: Possible exfiltration via sendBeacon/Image.src/fetch.
-    severity: CRITICAL
+    severity: WARNING  # downgraded from CRITICAL: capability signal — corroborated by PURPOSE_MISMATCH, must not hard-BLOCK alone
     languages: [javascript, typescript]
     metadata:
       category: exfiltration
@@ -261,7 +261,7 @@ rules:
   ##########################################################################
   - id: credential.theft.storage_access
     message: Accessing localStorage/sessionStorage for credentials—potential credential theft.
-    severity: CRITICAL
+    severity: WARNING  # downgraded from CRITICAL: capability signal — corroborated by PURPOSE_MISMATCH, must not hard-BLOCK alone
     languages: [javascript, typescript]
     metadata:
       category: credential-theft
@@ -307,20 +307,25 @@ rules:
           document.querySelectorAll('input[type="password"]')
       - pattern: |
           $ELEM.querySelector('input[type="password"]').value
-      - pattern: |
-          document.getElementById($ID).value
+      # `document.getElementById($ID).value` was removed: it matched ANY element
+      # value read (e.g. an autofill extension reading its own form fields by id
+      # like getElementById("iv-user-email").value), firing a fear-based CRITICAL
+      # credential-theft BLOCK on benign extensions. Password extraction now
+      # requires an explicit password field.
       - patterns:
           - pattern: $FORM.elements[$NAME].value
           - metavariable-regex:
               metavariable: $NAME
-              regex: "(password|passwd|pwd|pass)"
+              # Anchored: match a field literally named pass/password, not any
+              # string containing "pass" (e.g. "passport", "passenger").
+              regex: "^(password|passwd|pwd|pass)$"
 
   ##########################################################################
   # 13) Credential Theft - Form Data Serialization
   ##########################################################################
   - id: credential.theft.form_serialization
     message: Form data serialization with network transmission—credential exfiltration risk.
-    severity: CRITICAL
+    severity: WARNING  # downgraded from CRITICAL: capability signal — corroborated by PURPOSE_MISMATCH, must not hard-BLOCK alone
     languages: [javascript, typescript]
     metadata:
       category: credential-theft
@@ -337,7 +342,7 @@ rules:
   ##########################################################################
   - id: cookie.theft.document_cookie_access
     message: Accessing document.cookie—potential cookie theft for session hijacking.
-    severity: CRITICAL
+    severity: WARNING  # downgraded from CRITICAL: capability signal — corroborated by PURPOSE_MISMATCH, must not hard-BLOCK alone
     languages: [javascript, typescript]
     metadata:
       category: cookie-theft
@@ -359,7 +364,7 @@ rules:
   ##########################################################################
   - id: cookie.theft.cookie_exfiltration
     message: Cookie data being sent to external server—active cookie theft detected.
-    severity: CRITICAL
+    severity: WARNING  # downgraded from CRITICAL: capability signal — corroborated by PURPOSE_MISMATCH, must not hard-BLOCK alone
     languages: [javascript, typescript]
     metadata:
       category: cookie-theft
@@ -374,7 +379,7 @@ rules:
   ##########################################################################
   - id: cookie.theft.chrome_cookies_api
     message: Using chrome.cookies API to access cookies—potential session hijacking.
-    severity: CRITICAL
+    severity: WARNING  # downgraded from CRITICAL: capability signal — corroborated by PURPOSE_MISMATCH, must not hard-BLOCK alone
     languages: [javascript, typescript]
     metadata:
       category: cookie-theft
@@ -423,7 +428,7 @@ rules:
   ##########################################################################
   - id: c2.exfiltration.base64_encoded_data
     message: Base64 encoding with network transmission—obfuscated data exfiltration.
-    severity: CRITICAL
+    severity: WARNING  # downgraded from CRITICAL: capability signal — corroborated by PURPOSE_MISMATCH, must not hard-BLOCK alone
     languages: [javascript, typescript]
     metadata:
       category: c2-communication
@@ -494,8 +499,11 @@ rules:
   # 23) Credential Theft - Keylogger Pattern
   ##########################################################################
   - id: credential.theft.keylogger
-    message: Keylogging pattern detected—capturing all keyboard input including passwords.
-    severity: CRITICAL
+    message: >-
+      Keyboard event listener detected. Frequently a hotkey/shortcut handler;
+      dangerous only if captured keystrokes are stored or transmitted externally.
+      Review for corroborating capture/exfiltration before treating as keylogging.
+    severity: WARNING
     languages: [javascript, typescript]
     metadata:
       category: credential-theft
@@ -523,21 +531,38 @@ rules:
       mitre: [T1071, T1102]
       cwe: [CWE-940]
       description: Detects external messaging that may be used for C2 communication
+    # Only flag messaging addressed to an EXTERNAL extension (a 32-char store-id
+    # literal). The bare 2-arg forms matched any internal
+    # chrome.runtime.sendMessage(message, callback) / connect(port, options),
+    # false-flagging normal in-extension messaging as a C2 channel.
     pattern-either:
-      - pattern: chrome.runtime.sendMessage($EXT_ID, $MSG, ...)
-      - pattern: chrome.runtime.connect($EXT_ID, ...)
       - patterns:
           - pattern: chrome.runtime.sendMessage($EXT_ID, $MSG, ...)
           - metavariable-regex:
               metavariable: $EXT_ID
-              regex: "[a-z]{32}"
+              # A 32-char Chrome extension id LITERAL (a-p), quote-inclusive because
+              # semgrep matches the metavariable text (incl. quotes) with fullmatch.
+              # An internal message object / callback identifier will never match.
+              regex: "^[\"']?[a-p]{32}[\"']?$"
+      - patterns:
+          - pattern: chrome.runtime.connect($EXT_ID, ...)
+          - metavariable-regex:
+              metavariable: $EXT_ID
+              # A 32-char Chrome extension id LITERAL (a-p), quote-inclusive because
+              # semgrep matches the metavariable text (incl. quotes) with fullmatch.
+              # An internal message object / callback identifier will never match.
+              regex: "^[\"']?[a-p]{32}[\"']?$"
 
   ##########################################################################
   # 25) Cookie Theft - IndexedDB Cookie Storage
   ##########################################################################
   - id: cookie.theft.indexeddb_storage
     message: Storing cookies in IndexedDB—potential persistent cookie theft mechanism.
-    severity: ERROR
+    # WARNING, not ERROR: the patterns match ANY indexedDB.open / objectStore
+    # write (a benign, ubiquitous storage API). It is a capability signal that
+    # must be corroborated (cookie/credential read + persistence) before it counts
+    # toward a hard block — not a standalone high-risk finding.
+    severity: WARNING
     languages: [javascript, typescript]
     metadata:
       category: cookie-theft
@@ -556,22 +581,29 @@ rules:
   # 26) C2 Communication - Fetch with Credentials Include
   ##########################################################################
   - id: c2.exfiltration.fetch_credentials_include
-    message: Fetch with credentials:include to external domain—session hijacking risk.
-    severity: CRITICAL
+    message: >-
+      Credentialed fetch (credentials:include). Normal for a first-party or
+      disclosed backend; suspicious only when the destination is undisclosed /
+      unrelated, or paired with secret-read or exfiltration behavior. Review the
+      destination — not session hijacking on its own.
+    severity: WARNING
     languages: [javascript, typescript]
     metadata:
       category: c2-communication
       mitre: [T1539, T1041]
       cwe: [CWE-352, CWE-319]
-      description: Detects fetch requests that include credentials to external domains
-    pattern: fetch($URL, ...)
+      description: Detects fetch requests that explicitly include credentials
+    pattern: 'fetch($URL, {..., credentials: "include", ...})'
 
   ##########################################################################
   # 27) Credential Theft - Chrome Identity API Abuse
   ##########################################################################
   - id: credential.theft.chrome_identity_api
-    message: Chrome identity API usage—accessing OAuth tokens or user identity.
-    severity: ERROR
+    message: >-
+      Chrome identity API usage (chrome.identity). Reads the signed-in user's
+      profile/OAuth for sign-in — legitimate for many extensions. Review that it
+      matches the stated purpose. Not credential theft on its own.
+    severity: WARNING
     languages: [javascript, typescript]
     metadata:
       category: credential-theft
@@ -596,7 +628,16 @@ rules:
       cwe: [CWE-494, CWE-829]
       description: Detects dynamic loading of scripts from external sources
     pattern-either:
-      - pattern: document.createElement('script')
+      # Require a remote src on the created script element. The bare
+      # `document.createElement('script')` also matched inline injection
+      # (createElement('script'); el.textContent = ...), a benign page-context
+      # bridge pattern, firing a fear-based CRITICAL "remote code execution"
+      # BLOCK. Real remote loading assigns .src to an external URL.
+      - patterns:
+          - pattern-inside: |
+              $S = document.createElement('script');
+              ...
+          - pattern: $S.src = $URL
       - pattern: |
           document.write('<script src="' + $URL + '"></script>')
       - pattern: |

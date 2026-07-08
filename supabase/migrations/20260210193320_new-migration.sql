@@ -1,2 +1,0 @@
--- new-migration: Schema aligned with local migrations.
--- icon_path on scan_results stores relative paths (e.g. icons/128.png) for PNG icon rendering.

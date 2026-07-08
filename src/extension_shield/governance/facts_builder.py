@@ -34,6 +34,7 @@ from .schemas import (
     EntropyFileFinding,
     ExtensionMetadata,
 )
+from .signal_pack import sanitize_code_snippet
 
 
 logger = logging.getLogger(__name__)
@@ -405,7 +406,9 @@ class FactsBuilder:
                         severity=severity.lower(),
                         description=extra.get("message", ""),
                         line_number=start.get("line"),
-                        code_snippet=extra.get("lines"),
+                        # Real matched code only; drop fake placeholders so they
+                        # never surface as user-facing code evidence.
+                        code_snippet=sanitize_code_snippet(extra.get("lines")),
                     ))
             
             # Calculate risk level from findings

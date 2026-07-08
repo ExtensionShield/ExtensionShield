@@ -191,6 +191,108 @@ CRITICAL_HIGH_SAST_PATTERNS: Tuple[re.Pattern[str], ...] = tuple(
 )
 
 
+# ============================================================================
+# RESTRICTED-PERMISSION CAPABILITY EVIDENCE PATTERNS
+# ============================================================================
+#
+# A restricted permission (proxy / nativeMessaging / debugger) only escalates
+# from WARN to BLOCK when HIGH/CRITICAL SAST evidence is tied to THAT privileged
+# capability — never from unrelated findings. These patterns define what
+# "tied to the capability" means per permission.
+RESTRICTED_PERM_EVIDENCE_PATTERNS: Dict[str, Tuple[re.Pattern[str], ...]] = {
+    "proxy": tuple(
+        re.compile(p, re.IGNORECASE)
+        for p in (
+            r"chrome\.proxy",
+            r"\bproxy\b",
+            r"pac_?script",
+            r"onauthrequired",
+            r"webrequestblocking",
+            r"intercept.*(traffic|request)|modify\s*(headers|request|response)",
+        )
+    ),
+    "nativeMessaging": tuple(
+        re.compile(p, re.IGNORECASE)
+        for p in (
+            r"native\s*messag",
+            r"connectnative",
+            r"sendnativemessage",
+            r"native\s*host",
+        )
+    ),
+    "debugger": tuple(
+        re.compile(p, re.IGNORECASE)
+        for p in (
+            r"chrome\.debugger",
+            r"debugger\s*\.\s*attach",
+            r"devtools\s*protocol",
+            r"\bcdp\b",
+        )
+    ),
+}
+
+
+# ============================================================================
+# PURPOSE_MISMATCH BEHAVIOR TAXONOMY
+# ============================================================================
+#
+# PURPOSE_MISMATCH must escalate to a hard BLOCK only for CONCRETE dangerous
+# behavior, never for scary SAST rule NAMES. We classify each SAST finding by
+# the specific behavior it detected — the LAST dotted segment of its rule id
+# (e.g. `credential.theft.chrome_identity_api` -> `chrome_identity_api`) — and
+# treat benign-compatible detectors as review-only. We NEVER regex-match
+# credential/login/password keywords against the rule id, message, or snippet.
+#
+# Behavior-identifier keys (last segment of the custom Semgrep rule ids in
+# config/custom_semgrep_rules.yaml).
+
+# Benign-compatible or ambiguous: legitimate uses exist. Never a hard BLOCK on
+# their own — at most REVIEW (chrome.identity, first-party credentialed fetch,
+# background messaging, cookie/storage reads, generic API/websocket calls).
+_PM_BENIGN_COMPATIBLE = frozenset({
+    "chrome_identity_api", "fetch_credentials_include", "chrome_runtime_external",
+    "external_api_calls", "document_cookie_access", "chrome_cookies_api",
+    "storage_access", "indexeddb_storage", "websocket_connection",
+    "webnavigation", "dynamic_domain_mapping", "generic_channels",
+})
+# Reads secret / credential VALUES from the page. Dangerous only when
+# corroborated by an exfiltration behavior (reads secrets AND sends them out).
+_PM_SECRET_READ = frozenset({
+    "password_extraction", "password_input_hooks", "form_serialization",
+    "submit_intercept",
+})
+# Broad keystroke capture. Dangerous only when corroborated by exfil/storage.
+_PM_KEY_CAPTURE = frozenset({"keylogger"})
+# Covert / external exfiltration of data.
+_PM_EXFIL = frozenset({
+    "periodic_beacon", "image_steganography", "base64_encoded_data",
+    "dns_tunneling", "url_and_userid", "override_fetch_xhr",
+})
+# Remote executable code loading — concrete dangerous on its own.
+_PM_REMOTE_CODE = frozenset({
+    "dynamic_script_loading", "server_list", "fallback_loop", "import_scripts",
+})
+# Standalone high-confidence malicious behaviors — concrete on their own.
+_PM_STANDALONE_DANGEROUS = frozenset({
+    "clipboard_hijack",    # crypto-clipper: read clipboard + replace address
+    "silent_payment",      # automated money transfer
+    "cookie_exfiltration", # explicitly sends cookies to an external server
+})
+# Credentialed / generic send channels: benign for a first-party or disclosed
+# backend (REVIEW on their own), but the exfiltration vector when the extension
+# ALSO reads secrets or captures keystrokes.
+_PM_CREDENTIALED_SEND = frozenset({
+    "fetch_credentials_include", "external_api_calls", "websocket_connection",
+})
+# Suspicious external destinations (hardcoded DGA-looking / C2-style domains).
+_PM_SUSPICIOUS_EXTERNAL = frozenset({"random_domain_pattern"})
+
+
+def _pm_behavior_suffix(check_id: str) -> str:
+    """The specific behavior identifier: the last dotted segment of a rule id."""
+    return (check_id or "").strip().lower().split(".")[-1]
+
+
 # =============================================================================
 # HARD GATES CLASS
 # =============================================================================
@@ -403,10 +505,16 @@ class HardGates:
                         critical_high_example_ids.append(finding.check_id)
                         break
         
-        # Check BLOCK thresholds
+        # Check BLOCK thresholds.
+        # A pile of HIGH/ERROR findings does NOT hard-BLOCK on raw count alone —
+        # that false-BLOCKs benign extensions that legitimately accumulate several
+        # capability-level findings (e.g. internal messaging + IndexedDB + a fetch).
+        # HIGH/ERROR findings escalate to BLOCK only when at least one matches a
+        # genuinely-dangerous pattern (critical_high_hits, e.g. eval / keylogger /
+        # remote-code / credential exfil); otherwise they lower the security score
+        # toward NEEDS_REVIEW instead of hard-blocking.
         should_block = (
             critical_count >= self.config.sast_critical_block_count or
-            high_count >= self.config.sast_high_block_count or
             critical_high_hits >= 1
         )
         
@@ -420,14 +528,11 @@ class HardGates:
                     f"sast:critical:{f.check_id}" for f in critical_findings[:3]
                 ])
                 reasons.append(f"Security scan found {critical_count} critical code issue(s)")
-            
-            if high_count >= self.config.sast_high_block_count:
-                evidence_ids.extend([
-                    f"sast:high:{f.check_id}" for f in high_findings[:3]
-                ])
-                reasons.append(f"Security scan found {high_count} high-risk code pattern(s)")
-            
+
             if critical_high_hits >= 1:
+                evidence_ids.extend([
+                    f"sast:high:{cid}" for cid in critical_high_example_ids[:3]
+                ])
                 reasons.append(
                     f"Dangerous code pattern found in {critical_high_hits} location(s)"
                 )
@@ -497,20 +602,54 @@ class HardGates:
         violations: List[str] = []
         evidence_ids: List[str] = []
         
-        # Check for prohibited permissions
-        for prohibited in self.config.tos_prohibited_permissions:
-            if prohibited in all_permissions:
-                violations.append(f"Prohibited permission: {prohibited}")
-                evidence_ids.append(f"tos:prohibited_perm:{prohibited}")
-        
-        # Check for dangerous manifest configurations
-        # e.g., externally_connectable with wildcards
+        # Restricted permissions (proxy / nativeMessaging / debugger) are powerful
+        # but NOT inherently malicious: a VPN needs `proxy`, a password manager
+        # needs `nativeMessaging`, a devtools helper needs `debugger`. Declaring one
+        # is a REVIEW signal, not an automatic block. We only escalate to BLOCK when
+        # an aggravating factor shows the capability is wired up dangerously (an
+        # any-website message bridge, or code-level evidence). Scoped per audit: do
+        # not auto-block a legitimate extension on a permission declaration alone.
+        prohibited_present = [
+            p for p in self.config.tos_prohibited_permissions if p in all_permissions
+        ]
+
+        # Aggravator 1: externally_connectable exposes the extension to any website
+        # (a web -> extension -> native/privileged bridge).
         ext_conn = manifest.get("externally_connectable", {})
+        ext_conn_wildcard = False
         if isinstance(ext_conn, dict):
-            matches = ext_conn.get("matches", [])
-            if "<all_urls>" in matches or "*://*/*" in matches:
-                violations.append("externally_connectable allows all URLs")
-                evidence_ids.append("tos:ext_connectable_wildcard")
+            _ec_matches = ext_conn.get("matches", []) or []
+            ext_conn_wildcard = "<all_urls>" in _ec_matches or "*://*/*" in _ec_matches
+
+        # Aggravator 2: code-level evidence (SAST) that THIS restricted capability
+        # is wired up dangerously. An unrelated HIGH finding (e.g. eval usage in a
+        # UI file) must NOT escalate a bare `proxy` declaration to BLOCK — only
+        # findings tied to the privileged capability itself count. (Genuinely
+        # critical unrelated findings still block via the CRITICAL_SAST gate.)
+        def _finding_text(f: Any) -> str:
+            return " ".join(
+                t for t in (
+                    getattr(f, "check_id", "") or "",
+                    getattr(f, "message", "") or "",
+                    getattr(f, "code_snippet", "") or "",
+                ) if t
+            )
+
+        high_finding_texts = [
+            _finding_text(f)
+            for f in (getattr(sast, "deduped_findings", None) or [])
+            if (getattr(f, "severity", "") or "").upper() in ("CRITICAL", "HIGH", "ERROR")
+        ]
+        capability_evidence: Dict[str, int] = {}
+        for perm in prohibited_present:
+            patterns = RESTRICTED_PERM_EVIDENCE_PATTERNS.get(perm, ())
+            hits = sum(
+                1 for text in high_finding_texts
+                if any(p.search(text) for p in patterns)
+            )
+            if hits:
+                capability_evidence[perm] = hits
+        restricted_perm_aggravated = ext_conn_wildcard or bool(capability_evidence)
 
         # ---------------------------------------------------------------------
         # Travel-docs / visa portal ToS risk (deterministic, evidence-based)
@@ -638,33 +777,81 @@ class HardGates:
                 )
                 evidence_ids.append("tos:travel_docs:third_party_processor")
         
-        if violations:
+        # ---- Scoped decision -------------------------------------------------
+        # Travel/visa-portal automation remains a hard, evidence-based BLOCK.
+        travel_docs_block = any(e.startswith("tos:travel_docs") for e in evidence_ids)
+
+        decision: Literal["ALLOW", "WARN", "BLOCK"] = "ALLOW"
+        reasons: List[str] = list(violations)  # travel-docs reasons, if any
+
+        if prohibited_present:
+            perm_list = ", ".join(prohibited_present)
+            if restricted_perm_aggravated:
+                decision = "BLOCK"
+                reasons.append(
+                    f"Restricted permission ({perm_list}) combined with a high-risk capability"
+                )
+                if ext_conn_wildcard:
+                    reasons.append(
+                        "Any website can connect to this extension (externally_connectable: <all_urls>)"
+                    )
+                if capability_evidence:
+                    evidenced = ", ".join(sorted(capability_evidence))
+                    reasons.append(
+                        f"Code analysis found high-risk usage tied to: {evidenced}"
+                    )
+                evidence_ids.extend(f"tos:restricted_perm_blocked:{p}" for p in prohibited_present)
+            else:
+                decision = "WARN"
+                reasons.append(
+                    f"Requests restricted permission ({perm_list}); verify it matches the "
+                    f"extension's stated purpose before installing"
+                )
+                evidence_ids.extend(f"tos:restricted_perm_review:{p}" for p in prohibited_present)
+        elif ext_conn_wildcard:
+            decision = "WARN"
+            reasons.append(
+                "Any website can connect to this extension (externally_connectable: <all_urls>)"
+            )
+            evidence_ids.append("tos:ext_connectable_wildcard")
+
+        # Travel-docs automation forces BLOCK regardless of the permission scoping.
+        if travel_docs_block:
+            decision = "BLOCK"
+
+        if decision == "ALLOW":
             return GateResult(
                 gate_id=gate_id,
-                decision="BLOCK",
-                triggered=True,
-                confidence=0.95,  # High confidence for explicit ToS violations
-                reasons=violations,
-                evidence_ids=evidence_ids,
-                details={
-                    "violations": violations,
-                    "checked_permissions": list(self.config.tos_prohibited_permissions),
-                    "travel_docs": {
-                        "protected_domains_hit": protected_domain_hits[:10],
-                        "visa_ecosystem_domains_hit": list(dict.fromkeys(visa_ecosystem_hits + domain_string_hits))[:20],
-                        "pattern_hits": pattern_hits[:20],
-                        "externally_connectable_matches": ext_conn_matches[:20],
-                    },
-                },
+                decision="ALLOW",
+                triggered=False,
+                confidence=0.9,
+                reasons=["No ToS violations detected"],
+                details={"checked_permissions": list(self.config.tos_prohibited_permissions)},
             )
-        
+
         return GateResult(
             gate_id=gate_id,
-            decision="ALLOW",
-            triggered=False,
-            confidence=0.9,
-            reasons=["No ToS violations detected"],
-            details={"checked_permissions": list(self.config.tos_prohibited_permissions)},
+            decision=decision,
+            triggered=True,
+            # High confidence for a BLOCK (aggravated / evidence-based); moderate
+            # for a review-only restricted-permission declaration.
+            confidence=0.9 if decision == "BLOCK" else 0.6,
+            reasons=reasons or ["Restricted permissions require review"],
+            evidence_ids=evidence_ids,
+            details={
+                "violations": reasons,
+                "prohibited_present": prohibited_present,
+                "externally_connectable_wildcard": ext_conn_wildcard,
+                "aggravated": restricted_perm_aggravated,
+                "capability_evidence": capability_evidence,
+                "checked_permissions": list(self.config.tos_prohibited_permissions),
+                "travel_docs": {
+                    "protected_domains_hit": protected_domain_hits[:10],
+                    "visa_ecosystem_domains_hit": list(dict.fromkeys(visa_ecosystem_hits + domain_string_hits))[:20],
+                    "pattern_hits": pattern_hits[:20],
+                    "externally_connectable_matches": ext_conn_matches[:20],
+                },
+            },
         )
     
     # =========================================================================
@@ -711,95 +898,154 @@ class HardGates:
         
         is_benign_claimed = any(cat in claimed_purpose for cat in benign_categories)
         
-        # Detect credential capture patterns in SAST findings
-        credential_signals: List[str] = []
-        tracking_signals: List[str] = []
-        
+        # Classify SAST findings by the CONCRETE BEHAVIOR they detected (the
+        # specific rule suffix + severity) — never by scary keywords in the rule
+        # id/message, and never from placeholder snippets. Benign-compatible
+        # detectors (chrome.identity, first-party credentialed fetch, background
+        # messaging, cookie/storage reads) are excluded from block evidence.
+        secret_read: List[str] = []
+        key_capture: List[str] = []
+        exfil: List[str] = []
+        remote_code: List[str] = []
+        standalone_dangerous: List[str] = []
+        benign_compat: List[str] = []
+        credentialed_send: List[str] = []
+        suspicious_external: List[str] = []
+
         for finding in sast.deduped_findings:
-            text_to_check = f"{finding.check_id} {finding.message} {finding.code_snippet or ''}"
-            
-            for pattern in self._credential_patterns:
-                if pattern.search(text_to_check):
-                    credential_signals.append(f"{finding.check_id}: {pattern.pattern}")
-                    break
-            
-            for pattern in self._tracking_patterns:
-                if pattern.search(text_to_check):
-                    tracking_signals.append(f"{finding.check_id}: {pattern.pattern}")
-                    break
-        
-        # Dedupe signals
-        credential_signals = list(set(credential_signals))[:5]
-        tracking_signals = list(set(tracking_signals))[:5]
-        
-        # Check for concerning permission combinations on benign extensions
+            suffix = _pm_behavior_suffix(finding.check_id)
+            if not suffix:
+                continue
+            if suffix in _PM_BENIGN_COMPATIBLE:
+                benign_compat.append(suffix)
+                if suffix in _PM_CREDENTIALED_SEND:
+                    credentialed_send.append(suffix)
+                continue
+            if suffix in _PM_SUSPICIOUS_EXTERNAL:
+                suspicious_external.append(suffix)
+            if suffix in _PM_STANDALONE_DANGEROUS:
+                standalone_dangerous.append(suffix)
+            if suffix in _PM_REMOTE_CODE:
+                remote_code.append(suffix)
+            elif suffix in _PM_SECRET_READ:
+                secret_read.append(suffix)
+            elif suffix in _PM_KEY_CAPTURE:
+                key_capture.append(suffix)
+            elif suffix in _PM_EXFIL:
+                exfil.append(suffix)
+
+        # First-party/disclosed credentialed fetch (or a generic API/websocket
+        # send) is benign ALONE — REVIEW, not BLOCK. But when the extension ALSO
+        # reads secrets or captures keystrokes, that channel is the exfiltration
+        # vector, so it corroborates a credential-theft pattern. A hardcoded
+        # suspicious/DGA-looking destination corroborates the same way. We stay
+        # conservative: ambiguous cases become REVIEW, never SAFE.
+        if (secret_read or key_capture) and not exfil and (credentialed_send or suspicious_external):
+            exfil.extend(sorted(set(credentialed_send + suspicious_external)))
+
+        # Concerning permission combinations on an extension that CLAIMS to be a
+        # simple/benign utility (purpose vs capability mismatch).
         has_network = perms.has_broad_host_access or "webRequest" in perms.api_permissions
         has_clipboard = "clipboardRead" in perms.api_permissions
         has_capture = any(p in perms.api_permissions for p in ["tabCapture", "desktopCapture"])
-        
-        # Decision logic
-        mismatch_reasons: List[str] = []
+
+        # ------------------------------------------------------------------
+        # BLOCK only for CONCRETE, corroborated dangerous behavior.
+        # ------------------------------------------------------------------
+        block_reasons: List[str] = []
+        if remote_code:
+            block_reasons.append("Loads and runs code from a remote/external source")
+        if secret_read and exfil:
+            block_reasons.append(
+                "Reads secret or credential values and sends data to external servers"
+            )
+        if key_capture and exfil:
+            block_reasons.append("Captures keystrokes and transmits them externally")
+        if standalone_dangerous:
+            block_reasons.append(
+                "High-confidence malicious behavior detected: "
+                + ", ".join(sorted(set(standalone_dangerous)))
+            )
+
+        # ------------------------------------------------------------------
+        # REVIEW (WARN) for concerning-but-benign-compatible or uncorroborated
+        # signals, and for benign-purpose-claim vs capability mismatch.
+        # Ambiguous cases become REVIEW, never SAFE.
+        # ------------------------------------------------------------------
+        review_reasons: List[str] = []
+        if secret_read and not exfil:
+            review_reasons.append(
+                "Reads form/credential values — review whether it stays local"
+            )
+        if key_capture and not exfil:
+            review_reasons.append(
+                "Uses keyboard capture (may be a hotkey/shortcut) — review before use"
+            )
+        if exfil and not (secret_read or key_capture):
+            review_reasons.append("Sends data to external servers — review its destinations")
+        if suspicious_external and not block_reasons:
+            review_reasons.append(
+                "Contacts a hardcoded, unusual-looking domain — review the destination"
+            )
+        if benign_compat:
+            review_reasons.append(
+                "Uses sensitive-but-common capabilities (identity/cookies/messaging/network) "
+                "— verify they match the stated purpose"
+            )
+        if is_benign_claimed and has_network and has_clipboard:
+            review_reasons.append(
+                f"'{name}' presents as simple but can read your clipboard and access the internet"
+            )
+        if is_benign_claimed and has_capture:
+            review_reasons.append(f"'{name}' presents as simple but can capture your screen")
+
         decision: Literal["ALLOW", "WARN", "BLOCK"] = "ALLOW"
-        confidence = 0.8
-        
-        if credential_signals:
-            if len(credential_signals) >= 2:
-                decision = "BLOCK"
-                confidence = 0.85
-                mismatch_reasons.append(
-                    f"May capture your login credentials ({len(credential_signals)} patterns found)"
-                )
-            else:
-                decision = "WARN"
-                mismatch_reasons.append("May capture your login credentials")
-        
-        if is_benign_claimed:
-            if has_network and has_clipboard:
-                decision = "WARN" if decision == "ALLOW" else decision
-                mismatch_reasons.append(
-                    f"'{name}' says it's simple but can read your clipboard and access the internet"
-                )
-            
-            if has_capture:
-                decision = "WARN" if decision == "ALLOW" else decision
-                mismatch_reasons.append(
-                    f"'{name}' says it's simple but can capture your screen"
-                )
-            
-            if tracking_signals:
-                decision = "WARN" if decision == "ALLOW" else decision
-                mismatch_reasons.append("Contains tracking code despite being a simple utility")
-        
-        if mismatch_reasons:
+        if block_reasons:
+            decision = "BLOCK"
+        elif review_reasons:
+            decision = "WARN"
+
+        if decision == "ALLOW":
             return GateResult(
                 gate_id=gate_id,
-                decision=decision,
-                triggered=True,
-                confidence=confidence,
-                reasons=mismatch_reasons,
-                evidence_ids=[
-                    f"mismatch:credential:{s.split(':')[0]}" for s in credential_signals[:3]
-                ] + [
-                    f"mismatch:tracking:{s.split(':')[0]}" for s in tracking_signals[:3]
-                ],
-                details={
-                    "claimed_purpose": claimed_purpose[:100],
-                    "is_benign_claimed": is_benign_claimed,
-                    "credential_signals": credential_signals,
-                    "tracking_signals": tracking_signals,
-                    "has_network": has_network,
-                    "has_clipboard": has_clipboard,
-                    "has_capture": has_capture,
-                },
+                decision="ALLOW",
+                triggered=False,
+                confidence=0.8,
+                reasons=["No purpose mismatch detected"],
+                details={"is_benign_claimed": is_benign_claimed},
             )
-        
+
+        reasons = block_reasons if decision == "BLOCK" else review_reasons
+        evidence_ids = (
+            [f"mismatch:remote_code:{s}" for s in sorted(set(remote_code))]
+            + [f"mismatch:secret_read:{s}" for s in sorted(set(secret_read))]
+            + [f"mismatch:key_capture:{s}" for s in sorted(set(key_capture))]
+            + [f"mismatch:exfil:{s}" for s in sorted(set(exfil))]
+            + [f"mismatch:standalone:{s}" for s in sorted(set(standalone_dangerous))]
+        )[:6]
         return GateResult(
             gate_id=gate_id,
-            decision="ALLOW",
-            triggered=False,
-            confidence=0.8,
-            reasons=["No purpose mismatch detected"],
-            details={"is_benign_claimed": is_benign_claimed},
+            decision=decision,
+            triggered=True,
+            # High confidence for a corroborated BLOCK; moderate for review-only.
+            confidence=0.85 if decision == "BLOCK" else 0.6,
+            reasons=reasons[:4],
+            evidence_ids=evidence_ids,
+            details={
+                "claimed_purpose": claimed_purpose[:100],
+                "is_benign_claimed": is_benign_claimed,
+                "secret_read": sorted(set(secret_read)),
+                "key_capture": sorted(set(key_capture)),
+                "exfil": sorted(set(exfil)),
+                "remote_code": sorted(set(remote_code)),
+                "standalone_dangerous": sorted(set(standalone_dangerous)),
+                "benign_compatible": sorted(set(benign_compat)),
+                "credentialed_send": sorted(set(credentialed_send)),
+                "suspicious_external": sorted(set(suspicious_external)),
+                "has_network": has_network,
+                "has_clipboard": has_clipboard,
+                "has_capture": has_capture,
+            },
         )
     
     # =========================================================================

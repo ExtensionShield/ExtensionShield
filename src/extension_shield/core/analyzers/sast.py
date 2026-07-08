@@ -7,6 +7,8 @@ from typing import Dict, Optional, List
 import subprocess
 import os
 import fnmatch
+import shutil
+import sys
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
@@ -142,21 +144,73 @@ class JavaScriptAnalyzer(BaseAnalyzer):
     @staticmethod
     def _is_semgrep_installed() -> bool:
         """Check if Semgrep is installed."""
-        try:
-            subprocess.run(["semgrep", "--version"], capture_output=True, text=True, check=True)
-            return True
-        except FileNotFoundError:
+        semgrep_bin = JavaScriptAnalyzer._resolve_semgrep_executable()
+        if not semgrep_bin:
             logger.error(
-                "Semgrep is not installed or not found in PATH. Install 'semgrep' python package."
+                "Semgrep is not installed or not reachable from the current environment. "
+                "Use the project venv (`uv run` / `make analyze`) or set SEMGREP_BIN."
+            )
+            return False
+        try:
+            subprocess.run([semgrep_bin, "--version"], capture_output=True, text=True, check=True)
+            return True
+        except (FileNotFoundError, subprocess.CalledProcessError, OSError) as exc:
+            logger.error(
+                "Semgrep executable check failed for %s: %s",
+                semgrep_bin,
+                exc,
             )
             return False
 
     @staticmethod
+    def _resolve_semgrep_executable() -> Optional[str]:
+        """
+        Resolve the Semgrep executable the same way local and production runs expect it.
+
+        Resolution order:
+        1. `SEMGREP_BIN` override
+        2. `semgrep` on PATH
+        3. sibling binary next to the active Python interpreter (e.g. `.venv/bin/semgrep`)
+        4. binary inside the active Python prefix (e.g. `/app/.venv/bin/semgrep`)
+        """
+        candidates: List[Path] = []
+
+        env_override = os.getenv("SEMGREP_BIN")
+        if env_override:
+            candidates.append(Path(env_override).expanduser())
+
+        path_hit = shutil.which("semgrep")
+        if path_hit:
+            candidates.append(Path(path_hit))
+
+        bin_name = "semgrep.exe" if os.name == "nt" else "semgrep"
+        python_sibling = Path(sys.executable).parent / bin_name
+        candidates.append(python_sibling)
+
+        prefix_bin_dir = Path(sys.prefix) / ("Scripts" if os.name == "nt" else "bin")
+        candidates.append(prefix_bin_dir / bin_name)
+
+        seen: set[str] = set()
+        for candidate in candidates:
+            candidate_str = str(candidate)
+            if candidate_str in seen:
+                continue
+            seen.add(candidate_str)
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return candidate_str
+
+        return None
+
+    @staticmethod
     def _run_semgrep_scan(file_path: str, config: str = "auto") -> Optional[Dict]:
         """Run Semgrep scan on a single JavaScript file."""
+        semgrep_bin = JavaScriptAnalyzer._resolve_semgrep_executable()
+        if not semgrep_bin:
+            logger.error("Semgrep executable could not be resolved for scan of %s", file_path)
+            return None
         try:
             cmd = [
-                "semgrep",
+                semgrep_bin,
                 "--config",
                 config,
                 "--json",
@@ -253,9 +307,14 @@ class JavaScriptAnalyzer(BaseAnalyzer):
         if not file_paths:
             return {}
 
+        semgrep_bin = JavaScriptAnalyzer._resolve_semgrep_executable()
+        if not semgrep_bin:
+            logger.error("Semgrep executable could not be resolved for batch scan")
+            return {"__sast_error__": [{"detail": "semgrep executable not found"}]}
+
         try:
             cmd = [
-                "semgrep",
+                semgrep_bin,
                 "--config",
                 config,
                 "--json",
@@ -565,18 +624,19 @@ class JavaScriptAnalyzer(BaseAnalyzer):
             model_name = os.getenv("LLM_MODEL", "meta-llama/llama-3-3-70b-instruct")
             model_parameters = {"max_tokens": 500, "temperature": 0.1}
 
-            # Format prompt to messages
+            # Format prompt to messages. PromptTemplate.format_prompt expects
+            # keyword arguments, not a positional dict — passing a dict raised
+            # "format_prompt() takes 1 positional argument but 2 were given" and
+            # silently failed the SAST summary. Unpack the variables.
             formatted_prompt = template.format_prompt(
-                {
-                    "extension_name": extension_name,
-                    "files_scanned": files_scanned,
-                    "files_with_findings": stats["files_with_findings"],
-                    "critical_count": stats["by_severity"]["CRITICAL"],
-                    "error_count": stats["by_severity"]["ERROR"],
-                    "warning_count": stats["by_severity"]["WARNING"],
-                    "info_count": stats["by_severity"]["INFO"],
-                    "findings_details": findings_details,
-                }
+                extension_name=extension_name,
+                files_scanned=files_scanned,
+                files_with_findings=stats["files_with_findings"],
+                critical_count=stats["by_severity"]["CRITICAL"],
+                error_count=stats["by_severity"]["ERROR"],
+                warning_count=stats["by_severity"]["WARNING"],
+                info_count=stats["by_severity"]["INFO"],
+                findings_details=findings_details,
             )
             messages = formatted_prompt.to_messages()
 
@@ -607,7 +667,12 @@ class JavaScriptAnalyzer(BaseAnalyzer):
 
         is_semgrep_available = self._is_semgrep_installed()
         if not is_semgrep_available:
-            return None
+            return {
+                "sast_analysis": None,
+                "sast_findings": {},
+                "scan_error": True,
+                "scan_error_detail": "Semgrep executable unavailable",
+            }
 
         js_files = self._extract_javascript_files(extension_dir, manifest)
         files_to_scan, _ = self._filter_files(js_files, extension_dir)

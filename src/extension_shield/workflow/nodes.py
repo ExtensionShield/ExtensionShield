@@ -354,6 +354,14 @@ def extension_analyzer_node(state: WorkflowState) -> Command:
     manifest = state.get("manifest_data")
     metadata = state.get("extension_metadata")
 
+    # Ensure the extension id reaches the analyzers (ChromeStats requires it and
+    # otherwise logs "Extension ID not provided" even for Web Store scans). The
+    # id is known from the scan context/state; carry it into metadata.
+    state_extension_id = state.get("extension_id")
+    if state_extension_id:
+        metadata = dict(metadata or {})
+        metadata.setdefault("extension_id", state_extension_id)
+
     try:
         logger.info("Analyzing extension directory: %s", extension_dir)
         analyzer = ExtensionAnalyzer(

@@ -13,3 +13,5 @@ export { default as TopDriversRow } from './TopDriversRow';
 export { default as SafetyLabelCard } from './SafetyLabelCard';
 export { default as ScenarioGrid } from './ScenarioGrid';
 export { default as ResultFeedback } from './ResultFeedback';
+export { default as AnalyzerCoverage } from './AnalyzerCoverage';
+export { default as SimilarExtensions } from './SimilarExtensions';

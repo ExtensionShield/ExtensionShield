@@ -15,6 +15,7 @@ rules:
       facts.host_access_patterns contains "<all_urls>" OR
       facts.host_access_patterns contains "*://*/*"
     verdict: "NEEDS_REVIEW"
+    advisory: true  # broad host access alone must not escalate past V2
     confidence: 0.9
     recommended_action: "Require developer justification or reduce scope to specific domains"
     citations: ["CWS_LIMITED_USE::SECTION_1"]
@@ -59,9 +60,12 @@ rules:
       extraction.status == "ok" AND
       signals contains type="DATAFLOW_TRACE" AND
       declared_third_parties is empty
-    verdict: "BLOCK"
+    # A data-flow trace with no declared third party is a disclosure gap, not
+    # proof of malicious exfiltration. Review, not a hard block: a genuine
+    # exfiltration/credential-theft case is blocked by the V2 behavior gates.
+    verdict: "NEEDS_REVIEW"
     confidence: 0.8
-    recommended_action: "Block — Limited Use requires explicit third-party data sharing declaration"
+    recommended_action: "Review — Limited Use requires an explicit third-party data sharing declaration"
     citations: ["CWS_LIMITED_USE::SECTION_4"]
     evidence_refs: []
 

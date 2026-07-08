@@ -4,6 +4,7 @@ import realScanService from "../services/realScanService";
 import databaseService from "../services/databaseService";
 import { normalizeExtensionId } from "../utils/extensionId";
 import { getScanResultsRoute } from "../utils/slug";
+import { doesScanResultMatchIdentifier } from "../utils/scanResultIdentity";
 import { useAuth } from "./AuthContext";
 
 // User-friendly message for service unavailability (matches backend)
@@ -264,10 +265,8 @@ export const ScanProvider = ({ children }) => {
       const maxAttempts = 10;
       let results = null;
       for (let i = 0; i < maxAttempts; i += 1) {
-        // eslint-disable-next-line no-await-in-loop
         results = await realScanService.getRealScanResults(extId);
         if (results) break;
-        // eslint-disable-next-line no-await-in-loop
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
 
@@ -395,10 +394,8 @@ export const ScanProvider = ({ children }) => {
       const maxAttempts = 10;
       let results = null;
       for (let i = 0; i < maxAttempts; i += 1) {
-        // eslint-disable-next-line no-await-in-loop
         results = await realScanService.getRealScanResults(extensionId);
         if (results) break;
-        // eslint-disable-next-line no-await-in-loop
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
       // Results are already in correct format (no transformation needed)
@@ -475,10 +472,11 @@ export const ScanProvider = ({ children }) => {
   const loadResultsById = useCallback(async (extId) => {
     try {
       // If we already have results for this identifier, return without refetching.
-      // Check both the raw identifier and the resolved extension_id from prior results.
+      // Match by canonical id or slug, but only when the identifier genuinely
+      // refers to the currently loaded scan.
       const cachedId = currentExtensionIdRef.current;
       const cachedResults = scanResultsRef.current;
-      if (cachedResults && (extId === cachedId || extId === cachedResults.extension_id)) {
+      if (doesScanResultMatchIdentifier(cachedResults, extId, cachedId)) {
         return cachedResults;
       }
 

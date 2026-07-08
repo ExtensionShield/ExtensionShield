@@ -366,6 +366,173 @@ export function getRiskColorClass(level) {
 }
 
 /**
+ * Normalize any decision/verdict string to a canonical verdict.
+ * ALLOW | NEEDS_REVIEW | BLOCK, or null when absent/unknown.
+ * Accepts the scoring-layer alias 'WARN' as NEEDS_REVIEW.
+ */
+export function normalizeVerdict(decision) {
+  if (!decision || typeof decision !== 'string') return null;
+  const u = decision.trim().toUpperCase();
+  if (u === 'ALLOW') return 'ALLOW';
+  if (u === 'BLOCK') return 'BLOCK';
+  if (u === 'WARN' || u === 'NEEDS_REVIEW' || u === 'REVIEW') return 'NEEDS_REVIEW';
+  return null;
+}
+
+/**
+ * Lightweight store-listing trust check for list rows (which only carry the URL,
+ * not the full manifest/metadata). Returns true when the Chrome Web Store URL is
+ * missing or a placeholder (e.g. ".../detail/x/<id>") — i.e. the listing was not
+ * verified. Used to avoid an over-reassuring "Safe" on unverified listings.
+ */
+// A verifiable listing must be a real Chrome Web Store DETAIL page: an optional
+// slug followed by a 32-char [a-p] extension ID. Store homepages, search,
+// category, and other non-detail pages do not identify a listing and must not
+// count as verified. The literal slug "x" is the fabricated placeholder used
+// when a listing was never actually resolved.
+const CHROME_STORE_DETAIL_RE = /^\/detail\/(?:([^/]+)\/)?([a-p]{32})\/?$/i;
+const LEGACY_STORE_DETAIL_RE = /^\/webstore\/detail\/(?:([^/]+)\/)?([a-p]{32})\/?$/i;
+
+export function isUnverifiedStoreUrl(url) {
+  if (!url || typeof url !== 'string' || !url.trim()) return true;
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return true; // malformed URL — cannot have been verified
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return true;
+  const host = parsed.hostname.toLowerCase();
+  let match = null;
+  if (host === 'chromewebstore.google.com') {
+    match = parsed.pathname.match(CHROME_STORE_DETAIL_RE);
+  } else if (host === 'chrome.google.com') {
+    match = parsed.pathname.match(LEGACY_STORE_DETAIL_RE);
+  }
+  if (!match) return true; // not a store detail page (homepage/search/category/other host)
+  if ((match[1] || '').toLowerCase() === 'x') return true; // fabricated placeholder slug
+  return false;
+}
+
+/**
+ * Row-level provenance for recent-scan/history rows. Uses ONLY fields actually
+ * present in the row payload (url, manifest, metadata) — when the payload lacks
+ * a field, nothing is inferred from its absence. Returns short warning labels
+ * for a single small chip; the verdict badge stays separate and untouched.
+ */
+export function resolveRowProvenance(scan) {
+  const asObj = (v) => {
+    if (v && typeof v === 'object') return v;
+    if (typeof v === 'string') {
+      try {
+        const p = JSON.parse(v);
+        return p && typeof p === 'object' ? p : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  if (!scan || typeof scan !== 'object') {
+    return { unverified: true, warnings: ['Unverified listing'] };
+  }
+  const manifest = asObj(scan.manifest);
+  const metadata = asObj(scan.metadata);
+  const warnings = [];
+
+  const isEdge = /edge\.microsoft\.com/i.test(manifest?.update_url || '');
+  if (isEdge) warnings.push('Edge listing');
+
+  if (
+    manifest?.version && metadata?.version &&
+    String(manifest.version) !== String(metadata.version)
+  ) {
+    warnings.push('Version mismatch');
+  }
+
+  // Only claim missing metadata when the payload actually CARRIES a metadata
+  // object that turned out empty — an absent field proves nothing.
+  if (metadata && metadata.user_count == null && metadata.rating == null && metadata.version == null) {
+    warnings.push('No listing metadata');
+  }
+
+  // The generic URL warning is redundant when we already know it's an Edge build.
+  if (!isEdge && isUnverifiedStoreUrl(scan.url)) {
+    warnings.push('Unverified listing');
+  }
+
+  return { unverified: warnings.length > 0, warnings };
+}
+
+/**
+ * Resolve the authoritative verdict for a scan row using the same precedence as
+ * the report normalizer (ADR-0001): governance/final verdict first, then the
+ * scoring-layer decision. Reads whatever shape the row happens to carry
+ * (recent-scan rows nest scoring_v2; history rows may nest summary).
+ */
+export function resolveScanVerdict(scan) {
+  if (!scan || typeof scan !== 'object') return null;
+  const sv2 = scan.scoring_v2 || {};
+  const summary = (scan.summary && typeof scan.summary === 'object') ? scan.summary : {};
+  const summarySv2 = summary.scoring_v2 || {};
+  const gbDecision = summary?.governance_bundle?.decision || scan?.governance_bundle?.decision || {};
+  return normalizeVerdict(
+    scan.final_verdict ||
+    scan.governance_verdict ||
+    gbDecision.final_verdict ||
+    scan.decision ||
+    scan.verdict ||
+    sv2.decision ||
+    summarySv2.decision ||
+    scan.decision_v2
+  );
+}
+
+/**
+ * Resolve the VISIBLE badge from the authoritative verdict — never from the raw
+ * score band. The verdict wins over the number: a NEEDS_REVIEW/BLOCK scan must
+ * never render "Safe" just because its (possibly SAST-capped) score is high.
+ *
+ *   ALLOW        -> Safe    (green)
+ *   NEEDS_REVIEW -> Review  (amber)
+ *   BLOCK        -> Blocked (red)
+ *
+ * When no authoritative verdict exists we fall back to the score band, but we
+ * still NEVER upgrade to "Safe" (an unrated scan is shown as neutral "Unrated").
+ *
+ * The badge reflects ONLY the verdict. Listing trust/provenance is a separate
+ * concern — render it as its own small chip next to the badge, never by
+ * replacing or overriding the verdict label.
+ *
+ * @returns {{label: string, colorClass: string, hex: string, tone: string}}
+ */
+export function resolveVerdictBadge({ decision, level, score } = {}) {
+  const verdict = normalizeVerdict(decision);
+  if (verdict === 'ALLOW') {
+    return { label: 'Safe', colorClass: 'risk-low', hex: '#10B981', tone: 'good' };
+  }
+  if (verdict === 'BLOCK') {
+    return { label: 'Blocked', colorClass: 'risk-high', hex: '#EF4444', tone: 'bad' };
+  }
+  if (verdict === 'NEEDS_REVIEW') {
+    return { label: 'Review', colorClass: 'risk-medium', hex: '#F59E0B', tone: 'warn' };
+  }
+  // No authoritative verdict: fall back to the score band, but never claim Safe.
+  const band = (level != null && String(level).trim())
+    ? String(level).toUpperCase()
+    : (typeof score === 'number' ? getRiskLevel(score) : '');
+  if (band === 'HIGH' || band === 'CRITICAL') {
+    return { label: 'Not safe', colorClass: 'risk-high', hex: '#EF4444', tone: 'bad' };
+  }
+  if (band === 'MED' || band === 'MEDIUM' || band === 'MODERATE') {
+    return { label: 'Review', colorClass: 'risk-medium', hex: '#F59E0B', tone: 'warn' };
+  }
+  // LOW / NONE / unknown with no verdict -> do NOT reassure with "Safe".
+  return { label: 'Unrated', colorClass: 'risk-unknown', hex: '#6B7280', tone: 'unknown' };
+}
+
+/**
  * Display label for signal (consumer-facing: Safe, Review, Not safe).
  * Uses signal.level when present; otherwise returns signal.label for legacy labels.
  */

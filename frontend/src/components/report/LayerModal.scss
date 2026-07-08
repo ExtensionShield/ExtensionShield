@@ -378,6 +378,16 @@
   transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
 }
 
+.lm-info-tooltip--portal {
+  position: fixed;
+  bottom: auto;
+  transform: translate(-50%, -100%);
+  z-index: 10000;
+  opacity: 1;
+  visibility: visible;
+  animation: lmTooltipPortalIn 0.15s ease both;
+}
+
 .lm-info-trigger:hover .lm-info-tooltip,
 .lm-info-trigger:focus-visible .lm-info-tooltip {
   opacity: 1;
@@ -388,6 +398,11 @@
 @keyframes lmTooltipIn {
   from { opacity: 0; transform: translateX(-50%) translateY(4px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes lmTooltipPortalIn {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 4px)); }
+  to   { opacity: 1; transform: translate(-50%, -100%); }
 }
 
 @keyframes lmFadeUp {
