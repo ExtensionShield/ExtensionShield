@@ -107,7 +107,26 @@ function extractScore(p) {
   return null;
 }
 
+function resolveAuthoritativeRiskLevel(p) {
+  var verdict = null;
+  if (p && p.final_verdict) verdict = p.final_verdict;
+  else if (p && p.governance_verdict) verdict = p.governance_verdict;
+  else if (p && p.governance_bundle && p.governance_bundle.decision && p.governance_bundle.decision.final_verdict) {
+    verdict = p.governance_bundle.decision.final_verdict;
+  } else if (p && p.scoring_v2 && p.scoring_v2.decision) {
+    verdict = p.scoring_v2.decision;
+  }
+
+  var normalized = verdict && String(verdict).toUpperCase();
+  if (normalized === 'BLOCK') return 'HIGH';
+  if (normalized === 'NEEDS_REVIEW') return 'MEDIUM';
+  return null;
+}
+
 function extractRiskLevel(p) {
+  var verdictRisk = resolveAuthoritativeRiskLevel(p);
+  if (verdictRisk) return verdictRisk;
+
   if (p && p.risk_and_signals && typeof p.risk_and_signals.risk === 'number') {
     var s = p.risk_and_signals.risk;
     if (s >= 75) return 'LOW';

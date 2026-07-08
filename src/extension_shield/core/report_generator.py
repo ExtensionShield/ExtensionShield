@@ -23,6 +23,8 @@ from reportlab.platypus import (
 )
 from reportlab.lib.enums import TA_CENTER
 
+from extension_shield.utils.verdict_risk import coherent_risk_level_for_payload
+
 logger = logging.getLogger(__name__)
 
 
@@ -160,6 +162,7 @@ class ReportGenerator:
             or scan_results.get("risk_level")
             or "unknown"
         )
+        overall_risk = coherent_risk_level_for_payload(scan_results, overall_risk)
         overall_confidence = cls._coerce_float(
             scoring_v2.get("overall_confidence", scan_results.get("overall_confidence"))
         )
@@ -207,7 +210,11 @@ class ReportGenerator:
         """
         bundle = scan_results.get("governance_bundle") or {}
         decision = bundle.get("decision") or {}
-        verdict = decision.get("final_verdict") or scan_results.get("governance_verdict")
+        verdict = (
+            scan_results.get("final_verdict")
+            or scan_results.get("governance_verdict")
+            or decision.get("final_verdict")
+        )
         reasons = decision.get("final_reasons") or []
         authority = decision.get("final_authority")
         return {

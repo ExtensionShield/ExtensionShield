@@ -46,6 +46,7 @@ from extension_shield.api.database import db, SupabaseDatabase, _is_extension_id
 from extension_shield.api.supabase_auth import get_current_user_id as _get_current_user_id
 from extension_shield.core.config import get_settings
 from extension_shield.utils.mode import require_cloud, get_feature_flags, is_oss_telemetry_allowed, require_cloud_dep
+from extension_shield.utils.verdict_risk import coherent_risk_level_for_payload
 from extension_shield.api.csp_middleware import CSPMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from extension_shield.api.payload_helpers import (
@@ -832,6 +833,16 @@ def _hydrate_db_scan_result(results: Dict[str, Any], identifier: str) -> Dict[st
     payload["scoring_v2"] = results.get("scoring_v2") or summary.get("scoring_v2")
     payload["governance_bundle"] = results.get("governance_bundle") or summary.get("governance_bundle")
     return payload
+
+
+def _apply_coherent_overall_risk(payload: Dict[str, Any]) -> None:
+    """Keep served top-level risk labels coherent with the final verdict."""
+    if isinstance(payload, dict):
+        existing_risk = payload.get("overall_risk") or payload.get("risk_level") or "unknown"
+        payload["overall_risk"] = coherent_risk_level_for_payload(
+            payload,
+            existing_risk,
+        )
 
 
 def _refresh_scan_payload_with_store_metadata(
@@ -2901,6 +2912,7 @@ async def get_scan_results(identifier: str, http_request: Request):
             payload = ensure_consumer_insights(payload)
             ensure_description_in_meta(payload)
             ensure_name_in_payload(payload)
+            _apply_coherent_overall_risk(payload)
             # Add risk and signals mapping
             payload["risk_and_signals"] = _extract_risk_and_signals(payload)
             scan_results[extension_id] = payload
@@ -2931,6 +2943,7 @@ async def get_scan_results(identifier: str, http_request: Request):
         payload = ensure_consumer_insights(payload)
         ensure_description_in_meta(payload)
         ensure_name_in_payload(payload)
+        _apply_coherent_overall_risk(payload)
         # Add risk and signals mapping
         payload["risk_and_signals"] = _extract_risk_and_signals(payload)
         scan_results[extension_id] = payload  # Cache in memory
@@ -2979,6 +2992,7 @@ async def get_scan_results(identifier: str, http_request: Request):
             payload = ensure_consumer_insights(payload)
             ensure_description_in_meta(payload)
             ensure_name_in_payload(payload)
+            _apply_coherent_overall_risk(payload)
             # Add risk and signals mapping
             payload["risk_and_signals"] = _extract_risk_and_signals(payload)
             scan_results[extension_id] = payload  # Cache in memory
@@ -3032,12 +3046,14 @@ def _lookup_scan_result(
     if payload is not None:
         if lightweight:
             ensure_name_in_payload(payload)
+            _apply_coherent_overall_risk(payload)
             payload["risk_and_signals"] = _extract_risk_and_signals(payload)
             return payload
         payload = upgrade_legacy_payload(payload, extension_id)
         payload = ensure_consumer_insights(payload)
         ensure_description_in_meta(payload)
         ensure_name_in_payload(payload)
+        _apply_coherent_overall_risk(payload)
         payload["risk_and_signals"] = _extract_risk_and_signals(payload)
         scan_results[extension_id] = payload
         return payload
@@ -3053,6 +3069,7 @@ def _lookup_scan_result(
         formatted = _hydrate_db_scan_result(db_row, extension_id)
         if lightweight:
             ensure_name_in_payload(formatted)
+            _apply_coherent_overall_risk(formatted)
             formatted["risk_and_signals"] = _extract_risk_and_signals(formatted)
             scan_results[resolved_id] = formatted  # warm the memory cache
             return formatted
@@ -3060,6 +3077,7 @@ def _lookup_scan_result(
         payload = ensure_consumer_insights(payload)
         ensure_description_in_meta(payload)
         ensure_name_in_payload(payload)
+        _apply_coherent_overall_risk(payload)
         payload["risk_and_signals"] = _extract_risk_and_signals(payload)
         scan_results[resolved_id] = payload
         return payload
@@ -3074,6 +3092,7 @@ def _lookup_scan_result(
             return None
         if lightweight:
             ensure_name_in_payload(payload)
+            _apply_coherent_overall_risk(payload)
             payload["risk_and_signals"] = _extract_risk_and_signals(payload)
             scan_results[extension_id] = payload
             return payload
@@ -3081,6 +3100,7 @@ def _lookup_scan_result(
         payload = ensure_consumer_insights(payload)
         ensure_description_in_meta(payload)
         ensure_name_in_payload(payload)
+        _apply_coherent_overall_risk(payload)
         payload["risk_and_signals"] = _extract_risk_and_signals(payload)
         scan_results[extension_id] = payload
         return payload
@@ -3594,6 +3614,7 @@ async def get_recent_scans(limit: int = 10, search: str = None):
         for scan in recent:
             try:
                 _refresh_recent_scan_verdict(scan)
+                scan["risk_level"] = coherent_risk_level_for_payload(scan, scan.get("risk_level"))
                 mapping = _extract_risk_and_signals(scan)
                 signals = mapping.get("signals", {})
                 missing_layers = any(k not in signals for k in ("security", "privacy", "gov"))

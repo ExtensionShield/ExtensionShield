@@ -137,6 +137,32 @@ class TestScoreSection:
         assert "49" in text
         assert "92" in text
 
+    def test_block_score_section_does_not_render_low_overall_risk(self):
+        gen = ReportGenerator()
+        results = _results("BLOCK", ["Policy block"], overall_score=86, risk_level="low")
+        results["scoring_v2"] = {
+            "overall_score": 86,
+            "risk_level": "low",
+        }
+
+        text = _collect_text(gen._create_score_section(gen._extract_scoring_snapshot(results)))
+        assert "Overall Risk" in text
+        assert "HIGH" in text
+        assert "LOW" not in text
+
+    def test_needs_review_score_section_does_not_render_low_overall_risk(self):
+        gen = ReportGenerator()
+        results = _results("NEEDS_REVIEW", ["Needs review"], overall_score=94, risk_level="low")
+        results["scoring_v2"] = {
+            "overall_score": 94,
+            "risk_level": "low",
+        }
+
+        text = _collect_text(gen._create_score_section(gen._extract_scoring_snapshot(results)))
+        assert "Overall Risk" in text
+        assert "MEDIUM" in text
+        assert "LOW" not in text
+
     def test_header_is_extension_risk_report_not_security_only(self):
         gen = ReportGenerator()
         text = _collect_text(gen._create_header("Example", "a" * 32, "2026-06-24T00:00:00Z"))
