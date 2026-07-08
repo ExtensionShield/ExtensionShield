@@ -28,7 +28,7 @@ import {
   severityTone,
   findingCategory,
   preciseFindingTitle,
-  evidenceCountLabel,
+  resolveFindingEvidenceLabel,
 } from "../../utils/reportDisplay";
 import FileViewerModal from "../../components/FileViewerModal";
 import StatusMessage from "../../components/StatusMessage";
@@ -921,6 +921,16 @@ const ScanResultsPageV2 = () => {
                     const tone = severityTone(f.level);
                     const open = expandedFinding === i;
                     const evCount = f.evidenceCount || 0;
+                    // Evidence label (display only — helper selects the existing
+                    // finding.evidence.label, never generates one). Resolvable IDs keep
+                    // the openable count + "View evidence"; otherwise fall back to the
+                    // structured evidence reference; "Evidence not linked" only when
+                    // neither IDs nor structured evidence exist.
+                    const ev = f.evidence;
+                    const evidenceText = resolveFindingEvidenceLabel(f, evCount);
+                    const evidenceTitle = ev && ev.available
+                      ? (ev.snippet || ev.reason || ev.finalReason || '')
+                      : '';
                     return (
                       <li className="finding-row" key={`${f.displayTitle}-${i}`}>
                         <div className="finding-main">
@@ -934,7 +944,7 @@ const ScanResultsPageV2 = () => {
                           {severityBadge(f.level)}
                         </span>
                         <span className="finding-category">{f.category}</span>
-                        <span className="finding-evidence">{evidenceCountLabel(evCount)}</span>
+                        <span className="finding-evidence" title={evidenceTitle}>{evidenceText}</span>
                         <div className="finding-actions">
                           {evCount > 0 && (
                             <button

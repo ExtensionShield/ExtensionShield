@@ -318,6 +318,28 @@ export function evidenceCountLabel(count) {
 }
 
 /**
+ * Resolve the evidence label shown on a Key Findings row (display only).
+ *
+ * Precedence:
+ *  - resolvable evidence IDs (count > 0) -> the existing openable count label
+ *    (the "View evidence" button is gated on the same count, unchanged).
+ *  - else structured finding.evidence:
+ *      available + label -> "Evidence: <label>"
+ *      otherwise (available:false, or present but unlabelled) -> "Evidence: summary only"
+ *  - else (no IDs and no structured evidence) -> "Evidence not linked".
+ *
+ * Never generates a new label — it only selects the existing finding.evidence.label.
+ */
+export function resolveFindingEvidenceLabel(finding, evidenceCount) {
+  const n = Number(evidenceCount) || 0;
+  if (n > 0) return evidenceCountLabel(n);
+  const ev = finding && finding.evidence;
+  if (ev && ev.available === true && ev.label) return `Evidence: ${ev.label}`;
+  if (ev) return 'Evidence: summary only';
+  return evidenceCountLabel(0);
+}
+
+/**
  * Issue Overview counts by severity from a list of findings. Info stays 0 unless
  * findings are explicitly informational. Total is the sum of all buckets.
  */
