@@ -12,11 +12,16 @@
 
 <br />
 
-## **Manage and audit Chrome extensions with confidence**
+## **Manage and audit Chrome extensions with evidence**
 
-ExtensionShield helps you check Chrome extensions in a simple and clear way.
+ExtensionShield is a Chrome extension security scanner and governance workflow.
+The public repo runs locally in **OSS mode** with SQLite by default, and the scanner,
+CLI, and report UI do not require Supabase or a cloud account.
 
-It scans extensions from the **Chrome Web Store** or from **CRX/ZIP uploads**, shows risk scores, and helps you understand what an extension can access. The **core scanner, CLI, and local analysis** are **MIT-licensed** and work without any cloud dependency.
+It can scan extensions from the **Chrome Web Store** or from local **CRX/ZIP files**.
+Each scan can include manifest/permission review, Semgrep SAST findings,
+entropy/obfuscation checks, optional VirusTotal signals, and a scored report across
+Security, Privacy, and Governance.
 
 
 <table>
@@ -24,13 +29,13 @@ It scans extensions from the **Chrome Web Store** or from **CRX/ZIP uploads**, s
 <td width="56%" valign="middle">
 <h2><strong>Get the Chrome extension</strong></h2>
   
-Install the **ExtensionShield Chrome extension** to manage your extensions from **My Extensions**, check their **security audit score**, and spot risky extensions before they become a problem.
+Install the **ExtensionShield Chrome extension** to review installed extensions and
+open ExtensionShield scan reports from the browser.
 
-- Manage installed extensions in one place  
-- Review labels like **Safe**, **Review**, and **Unknown**  
-- Stay safer while browsing with better extension visibility
-- Stay up to date with new releases, security findings, product updates,
-  and community announcements from ExtensionShield.
+- Manifest source: [`packages/extension/src/manifest.json`](packages/extension/src/manifest.json)
+- Popup labels are derived from scan scores/verdicts in [`packages/extension/src/popup.js`](packages/extension/src/popup.js)
+- The extension requests `storage` and optional `management` permission
+- The web scanner and report UI live in [`frontend/`](frontend/)
 
 <p>
   <a href="https://www.linkedin.com/company/extensionshield/posts/?feedView=all">
@@ -63,24 +68,29 @@ Install the **ExtensionShield Chrome extension** to manage your extensions from 
 
 ## **Overview**
 
-ExtensionShield scans Chrome extensions, runs security and privacy analysis, and produces risk scores and summary reports.
+ExtensionShield scans browser extensions and produces evidence-linked reports for
+security, privacy, and governance review.
 
-Optional cloud features such as auth, history, team dashboards, and community queue are available via <a href="https://extensionshield.com" style="color:#2ea043;">ExtensionShield Cloud</a>.
+The local OSS flow is SQLite-first. Optional hosted features such as auth, user
+history, telemetry dashboards, and community review queue are part of
+<a href="https://extensionshield.com" style="color:#2ea043;">ExtensionShield Cloud</a>.
 
 ---
 
 ## **What ExtensionShield does**
 
-| Feature | Description |
-|--------|-------------|
-| **Scan** | Scan extensions from the Chrome Web Store or by uploading CRX/ZIP files |
-| **Analyze** | Review permissions, SAST, entropy, and optional VirusTotal integration |
-| **Score** | Generate security and privacy risk scores with reports |
-| **Summarize** | Create written summaries of findings when enabled |
+| Area | What is implemented | Repo evidence |
+|------|---------------------|---------------|
+| **Local run** | `make api`, `make frontend`, `make analyze`, and `make analyze-file` default to SQLite (`ExtensionShield.db`) | [`Makefile`](Makefile) |
+| **Inputs** | Chrome Web Store URL scans and local CRX/ZIP uploads | [`src/extension_shield/api/main.py`](src/extension_shield/api/main.py), [`src/extension_shield/utils/extension.py`](src/extension_shield/utils/extension.py) |
+| **Analysis** | Permissions, SAST, entropy/obfuscation, web store metadata, network/privacy signals, and optional VirusTotal data | [`src/extension_shield/governance/signal_pack.py`](src/extension_shield/governance/signal_pack.py), [`src/extension_shield/config/custom_semgrep_rules.yaml`](src/extension_shield/config/custom_semgrep_rules.yaml) |
+| **Scoring** | 0-100 Security, Privacy, and Governance layer scores with hard gates for high-confidence threats | [`src/extension_shield/scoring/engine.py`](src/extension_shield/scoring/engine.py), [`src/extension_shield/scoring/gates.py`](src/extension_shield/scoring/gates.py) |
+| **Reports** | Frontend report views for scan results, evidence, summaries, and layer details | [`frontend/src/pages/scanner/ScanResultsPageV2.jsx`](frontend/src/pages/scanner/ScanResultsPageV2.jsx), [`frontend/src/components/report/`](frontend/src/components/report/) |
+| **Open-core boundary** | OSS mode runs scanner, CLI, SQLite, and report UI without cloud calls; cloud-only routes are gated | [`docs/OPEN_CORE_BOUNDARIES.md`](docs/OPEN_CORE_BOUNDARIES.md) |
 
-In **OSS mode** you get the scanner, CLI, local SQLite storage, and report UI with no cloud required.
-
-In **Cloud mode** you also get auth, scan history, telemetry, and enterprise features.
+In **OSS mode**, you get the scanner, CLI, local SQLite storage, and report UI.
+In **Cloud mode**, hosted ExtensionShield adds auth, user history, telemetry/admin
+features, and community/enterprise workflows.
 
 ---
 
@@ -102,8 +112,16 @@ In **Cloud mode** you also get auth, scan history, telemetry, and enterprise fea
 
 ## **License & attribution**
 
-- **Core** (scanner, CLI, local analysis): **MIT** — see <a href="LICENSE" style="color:#2ea043;">LICENSE</a>. The core is derived from ThreatXtension (MIT per its upstream README); see <a href="docs/NOTICE" style="color:#2ea043;">NOTICE</a> for the full scope and license basis.  
+- **Core** (scanner, CLI, local analysis): **MIT** — see <a href="LICENSE" style="color:#2ea043;">LICENSE</a>. The core is derived from ThreatXtension (MIT as declared in its README — see <a href="docs/NOTICE" style="color:#2ea043;">NOTICE</a> for the license basis).  
 - **Cloud** (auth, Supabase, telemetry admin, community queue, enterprise forms): **proprietary**, available via <a href="https://extensionshield.com" style="color:#2ea043;">ExtensionShield Cloud</a>  
+
+**Acknowledgments & attribution**: ExtensionShield began as a derivative of
+<a href="https://github.com/barvhaim/ThreatXtension" style="color:#2ea043;">ThreatXtension</a>,
+whose README states MIT licensing. ExtensionShield retains derived scanner
+components and adds original work including the V2 scoring engine, governance
+layer, browser extension, cloud features, and redesigned frontend. See
+<a href="docs/NOTICE" style="color:#2ea043;">NOTICE</a> for attribution and
+file-level provenance.
 
 ---
 
@@ -112,5 +130,3 @@ In **Cloud mode** you also get auth, scan history, telemetry, and enterprise fea
 We build ExtensionShield in the open so security tools stay transparent and easy to inspect.
 
 Feedback, issue reports, docs fixes, tests, and rule improvements are welcome. If ExtensionShield helps you, consider opening a PR, sharing your use case, or supporting the project.
-
-**Acknowledgments & attribution**: ExtensionShield began as a derivative of <a href="https://github.com/barvhaim/ThreatXtension" style="color:#2ea043;">ThreatXtension</a> — it started from ThreatXtension's open-source scanner codebase and still incorporates substantial parts of it (the permissions database, config, entropy analysis, the Semgrep ruleset, and parts of the scanner pipeline and scan-result schema). On top of that base it adds substantial original work: the V2 scoring engine, the governance layer, ExtensionShield Cloud, the browser extension, and a redesigned frontend. ThreatXtension's README declares MIT (no separate upstream LICENSE file is published). See <a href="docs/NOTICE" style="color:#2ea043;">NOTICE</a> for the file-level breakdown of what is derived versus original.

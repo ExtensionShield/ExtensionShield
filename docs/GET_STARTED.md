@@ -167,7 +167,7 @@ In OSS mode, cloud-only routes return **HTTP 501** with a JSON body indicating t
 | `make dev`           | Show OSS dev setup instructions      |
 | `make api`           | Start API server (port 8007)          |
 | `make frontend`      | Start React dev server (port 5173)   |
-| `make analyze URL=`  | Analyze extension from Chrome Web Store URL |
+| `make analyze URL=`  | Analyze extension from Chrome Web Store URL using local SQLite by default |
 | `make test`          | Run tests                            |
 | `make format`        | Format code (Black)                  |
 | `make lint`          | Lint code (Pylint)                   |

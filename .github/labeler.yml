@@ -33,7 +33,6 @@
           - "docs/**"
           - "scripts/README.md"
           - "packages/**/README.md"
-          - "supabase/README.md"
 
 "area: infra":
   - changed-files:
@@ -42,8 +41,6 @@
           - "Dockerfile"
           - "docker-compose.yml"
           - "railway.toml"
-          - "deploy/**"
-          - "supabase/**"
           - "Makefile"
           - "package.json"
           - "package-lock.json"

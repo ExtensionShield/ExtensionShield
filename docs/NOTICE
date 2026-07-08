@@ -63,13 +63,12 @@ below describe what was carried over and on what license basis.
       tracking) were adapted from ThreatXtension's Semgrep ruleset; see the
       in-file section header.
 
-    * The scan_results and statistics Supabase schema/migration files in
-      supabase/schemas/ and supabase/migrations/ were ported from
-      ThreatXtension's SQLite schema (column names/order based on upstream, with
-      deliberate type changes such as TEXT -> JSONB and timestamp text ->
-      timestamptz); see the per-file provenance comments. Other Supabase tables
-      (e.g. page_views_daily) are ExtensionShield-original and are not part of
-      ThreatXtension's upstream schema.
+    * Historical Supabase scan_results/statistics schema and migration files were
+      originally ported from ThreatXtension's SQLite schema (column names/order
+      based on upstream, with Postgres type changes). Those local cloud migration
+      files are no longer shipped in the public SQLite-first repository; this
+      note is retained to document provenance of any corresponding private/cloud
+      schema lineage.
 
   Work that is original to ExtensionShield (not derived from upstream) includes
   the V2 ScoringEngine and governance layers (extension_shield.scoring,

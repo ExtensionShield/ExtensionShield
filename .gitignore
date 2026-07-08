@@ -197,6 +197,7 @@ CLAUDE.md
 # Internal documentation (not for freelancers/public)
 AGENTS.md
 FREELANCER_WORKFLOW.md
+SCORING_ENGINE_HLD_AUDIT.local.md
 extensions_storage/
 .bob/
 .playwright-mcp/
@@ -250,3 +251,28 @@ docs/qa_extensionshield/
 
 # Internal audit notes (local only; never publish)
 docs/audits/
+
+# SQLite sidecars / backups
+*.db-journal
+*.db-wal
+*.db-shm
+*.db-*
+*.db.*
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-*
+*.sqlite.*
+
+# Optional, if Railway config is kept locally but removed from repo
+railway.toml
+
+# Playwright reports
+playwright-report/
+test-results/
+
+# Local-only cloud/Supabase tooling
+supabase/
+scripts/cloud_only/
+package.json
+package-lock.json

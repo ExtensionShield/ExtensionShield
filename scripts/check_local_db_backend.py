@@ -35,8 +35,8 @@ def main():
         print(f"  ✓ API uses Supabase ({url}...)")
         print("  Scan results are stored in your Supabase project (same as production if same project).\n")
     else:
-        path = getattr(settings, "database_path", "project-atlas.db")
-        abs_path = Path(path).resolve() if path else Path("project-atlas.db").resolve()
+        path = getattr(settings, "database_path", "ExtensionShield.db")
+        abs_path = Path(path).resolve() if path else Path("ExtensionShield.db").resolve()
         print(f"  ✓ API uses SQLite")
         print(f"  Scan results file: {abs_path}\n")
     print("  Frontend does not connect to the DB; it talks to the API (VITE_API_URL or proxy to :8007).")
