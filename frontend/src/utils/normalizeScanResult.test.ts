@@ -1163,3 +1163,169 @@ describe('Governance review reason is promoted; publisher update age is context'
     expect(maint!.severity).toBe('medium');
   });
 });
+
+// =============================================================================
+// EVIDENCE-LINKED KEY FINDINGS (audit follow-up)
+// =============================================================================
+
+describe('Key Findings evidence links', () => {
+  it('SAST finding includes file path, line, and snippet when present', () => {
+    const raw = {
+      extension_id: 'sastev1234567890abcdefghijklmnop',
+      final_verdict: 'ALLOW',
+      scoring_v2: {
+        overall_score: 82, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 82, risk: 0.18, confidence: 0.9,
+          factors: [{ name: 'SAST', severity: 0.5, confidence: 0.9, weight: 0.4, contribution: 0.1, evidence_ids: ['ev1'] }] },
+      },
+      governance_bundle: { signal_pack: { evidence: [
+        { evidence_id: 'ev1', file_path: 'js/content.js', line_start: 12, line_end: 14, snippet: 'eval(userInput)', tool_name: 'sast' },
+      ] } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const f = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'sast' && k.evidence.available);
+    expect(f).toBeDefined();
+    expect(f!.evidence!.filePath).toBe('js/content.js');
+    expect(f!.evidence!.lineStart).toBe(12);
+    expect(f!.evidence!.snippet).toContain('eval');
+    expect(f!.evidence!.sourceViewerPath).toBe('js/content.js');
+  });
+
+  it('governance finding includes rulepack, rule, and reason when present', () => {
+    const raw = {
+      extension_id: 'govev12345678901abcdefghijklmnop',
+      final_verdict: 'NEEDS_REVIEW',
+      scoring_v2: { overall_score: 80, decision: 'NEEDS_REVIEW', risk_level: 'low', hard_gates_triggered: [] },
+      governance_bundle: { decision: {
+        final_verdict: 'NEEDS_REVIEW',
+        final_reasons: ['Verify clipboard access is limited to user-initiated copy/paste'],
+        action_required: 'Verify clipboard access is limited to user-initiated copy/paste',
+        rationale: '1. [CWS_LIMITED_USE::R5] Condition matched. Verdict: NEEDS_REVIEW',
+      } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const f = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'governance' && k.evidence.rulepack);
+    expect(f).toBeDefined();
+    expect(f!.evidence!.rulepack).toBe('CWS_LIMITED_USE');
+    expect(f!.evidence!.ruleId).toBe('R5');
+    expect(f!.evidence!.finalReason).toContain('clipboard');
+  });
+
+  it('manifest/permission finding includes a permission reference', () => {
+    const raw = {
+      extension_id: 'manifev123456789abcdefghijklmnop',
+      final_verdict: 'ALLOW',
+      manifest: { permissions: ['tabs', 'cookies'], host_permissions: ['<all_urls>'] },
+      scoring_v2: {
+        overall_score: 78, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        privacy_layer: { layer_name: 'privacy', score: 70, risk: 0.3, confidence: 0.8,
+          factors: [{ name: 'PermissionsBaseline', severity: 0.5, confidence: 0.9, weight: 0.4, contribution: 0.1, evidence_ids: [], details: { description: 'Broad permissions requested' } }] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const f = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'manifest');
+    expect(f).toBeDefined();
+    expect(f!.evidence!.permission).toBe('tabs');
+    expect(f!.evidence!.hostPermission).toBe('<all_urls>');
+  });
+
+  it('VirusTotal finding includes hash and result counts when present', () => {
+    const raw = {
+      extension_id: 'vtev123456789012abcdefghijklmnop',
+      final_verdict: 'ALLOW',
+      virustotal_analysis: { enabled: true, files_analyzed: 5, files_found_in_vt: 5, total_malicious: 3, total_suspicious: 1, summary: { threat_level: 'malicious' }, file_results: [{ hashes: { sha256: 'abc123def456' } }] },
+      scoring_v2: {
+        overall_score: 40, decision: 'ALLOW', risk_level: 'medium', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 40, risk: 0.6, confidence: 0.9,
+          factors: [{ name: 'VirusTotal', severity: 0.8, confidence: 1.0, weight: 0.3, contribution: 0.24, evidence_ids: [] }] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const f = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'virustotal' && k.evidence.available);
+    expect(f).toBeDefined();
+    expect(f!.evidence!.hash).toBe('abc123def456');
+    expect(f!.evidence!.malicious).toBe(3);
+    expect(f!.evidence!.coverageState).toBe('malicious');
+  });
+
+  it('coverage-cap finding includes analyzer and coverage reason', () => {
+    const raw = {
+      extension_id: 'covev123456789012abcdefghijklmno',
+      final_verdict: 'NEEDS_REVIEW',
+      scoring_v2: { overall_score: 65, decision: 'NEEDS_REVIEW', risk_level: 'medium', hard_gates_triggered: [], coverage_cap_applied: true },
+      sast_results: { scan_error: true, files_scanned: 0, sast_findings: {} },
+      virustotal_analysis: { enabled: true, files_found_in_vt: 5 },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings[0].title).toBe('Limited code coverage');
+    expect(vm.keyFindings[0].evidence!.kind).toBe('coverage');
+    expect(vm.keyFindings[0].evidence!.analyzer).toBe('SAST');
+    expect(vm.keyFindings[0].evidence!.reason).toContain('SAST');
+  });
+
+  it('a finding without resolvable evidence is marked summary-only and does not crash', () => {
+    const raw = {
+      extension_id: 'noevid123456789abcdefghijklmnop1',
+      final_verdict: 'ALLOW',
+      scoring_v2: {
+        overall_score: 80, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 80, risk: 0.2, confidence: 0.9,
+          factors: [{ name: 'SAST', severity: 0.5, confidence: 0.9, weight: 0.4, contribution: 0.1, evidence_ids: [] }] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm).toBeDefined();
+    const f = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'sast');
+    expect(f!.evidence!.available).toBe(false);
+  });
+
+  it('old payloads without evidence still normalize safely (legacy summary.key_findings)', () => {
+    const vm = normalizeScanResult(legacyRawResult);
+    expect(vm).toBeDefined();
+    expect(vm.keyFindings.length).toBeGreaterThan(0);
+    // Legacy findings are summary-only, never crash on missing evidence.
+    vm.keyFindings.forEach((k) => {
+      if (k.evidence) expect(k.evidence.available).toBe(false);
+    });
+  });
+
+  it('preserves ordering: coverage first, governance reason before ordinary factors', () => {
+    const raw = {
+      extension_id: 'orderev12345678abcdefghijklmnop1',
+      final_verdict: 'NEEDS_REVIEW',
+      metadata: { last_updated: 'January 1, 2024' },
+      scoring_v2: {
+        overall_score: 65, decision: 'NEEDS_REVIEW', risk_level: 'medium', hard_gates_triggered: [], coverage_cap_applied: true,
+        security_layer: { layer_name: 'security', score: 65, risk: 0.35, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072 }] },
+      },
+      sast_results: { scan_error: true, files_scanned: 0, sast_findings: {} },
+      virustotal_analysis: { enabled: true, files_found_in_vt: 5 },
+      governance_bundle: { decision: {
+        final_verdict: 'NEEDS_REVIEW',
+        final_reasons: ['Verify clipboard access is limited to user-initiated copy/paste'],
+        rationale: '[CWS_LIMITED_USE::R5] Condition matched.',
+      } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings[0].title).toBe('Limited code coverage');
+    const govIdx = vm.keyFindings.findIndex((k) => k.evidence && k.evidence.kind === 'governance' && k.evidence.rulepack);
+    const maintIdx = vm.keyFindings.findIndex((k) => k.title === 'Publisher update age');
+    expect(govIdx).toBeGreaterThan(0);
+    if (maintIdx >= 0) expect(maintIdx).toBeGreaterThan(govIdx);
+  });
+
+  it('publisher update age under threshold (severity <= 0.4) stays out of Key Findings', () => {
+    const raw = {
+      extension_id: 'maintlow12345678abcdefghijklmnop',
+      final_verdict: 'ALLOW',
+      scoring_v2: {
+        overall_score: 90, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 90, risk: 0.1, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.4, confidence: 0.9, weight: 0.1, contribution: 0.036 }] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings.some((k) => k.title === 'Publisher update age')).toBe(false);
+  });
+});

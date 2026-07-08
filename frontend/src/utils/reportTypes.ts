@@ -538,6 +538,54 @@ export interface KeyFindingVM {
   layer: 'security' | 'privacy' | 'governance';
   summary: string;
   evidenceIds: string[];
+  /**
+   * Optional, additive structured reference letting a user verify WHY this
+   * finding exists. Backward-compatible: absent on legacy payloads / findings
+   * with no derivable evidence. Never fabricated — `available: false` marks a
+   * summary-only finding. Ordering/severity are unaffected by this field.
+   */
+  evidence?: KeyFindingEvidence;
+}
+
+/**
+ * Structured, verifiable reference for a Key Finding. All fields except `kind`
+ * and `available` are optional and only present when the source payload carried
+ * them (no invented evidence). `label` is a short one-line reference for compact
+ * display; the type-specific fields back it.
+ */
+export interface KeyFindingEvidence {
+  kind: 'sast' | 'governance' | 'manifest' | 'virustotal' | 'coverage' | 'summary';
+  available: boolean;
+  label?: string;
+  // SAST / code
+  filePath?: string;
+  lineStart?: number | null;
+  lineEnd?: number | null;
+  snippet?: string;
+  evidenceIds?: string[];
+  /** File path the existing FileViewerModal / GET /api/scan/file endpoint can open. */
+  sourceViewerPath?: string;
+  // governance rulepack
+  rulepack?: string;
+  ruleId?: string;
+  finalReason?: string;
+  actionRequired?: string;
+  // manifest / permission
+  permission?: string;
+  hostPermission?: string;
+  manifestField?: string;
+  explanation?: string;
+  // virustotal
+  hash?: string;
+  malicious?: number;
+  suspicious?: number;
+  harmless?: number;
+  undetected?: number;
+  coverageState?: string;
+  // coverage-cap
+  analyzer?: string;
+  reason?: string;
+  confidence?: number | null;
 }
 
 /** Permissions view model */
