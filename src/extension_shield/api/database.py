@@ -785,7 +785,7 @@ class Database:
                             WHEN extension_id LIKE ? THEN 3
                             ELSE 4
                           END,
-                          COALESCE(updated_at, timestamp) DESC
+                          COALESCE(timestamp, updated_at) DESC
                         LIMIT ?
                     """,
                         (term, term, term_raw, term_raw, term_raw, term, limit),
@@ -804,7 +804,7 @@ class Database:
                         FROM scan_results
                         WHERE status = 'completed'
                           """ + visibility_filter + """
-                        ORDER BY COALESCE(updated_at, timestamp) DESC
+                        ORDER BY COALESCE(timestamp, updated_at) DESC
                         LIMIT ?
                     """,
                         (limit,),
@@ -1509,14 +1509,17 @@ class SupabaseDatabase:
             )
             if not include_all:
                 q = q.or_("visibility.is.null,visibility.eq.public").or_("source.is.null,source.eq.webstore")
-            q = q.order("updated_at", desc=True)
+            # Order by actual last-scan time so a re-scanned extension moves to the
+            # top; incidental updated_at bumps (report views, metadata refresh, batch
+            # scripts) must not reorder the "recently scanned" list.
+            q = q.order("scanned_at", desc=True)
             if search and search.strip():
                 term = _escape_postgrest_like_term(search.strip())
                 q = q.or_(f"extension_name.ilike.%{term}%,extension_id.ilike.%{term}%")
             resp = q.limit(limit_fetch).execute()
             rows = getattr(resp, "data", None) or []
 
-            # Rank by relevance when search is present: exact title > title starts with > title contains > id contains; then recency (query already ordered by updated_at)
+            # Rank by relevance when search is present: exact title > title starts with > title contains > id contains; then recency (query already ordered by scanned_at)
             if search and search.strip():
                 term = search.strip()
                 rows = sorted(rows, key=lambda r: _relevance_rank(r.get("extension_name"), r.get("extension_id"), term))[:limit]
@@ -1561,7 +1564,7 @@ class SupabaseDatabase:
                         self.client.table(self.table_scan_results)
                         .select(select_cols)
                         .eq("status", "completed")
-                        .order("updated_at", desc=True)
+                        .order("scanned_at", desc=True)  # actual last-scan time (see main branch)
                     )
                     if search and search.strip():
                         term = _escape_postgrest_like_term(search.strip())
