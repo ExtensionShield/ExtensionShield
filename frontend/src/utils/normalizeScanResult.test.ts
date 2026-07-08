@@ -1042,3 +1042,124 @@ describe('Verdict / risk-label coherence (coherentRiskLevel)', () => {
     expect(vm.scores.overall.band).toBe('WARN');
   });
 });
+
+// =============================================================================
+// GOVERNANCE-REASON PROMOTION + PUBLISHER-AGE THRESHOLD (audit follow-up #2)
+// =============================================================================
+
+describe('Governance review reason is promoted; publisher update age is context', () => {
+  it('Bulk URL Opener-style: clipboard governance reason shows first, not publisher update age', () => {
+    const raw: RawScanResult = {
+      extension_id: 'bulkurlopener1234567890abcdefghij',
+      extension_name: 'Bulk URL Opener Extension',
+      metadata: { last_updated: 'February 24, 2026' }, // ~134 days -> severity 0.4
+      scoring_v2: {
+        overall_score: 94, decision: 'ALLOW', risk_level: 'low',
+        coverage_cap_applied: false, hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 92, risk: 0.08, confidence: 0.9,
+          factors: [
+            { name: 'Manifest', severity: 0.3, confidence: 0.9, weight: 0.2, contribution: 0.02, flags: ['missing_csp'] },
+            { name: 'Maintenance', severity: 0.4, confidence: 0.9, weight: 0.1, contribution: 0.036, flags: ['needs_update'] },
+          ] },
+        privacy_layer: { layer_name: 'privacy', score: 89, risk: 0.11, confidence: 0.9,
+          factors: [{ name: 'CaptureSignals', severity: 0.3, confidence: 0.9, weight: 0.2, contribution: 0.02, flags: ['capture_capability'] }] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+      governance_bundle: {
+        decision: {
+          final_verdict: 'NEEDS_REVIEW',
+          final_authority: 'score_threshold',
+          final_reasons: ['Verify clipboard access is limited to user-initiated copy/paste operations'],
+        },
+      },
+    } as unknown as RawScanResult;
+
+    const vm = normalizeScanResult(raw);
+    expect(vm.scores.decision).toBe('WARN'); // NEEDS_REVIEW
+    expect(/clipboard/i.test(vm.keyFindings[0].title)).toBe(true);
+    // 134-day publisher update age is NOT a Key Finding (kept as layer detail).
+    expect(vm.keyFindings.some((f) => f.title === 'Publisher update age')).toBe(false);
+    // ...but it IS still present in the layer detail.
+    expect(vm.factorsByLayer.security.some((f) => f.name === 'Maintenance')).toBe(true);
+  });
+
+  it('134-day publisher update age alone: no Key Finding and no review escalation', () => {
+    const raw: RawScanResult = {
+      extension_id: 'age134days1234567890abcdefghijklm',
+      metadata: { last_updated: 'February 24, 2026' },
+      scoring_v2: {
+        overall_score: 94, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 92, risk: 0.08, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.4, confidence: 0.9, weight: 0.1, contribution: 0.036, flags: ['needs_update'] }] },
+        privacy_layer: { layer_name: 'privacy', score: 100, risk: 0, confidence: 1, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings.some((f) => f.title === 'Publisher update age')).toBe(false);
+    expect(vm.scores.decision).toBe('ALLOW');
+  });
+
+  it('>365-day publisher update age alone: advisory (medium), never HIGH, not a standalone review', () => {
+    const raw: RawScanResult = {
+      extension_id: 'agestale1234567890abcdefghijklmno',
+      metadata: { last_updated: 'January 1, 2024' },
+      scoring_v2: {
+        overall_score: 88, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 84, risk: 0.16, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072, flags: ['stale_extension'] }] },
+        privacy_layer: { layer_name: 'privacy', score: 100, risk: 0, confidence: 1, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const maint = vm.keyFindings.find((f) => f.title === 'Publisher update age');
+    expect(maint).toBeDefined();
+    expect(maint!.severity).toBe('medium');
+    expect(vm.keyFindings.some((f) => f.severity === 'high')).toBe(false);
+    expect(vm.scores.decision).toBe('ALLOW');
+  });
+
+  it('publisher update age WITH a corroborating gate: review is still shown and driven by the real risk', () => {
+    const raw: RawScanResult = {
+      extension_id: 'agecorrob1234567890abcdefghijklmn',
+      metadata: { last_updated: 'January 1, 2024' },
+      scoring_v2: {
+        overall_score: 60, decision: 'BLOCK', risk_level: 'medium',
+        hard_gates_triggered: ['SENSITIVE_EXFIL'],
+        security_layer: { layer_name: 'security', score: 70, risk: 0.3, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072 }] },
+        privacy_layer: { layer_name: 'privacy', score: 40, risk: 0.6, confidence: 0.9, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+      governance_bundle: { decision: { final_verdict: 'BLOCK', final_reasons: ['Sends data to external servers — review destinations'] } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.scores.decision).toBe('BLOCK');
+    // A real corroborating risk (the gate) is present, not just publisher age.
+    expect(vm.keyFindings.some((f) => f.title !== 'Publisher update age' && f.severity === 'high')).toBe(true);
+  });
+
+  it('coverage-cap findings still appear before governance reasons and factor findings', () => {
+    const raw: RawScanResult = {
+      extension_id: 'covfirst1234567890abcdefghijklmno',
+      scoring_v2: {
+        overall_score: 80, decision: 'NEEDS_REVIEW', risk_level: 'low',
+        coverage_cap_applied: true, hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 85, risk: 0.15, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072 }] },
+        privacy_layer: { layer_name: 'privacy', score: 100, risk: 0, confidence: 1, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+      sast_results: { scan_error: false, files_scanned: 0, sast_findings: {} },
+      virustotal_analysis: { enabled: true, files_found_in_vt: 5 },
+      governance_bundle: { decision: { final_verdict: 'NEEDS_REVIEW', final_reasons: ['Verify clipboard access is limited to user-initiated copy/paste operations'] } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings[0].title).toBe('No analyzable code scanned');
+    // governance reason present, publisher age still not shown as HIGH
+    expect(vm.keyFindings.some((f) => /clipboard/i.test(f.title))).toBe(true);
+    const maint = vm.keyFindings.find((f) => f.title === 'Publisher update age');
+    expect(maint!.severity).toBe('medium');
+  });
+});
