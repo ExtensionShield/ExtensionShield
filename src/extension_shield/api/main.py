@@ -56,6 +56,7 @@ from extension_shield.api.payload_helpers import (
     ensure_description_in_meta,
     ensure_name_in_payload,
     log_scan_results_return_shape,
+    refresh_governance_decision,
     upgrade_legacy_payload,
 )
 from extension_shield.governance.tool_adapters import SignalPackBuilder
@@ -418,6 +419,19 @@ _health_start_time = datetime.now(timezone.utc)
 # -----------------------------------------------------------------------------
 DAILY_DEEP_SCAN_LIMIT = 3  # authenticated users
 ANONYMOUS_DAILY_DEEP_SCAN_LIMIT = 1  # anonymous (IP-based) users – after 1 scan, prompt login
+
+# -----------------------------------------------------------------------------
+# Scan freshness cutoff
+# -----------------------------------------------------------------------------
+# Scans completed before this instant predate the 2026-07-07 scoring/decision
+# recalibration (#257: ScoringEngine 2.0.0 -> 2.1.0 + the governance decision
+# self-heal). Serving them from cache would show pre-recalibration scores and
+# verdicts, so /api/scan/trigger treats any cached scan older than the cutoff as
+# stale and runs a fresh deep scan. This is version-agnostic: it also catches
+# legacy rows that carry no scoring_version (which the model-version gate cannot
+# see). Override with the SCAN_FRESHNESS_CUTOFF env var (ISO-8601); set it to an
+# empty string to disable the timestamp gate (the version gates still apply).
+_DEFAULT_SCAN_FRESHNESS_CUTOFF = "2026-07-08T01:37:14+00:00"  # #257 ship instant (UTC)
 # deep_scan_usage[user_id][YYYY-MM-DD] = used_count
 deep_scan_usage: Dict[str, Dict[str, int]] = {}
 # Lock to prevent race conditions when multiple concurrent requests check/increment the same counter
@@ -660,6 +674,90 @@ def _fast_live_version_check(extension_id: str, timeout_seconds: float = 2.0) ->
     except Exception as exc:
         logger.debug("[CACHED_PATH] Fast version check failed for %s: %s", extension_id, exc)
     return None
+
+
+def _as_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Normalize a datetime to an aware UTC value (assume UTC when naive)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _get_scan_freshness_cutoff() -> Optional[datetime]:
+    """Resolve the configured scan-freshness cutoff as an aware UTC datetime.
+
+    Reads SCAN_FRESHNESS_CUTOFF (ISO-8601) with the ship-instant default. An
+    empty value disables the timestamp gate; an invalid value is ignored (logged)
+    so a bad env var never silently rescans everything.
+    """
+    raw = os.getenv("SCAN_FRESHNESS_CUTOFF", _DEFAULT_SCAN_FRESHNESS_CUTOFF)
+    raw = raw.strip() if isinstance(raw, str) else ""
+    if not raw:
+        return None
+    cutoff = _as_utc(_parse_iso_datetime(raw))
+    if cutoff is None:
+        logger.warning(
+            "[FRESHNESS] Invalid SCAN_FRESHNESS_CUTOFF=%r; timestamp rescan gate disabled",
+            raw,
+        )
+    return cutoff
+
+
+def _scan_payload_time(payload: Dict[str, Any]) -> Optional[datetime]:
+    """Best-effort last-scan time from a cached scan payload, as aware UTC.
+
+    Both DB backends normalize their scan time onto ``timestamp`` (Supabase maps
+    scanned_at; SQLite has a native column) and in-memory payloads stamp an ISO
+    ``timestamp`` at completion — the extra keys are defensive fallbacks.
+    """
+    if not isinstance(payload, dict):
+        return None
+    for key in ("timestamp", "scanned_at", "updated_at", "last_scanned", "created_at"):
+        dt = _as_utc(_parse_iso_datetime(payload.get(key)))
+        if dt is not None:
+            return dt
+    return None
+
+
+def _scan_predates_freshness_cutoff(payload: Dict[str, Any]) -> bool:
+    """True when a cached scan is older than the configured freshness cutoff.
+
+    Unknown/unparseable scan times return False (the version gates still apply) so
+    we never trigger a rescan storm on rows we cannot reliably date.
+    """
+    cutoff = _get_scan_freshness_cutoff()
+    if cutoff is None:
+        return False
+    scanned = _scan_payload_time(payload)
+    if scanned is None:
+        return False
+    return scanned < cutoff
+
+
+# Best-effort in-process cooldown. When a staleness-driven refresh FAILS we keep the
+# prior good report, but that report keeps its original (pre-cutoff) scan time and
+# would otherwise re-trigger a rescan on every subsequent lookup. Recording the failed
+# attempt lets the gate serve the cached report for a cooldown window instead of
+# rescanning an unfetchable/delisted extension endlessly. Per-process and cleared on
+# restart — purely a resource guard, never affects correctness of what is served.
+_FAILED_REFRESH_COOLDOWN = timedelta(hours=6)
+_failed_refresh_at: Dict[str, datetime] = {}
+
+
+def _note_failed_refresh(extension_id: str) -> None:
+    try:
+        _failed_refresh_at[extension_id] = datetime.now(timezone.utc)
+    except Exception:
+        pass
+
+
+def _in_failed_refresh_cooldown(extension_id: str) -> bool:
+    last = _failed_refresh_at.get(extension_id)
+    if last is None:
+        return False
+    return (datetime.now(timezone.utc) - last) < _FAILED_REFRESH_COOLDOWN
 
 
 def _hydrate_db_scan_result(results: Dict[str, Any], identifier: str) -> Dict[str, Any]:
@@ -1412,6 +1510,56 @@ def _find_icon_path_on_disk(
     return None
 
 
+def _persist_scan_failure(extension_id: str, failed_payload: Dict[str, Any]) -> None:
+    """Record a scan failure WITHOUT destroying a previously-good cached report.
+
+    A staleness-driven rescan (the "Safe forced rescan" path) of an extension that
+    has since become unfetchable — delisted, region-blocked, or a transient download
+    error — must not replace a good ``completed`` report with a score-0 ``failed``
+    placeholder. When a prior completed result exists (DB first, then memory), we
+    keep it and leave the status ``completed`` so users still see the last good
+    report; only when there is no prior good result do we store the failure.
+    """
+    prior_good = False
+    try:
+        row = db.get_scan_result(extension_id)
+        if isinstance(row, dict) and str(row.get("status")) == "completed":
+            prior_good = True
+    except Exception:
+        prior_good = False
+    if not prior_good:
+        mem = scan_results.get(extension_id)
+        if isinstance(mem, dict) and str(mem.get("status")) == "completed" and not mem.get("error"):
+            prior_good = True
+
+    if prior_good:
+        logger.warning(
+            "[SCAN_FAILURE] Rescan failed for %s; preserving previous good result "
+            "(not overwriting with a failed placeholder).",
+            extension_id,
+        )
+        # Drop any transient in-memory failed payload so the next GET reloads the
+        # good row from the DB; the last good report remains the served result.
+        scan_results.pop(extension_id, None)
+        scan_status[extension_id] = "completed"
+        # The preserved report keeps its (possibly pre-cutoff) scan time, so record
+        # this failed attempt to suppress endless re-rescans of an unfetchable ext.
+        _note_failed_refresh(extension_id)
+        return
+
+    scan_results[extension_id] = failed_payload
+    scan_status[extension_id] = "failed"
+    try:
+        db.save_scan_result(failed_payload)
+        logger.info("[TIMELINE] saved failed scan to database → extension_id=%s", extension_id)
+    except Exception as save_err:
+        logger.warning(
+            "[TIMELINE] failed to save failed scan to database → extension_id=%s, error=%s",
+            extension_id,
+            save_err,
+        )
+
+
 async def run_analysis_workflow(url: str, extension_id: str):
     """Run the analysis workflow in the background."""
     workflow_start = datetime.now()
@@ -1679,12 +1827,9 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "risk_distribution": {"high": 0, "medium": 0, "low": 0},
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            scan_results[extension_id] = failed_payload
-            try:
-                db.save_scan_result(failed_payload)
-                logger.info("[TIMELINE] saved failed scan to database → extension_id=%s", extension_id)
-            except Exception as save_err:
-                logger.warning("[TIMELINE] failed to save failed scan to database → extension_id=%s, error=%s", extension_id, save_err)
+            # Preserve a previously-good report instead of clobbering it with a
+            # failed placeholder (matters for staleness rescans of delisted exts).
+            _persist_scan_failure(extension_id, failed_payload)
 
     except Exception as e:
         scan_status[extension_id] = "failed"
@@ -1726,7 +1871,9 @@ async def run_analysis_workflow(url: str, extension_id: str):
         else:
             logger.error("[WORKFLOW] Unknown error: %s", error_str)
         
-        scan_results[extension_id] = {
+        # Preserve a previously-good report instead of clobbering it with a failed
+        # placeholder (matters for staleness rescans of now-unfetchable extensions).
+        _persist_scan_failure(extension_id, {
             "extension_id": extension_id,
             "extension_name": extension_id,
             "url": url,
@@ -1740,12 +1887,7 @@ async def run_analysis_workflow(url: str, extension_id: str):
             "total_findings": 0,
             "risk_distribution": {"high": 0, "medium": 0, "low": 0},
             "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-        try:
-            db.save_scan_result(scan_results[extension_id])
-            logger.info("[TIMELINE] saved failed scan to database → extension_id=%s", extension_id)
-        except Exception as save_err:
-            logger.warning("[TIMELINE] failed to save failed scan to database → extension_id=%s, error=%s", extension_id, save_err)
+        })
 
 
 def get_extracted_files(extracted_path: Optional[str]) -> list[str]:
@@ -2356,6 +2498,12 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
         except Exception:
             cached_payload = None
 
+    # True when we fall through to a rescan only because an EXISTING cached scan is
+    # stale (store version / scoring model / freshness cutoff) rather than because
+    # the user asked for a brand-new scan. A staleness refresh is system-initiated:
+    # it must not spend the user's daily quota or 429 them on what was a cached lookup.
+    system_refresh = False
+
     # If we already have results, use a fast version check only (no blocking store refresh)
     # so cached lookups return immediately. Full store refresh runs on GET when needed.
     if cached_payload:
@@ -2381,6 +2529,13 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
             and cached_scoring_version != ScoringEngine.VERSION
         )
 
+        # Freshness-cutoff rescan: any scan completed before the recalibration
+        # cutoff predates the current scoring/decision logic and must be rescanned
+        # so users never see pre-change results (catches legacy rows with no
+        # scoring_version, which model_stale cannot detect). See
+        # _DEFAULT_SCAN_FRESHNESS_CUTOFF / SCAN_FRESHNESS_CUTOFF.
+        cutoff_stale = _scan_predates_freshness_cutoff(cached_payload)
+
         # Temporary force-rescan: honored only in dev, or with a matching admin
         # token header. Never for anonymous prod callers (prevents abuse).
         force_requested = bool(getattr(scan_request, "force", False))
@@ -2394,7 +2549,13 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
         if force_requested and not force_allowed:
             logger.info("[FORCE_RESCAN] force ignored for %s (not permitted in this environment)", extension_id)
 
-        if (not version_changed) and (not model_stale) and (not force_allowed):
+        stale = version_changed or model_stale or cutoff_stale
+        # Suppress a staleness rescan when we recently tried and failed to refresh
+        # this extension (its preserved good report is still pre-cutoff) — serve the
+        # cached report instead of rescanning an unfetchable extension on every lookup.
+        suppressed_by_cooldown = stale and not force_allowed and _in_failed_refresh_cooldown(extension_id)
+
+        if (not stale or suppressed_by_cooldown) and (not force_allowed):
             # Bump extension to top of recent scans (for both auth and anonymous users)
             try:
                 db.touch_scan_result(extension_id)
@@ -2409,8 +2570,8 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
                     pass
             scan_status[extension_id] = "completed"
             logger.info(
-                "[CACHED_PATH] Returning cached results for %s (no version change)",
-                extension_id,
+                "[CACHED_PATH] Returning cached results for %s (stale=%s, suppressed_by_cooldown=%s)",
+                extension_id, stale, suppressed_by_cooldown,
             )
             return {
                 "message": "Cached results available",
@@ -2419,9 +2580,12 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
                 "already_scanned": True,
                 "scan_type": "lookup",
             }
+        # Staleness-driven refresh of an existing cached scan (not an admin force):
+        # system-initiated, so it is exempt from the daily limit / credit consumption.
+        system_refresh = stale and not force_allowed
         logger.info(
-            "[CACHED_PATH] Rescan for %s (version_changed=%s, model_stale=%s [%s->%s], force=%s); starting deep rescan",
-            extension_id, version_changed, model_stale, cached_scoring_version, ScoringEngine.VERSION, force_allowed,
+            "[CACHED_PATH] Rescan for %s (version_changed=%s, model_stale=%s [%s->%s], cutoff_stale=%s, force=%s, system_refresh=%s); starting deep rescan",
+            extension_id, version_changed, model_stale, cached_scoring_version, ScoringEngine.VERSION, cutoff_stale, force_allowed, system_refresh,
         )
         logger.info(
             "[CACHED_PATH] Version change detected for %s (%s -> %s); starting deep rescan",
@@ -2430,25 +2594,37 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
             live_version,
         )
     elif _has_cached_results(extension_id):
-        # File-only fallback: we know we have cached results but cannot safely inspect version.
-        try:
-            db.touch_scan_result(extension_id)
-        except Exception:
-            pass
-        user_id = getattr(getattr(request, "state", None), "user_id", None)
-        if user_id:
+        # File-only / uninspectable fallback: results exist but we could not load a
+        # payload above to check store version or scoring freshness. When the freshness
+        # gate is enabled we cannot prove this row is post-recalibration, so fall
+        # through to a system refresh (free, non-destructive) rather than serving
+        # possibly-stale data; when the gate is disabled, keep the legacy instant-cached
+        # behavior.
+        if _get_scan_freshness_cutoff() is not None:
+            system_refresh = True
+            logger.info(
+                "[CACHED_PATH] Uninspectable cached results for %s; freshness gate on → system refresh",
+                extension_id,
+            )
+        else:
             try:
-                db.add_user_scan_history(user_id=user_id, extension_id=extension_id)
+                db.touch_scan_result(extension_id)
             except Exception:
                 pass
-        scan_status[extension_id] = "completed"
-        return {
-            "message": "Cached results available",
-            "extension_id": extension_id,
-            "status": "completed",
-            "already_scanned": True,
-            "scan_type": "lookup",
-        }
+            user_id = getattr(getattr(request, "state", None), "user_id", None)
+            if user_id:
+                try:
+                    db.add_user_scan_history(user_id=user_id, extension_id=extension_id)
+                except Exception:
+                    pass
+            scan_status[extension_id] = "completed"
+            return {
+                "message": "Cached results available",
+                "extension_id": extension_id,
+                "status": "completed",
+                "already_scanned": True,
+                "scan_type": "lookup",
+            }
 
     # Check if already scanning
     if extension_id in scan_status and scan_status[extension_id] == "running":
@@ -2466,24 +2642,30 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
     # Enforce daily deep-scan limit - skip in development
     # Uses rate_limit_key (user_id for authenticated users, IP for anonymous)
     is_anonymous = rate_limit_key.startswith("ip:")
-    if settings.is_prod():
-        limit_status = _deep_scan_limit_status(rate_limit_key)
-        if limit_status["remaining"] <= 0:
-            limit_num = limit_status.get("limit", 1)
-            scans_word = "scan" if limit_num == 1 else "scans"
-            raise HTTPException(
-                status_code=429,
-                detail={
-                    "error_code": "DAILY_DEEP_SCAN_LIMIT",
-                    "message": f"You've reached your daily scan limit ({limit_num} {scans_word}). Sign in to get more scans or try again tomorrow.",
-                    "is_anonymous": is_anonymous,
-                    "requires_login": is_anonymous,
-                    **limit_status,
-                },
-            )
+    if system_refresh:
+        # System-initiated staleness refresh of an already-cached scan: the user did
+        # not request a new scan, so it neither counts against nor consumes the daily
+        # deep-scan quota. Report current usage without decrementing.
+        after_consume = _deep_scan_limit_status(rate_limit_key)
+    else:
+        if settings.is_prod():
+            limit_status = _deep_scan_limit_status(rate_limit_key)
+            if limit_status["remaining"] <= 0:
+                limit_num = limit_status.get("limit", 1)
+                scans_word = "scan" if limit_num == 1 else "scans"
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "error_code": "DAILY_DEEP_SCAN_LIMIT",
+                        "message": f"You've reached your daily scan limit ({limit_num} {scans_word}). Sign in to get more scans or try again tomorrow.",
+                        "is_anonymous": is_anonymous,
+                        "requires_login": is_anonymous,
+                        **limit_status,
+                    },
+                )
 
-    # Consume one deep scan since we are starting a new analysis run
-    after_consume = _consume_deep_scan(rate_limit_key)
+        # Consume one deep scan since we are starting a new analysis run
+        after_consume = _consume_deep_scan(rate_limit_key)
 
     # Start background analysis
     scan_user_ids[extension_id] = getattr(getattr(request, "state", None), "user_id", None)
@@ -3411,6 +3593,7 @@ async def get_recent_scans(limit: int = 10, search: str = None):
         # If legacy recent rows are missing layer scores, backfill from full scan result dynamically.
         for scan in recent:
             try:
+                _refresh_recent_scan_verdict(scan)
                 mapping = _extract_risk_and_signals(scan)
                 signals = mapping.get("signals", {})
                 missing_layers = any(k not in signals for k in ("security", "privacy", "gov"))
@@ -3442,6 +3625,38 @@ async def get_recent_scans(limit: int = 10, search: str = None):
     except Exception as e:
         logger.error(f"[get_recent_scans] Error fetching recent scans: {e}", exc_info=True)
         return {"recent": [], "db_backend": db_backend}
+
+
+def _refresh_recent_scan_verdict(scan: Dict[str, Any]) -> bool:
+    """Keep recent-row verdicts aligned with the scan-results detail endpoint.
+
+    Never raises: a verdict-refresh failure (or a malformed/legacy governance_bundle
+    that is not a dict) must not bubble up and blank the row's risk/signals — the
+    caller only wants an aligned verdict, best-effort.
+    """
+    if not isinstance(scan, dict):
+        return False
+
+    try:
+        changed = refresh_governance_decision(scan)
+    except Exception as exc:  # malformed persisted bundle — degrade, don't crash the row
+        logger.warning(
+            "[recent] governance verdict refresh failed for %s: %s",
+            scan.get("extension_id"),
+            exc,
+        )
+        changed = False
+
+    gb = scan.get("governance_bundle")
+    decision = gb.get("decision") if isinstance(gb, dict) else None
+    final_verdict = decision.get("final_verdict") if isinstance(decision, dict) else None
+    if final_verdict:
+        scan["final_verdict"] = final_verdict
+        scan["governance_verdict"] = final_verdict
+        summary = scan.get("summary")
+        if isinstance(summary, dict):
+            summary["governance_verdict"] = final_verdict
+    return changed
 
 
 @app.get("/api/diagnostic/scans", dependencies=[require_cloud_dep("telemetry")])
