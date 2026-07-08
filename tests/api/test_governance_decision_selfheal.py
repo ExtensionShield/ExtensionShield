@@ -87,3 +87,35 @@ def test_missing_inputs_leaves_verdict_untouched():
 def test_no_governance_bundle_is_noop():
     assert refresh_governance_decision({"extension_id": "x"}) is False
     assert refresh_governance_decision(None) is False
+
+
+def test_recent_scan_refresh_exposes_current_final_verdict(monkeypatch):
+    """Recent rows must use the same refreshed final verdict as detail pages."""
+    from extension_shield.api import main
+
+    scan = {
+        "extension_id": "recentrowextensionidxxxxxxxxxxxx",
+        "final_verdict": "NEEDS_REVIEW",
+        "governance_verdict": "NEEDS_REVIEW",
+        "summary": {
+            "governance_bundle": {
+                "decision": {"final_verdict": "NEEDS_REVIEW"},
+            },
+        },
+    }
+    scan["governance_bundle"] = scan["summary"]["governance_bundle"]
+
+    def fake_refresh(payload):
+        payload["governance_bundle"]["decision"]["final_verdict"] = "ALLOW"
+        payload["governance_bundle"]["decision"]["decision_version"] = DECISION_VERSION
+        return True
+
+    monkeypatch.setattr(main, "refresh_governance_decision", fake_refresh)
+
+    changed = main._refresh_recent_scan_verdict(scan)
+
+    assert changed is True
+    assert scan["final_verdict"] == "ALLOW"
+    assert scan["governance_verdict"] == "ALLOW"
+    assert scan["summary"]["governance_verdict"] == "ALLOW"
+    assert scan["summary"]["governance_bundle"]["decision"]["final_verdict"] == "ALLOW"
