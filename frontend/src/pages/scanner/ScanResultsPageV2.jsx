@@ -938,6 +938,23 @@ const ScanResultsPageV2 = () => {
                           <div className="finding-text">
                             <span className="finding-title">{f.displayTitle}</span>
                             {f.summary && open && <span className="finding-summary">{f.summary}</span>}
+                            {open && ev && ev.available && (
+                              <div className="finding-evidence-details">
+                                {ev.filePath && (
+                                  <div className="fed-row"><span className="fed-key">File</span>
+                                    <span className="fed-val">{ev.filePath}{typeof ev.lineStart === "number" && ev.lineStart > 0 ? `:${ev.lineStart}${typeof ev.lineEnd === "number" && ev.lineEnd > ev.lineStart ? `–${ev.lineEnd}` : ""}` : ""}</span></div>
+                                )}
+                                {ev.snippet && <pre className="fed-snippet">{ev.snippet}</pre>}
+                                {ev.permission && (<div className="fed-row"><span className="fed-key">Permission</span><span className="fed-val">{ev.permission}</span></div>)}
+                                {ev.hostPermission && (<div className="fed-row"><span className="fed-key">Host access</span><span className="fed-val">{ev.hostPermission}</span></div>)}
+                                {ev.kind === "manifest" && ev.manifestField && !ev.permission && (<div className="fed-row"><span className="fed-key">Manifest</span><span className="fed-val">{ev.manifestField}</span></div>)}
+                                {(ev.rulepack || ev.ruleId) && (<div className="fed-row"><span className="fed-key">Rule</span><span className="fed-val">{ev.rulepack ? `${ev.rulepack}${ev.ruleId ? `::${ev.ruleId}` : ""}` : ev.ruleId}</span></div>)}
+                                {ev.finalReason && (<div className="fed-row"><span className="fed-key">Reason</span><span className="fed-val">{ev.finalReason}</span></div>)}
+                                {ev.actionRequired && ev.actionRequired !== ev.finalReason && (<div className="fed-row"><span className="fed-key">Action</span><span className="fed-val">{ev.actionRequired}</span></div>)}
+                                {typeof ev.malicious === "number" && (<div className="fed-row"><span className="fed-key">VirusTotal</span><span className="fed-val">{ev.malicious} malicious · {ev.suspicious || 0} suspicious{ev.hash ? ` · ${String(ev.hash).slice(0, 12)}…` : ""}</span></div>)}
+                                {ev.analyzer && (<div className="fed-row"><span className="fed-key">Coverage</span><span className="fed-val">{ev.analyzer}{ev.reason ? ` — ${ev.reason}` : ""}</span></div>)}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <span className={`finding-severity tone-${tone}`} title={severityLabel(f.level)}>
@@ -955,7 +972,7 @@ const ScanResultsPageV2 = () => {
                               View evidence <ExternalLink size={13} aria-hidden="true" />
                             </button>
                           )}
-                          {f.summary && (
+                          {(f.summary || (ev && ev.available)) && (
                             <button
                               type="button"
                               className={`finding-expand${open ? " is-open" : ""}`}

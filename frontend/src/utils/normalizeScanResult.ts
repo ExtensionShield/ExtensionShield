@@ -588,12 +588,15 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
   const scoringV2 = raw.scoring_v2 || raw.governance_bundle?.scoring_v2 || null;
   const sastResults = raw.sast_results;
   const permsAnalysis = raw.permissions_analysis;
+  // Evidence lookups (shared by the SAST + factor findings below).
+  const evLookup = buildEvidenceIndex(raw);
+  const fileIndex = buildSignalPackFileIndex(raw);
 
   // 1. Extract SAST findings for Security layer (prioritize high severity)
   if (sastResults) {
     const sastFindings = sastResults.sast_findings || sastResults.sastFindings || {};
-    const sastFindingsList: Array<{ severity: FindingSeverity; title: string; summary: string }> = [];
-    
+    const sastFindingsList: Array<{ severity: FindingSeverity; title: string; summary: string; filePath: string; lineNum?: number; snippet?: string }> = [];
+
     if (typeof sastFindings === 'object' && !Array.isArray(sastFindings)) {
       Object.entries(sastFindings).forEach(([filePath, findings]) => {
         if (Array.isArray(findings)) {
@@ -603,7 +606,8 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             const message = extra.message || finding.check_id || 'SAST finding';
             const checkId = finding.check_id || 'unknown';
             const lineNum = finding.start?.line;
-            
+            const snippet = typeof extra.lines === 'string' ? extra.lines : undefined;
+
             // Map severity to finding level
             let findingSeverity: FindingSeverity = 'low';
             if (severity === 'CRITICAL' || severity === 'ERROR') {
@@ -616,28 +620,59 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
               severity: findingSeverity,
               title: humanizeSastCheckId(checkId),
               summary: message,
+              filePath: finding.path || filePath,
+              lineNum: typeof lineNum === 'number' ? lineNum : undefined,
+              snippet,
             });
           });
         }
       });
     }
-    
+
     // Sort by severity (high > medium > low) and take top 10
     sastFindingsList.sort((a, b) => {
       const order = { high: 3, medium: 2, low: 1 };
       return (order[b.severity] || 0) - (order[a.severity] || 0);
     });
-    
+
     sastFindingsList.slice(0, 10).forEach(f => {
+      // Prefer the canonical signal_pack.evidence line for this file, else the
+      // finding's own start line. Evidence is display-only (not drawer-openable).
+      const spHit = f.filePath ? fileIndex[`sast::${f.filePath}`] : undefined;
+      const filePath = f.filePath || spHit?.filePath;
+      const lineStart = f.lineNum ?? spHit?.lineStart ?? null;
+      const evidence: KeyFindingEvidence = filePath
+        ? {
+            kind: 'sast', available: true, filePath,
+            lineStart, lineEnd: spHit?.lineEnd ?? null,
+            snippet: f.snippet ?? spHit?.snippet, sourceViewerPath: filePath,
+            label: codeEvidenceLabel(filePath, lineStart), evidenceIds: [],
+          }
+        : { kind: 'sast', available: false };
       result.security.push({
         title: f.title,
         severity: f.severity,
         layer: 'security',
         summary: f.summary.length > 100 ? `${f.summary.substring(0, 97)}...` : f.summary,
         evidenceIds: [],
+        evidence,
       });
     });
   }
+
+  // Attach the structured evidence a factor already carries (resolves synthetic
+  // ids to signal_pack.evidence by tool+file). Display-only; ordering unaffected.
+  const factorEvidence = (f: RawFactorScore, layer: 'security' | 'privacy' | 'governance'): KeyFindingEvidence =>
+    resolveFactorEvidence({
+      name: safeGet(f.name, 'Unknown'),
+      severity: safeGet(f.severity, 0),
+      confidence: safeGet(f.confidence, 0),
+      weight: f.weight,
+      riskContribution: f.contribution,
+      evidenceIds: safeGet(f.evidence_ids, []),
+      details: f.details,
+      layer,
+    }, raw, evLookup);
 
   // 2. Extract factors from scoring_v2 (already categorized by layer)
   // Only include factors with significant severity (>= 0.3) to avoid noise
@@ -652,6 +687,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             layer: 'security',
             summary: humanizeFactorSummary(f, 'security'),
             evidenceIds: safeGet(f.evidence_ids, []),
+            evidence: factorEvidence(f, 'security'),
           });
         }
       });
@@ -667,6 +703,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             layer: 'privacy',
             summary: humanizeFactorSummary(f, 'privacy'),
             evidenceIds: safeGet(f.evidence_ids, []),
+            evidence: factorEvidence(f, 'privacy'),
           });
         }
       });
@@ -682,6 +719,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             layer: 'governance',
             summary: humanizeFactorSummary(f, 'governance'),
             evidenceIds: safeGet(f.evidence_ids, []),
+            evidence: factorEvidence(f, 'governance'),
           });
         }
       });
@@ -1021,6 +1059,54 @@ function codeEvidenceLabel(filePath?: string, lineStart?: number | null): string
 }
 
 /**
+ * Parse a synthetic factor evidence id into (tool, file, token). Factor ids
+ * encode the signal, not a content hash, e.g.:
+ *   "entropy:file:js/jsonpath.js"                         -> tool=entropy, file=js/jsonpath.js
+ *   "sast:src...base64_encoded_data:service_worker.js"    -> tool=sast,    file=service_worker.js
+ *   "perm:high_risk:cookies" / "manifest:issue:missing_csp" / "combo:broad_host_access"
+ * The file is the last ":"-segment (extension file paths use "/", not ":");
+ * the token is that same last segment, used for permission/manifest references.
+ */
+function parseSyntheticEvidenceId(id: unknown): { tool: string; file: string; token: string } {
+  if (typeof id !== 'string' || !id.includes(':')) return { tool: '', file: '', token: '' };
+  const parts = id.split(':');
+  const last = parts[parts.length - 1];
+  return { tool: parts[0].toLowerCase(), file: last, token: last };
+}
+
+/**
+ * Index signal_pack.evidence by `${tool_name}::${file_path}` so a factor's
+ * synthetic id (which shares the tool + file, not the content hash) can be
+ * resolved to the real file/line/snippet the payload already carries.
+ */
+function buildSignalPackFileIndex(raw: RawScanResult): Record<string, EvidenceItemVM> {
+  const idx: Record<string, EvidenceItemVM> = {};
+  try {
+    extractEvidenceItems(raw).forEach(({ evidence }) => {
+      if (evidence && evidence.toolName && evidence.filePath) {
+        idx[`${String(evidence.toolName).toLowerCase()}::${evidence.filePath}`] = evidence;
+      }
+    });
+  } catch { /* never throw — evidence is best-effort */ }
+  return idx;
+}
+
+/** Resolve the first file-backed (sast/entropy) synthetic id to its signal-pack evidence. */
+function resolveSyntheticCodeEvidence(
+  ids: string[],
+  fileIndex: Record<string, EvidenceItemVM>,
+): EvidenceItemVM | null {
+  for (const id of ids) {
+    const { tool, file } = parseSyntheticEvidenceId(id);
+    if ((tool === 'sast' || tool === 'entropy') && file) {
+      const hit = fileIndex[`${tool}::${file}`];
+      if (hit && hit.filePath) return hit;
+    }
+  }
+  return null;
+}
+
+/**
  * Resolve a structured evidence reference for a scoring-factor finding using the
  * evidence the payload already carries. Never fabricates: returns
  * `{ available: false }` when nothing is resolvable.
@@ -1037,16 +1123,21 @@ function resolveFactorEvidence(
     manifest?: { permissions?: unknown; host_permissions?: unknown };
     metadata?: { last_updated?: unknown };
   };
+  // Synthetic factor ids (entropy:file:*, sast:*:file) don't match the
+  // content-hash-keyed evidence index; resolve them by (tool, file) instead.
+  const fileIndex = buildSignalPackFileIndex(raw);
 
-  // SAST / obfuscation — resolve the first evidence item to file/line/snippet.
+  // SAST / obfuscation — resolve to file/line/snippet, first by direct id then by
+  // the (tool, file) match against signal_pack.evidence.
   if (name === 'SAST' || name === 'Obfuscation') {
-    const first = ids.map((id) => evLookup[id]).find(Boolean);
-    if (first && first.filePath) {
+    const direct = ids.map((id) => evLookup[id]).find((e) => e && e.filePath);
+    const hit = direct || resolveSyntheticCodeEvidence(ids, fileIndex);
+    if (hit && hit.filePath) {
       return {
         kind: 'sast', available: true,
-        filePath: first.filePath, lineStart: first.lineStart, lineEnd: first.lineEnd,
-        snippet: first.snippet, evidenceIds: ids, sourceViewerPath: first.filePath,
-        label: codeEvidenceLabel(first.filePath, first.lineStart),
+        filePath: hit.filePath, lineStart: hit.lineStart, lineEnd: hit.lineEnd,
+        snippet: hit.snippet, evidenceIds: ids, sourceViewerPath: hit.filePath,
+        label: codeEvidenceLabel(hit.filePath, hit.lineStart),
       };
     }
     return { kind: 'sast', available: false, evidenceIds: ids };
@@ -1070,18 +1161,37 @@ function resolveFactorEvidence(
     return { kind: 'virustotal', available: false };
   }
 
-  // Manifest / permission factors — permission + host permission references.
+  // Manifest / permission factors — surface the SPECIFIC permission or manifest
+  // issue named in the synthetic evidence id, falling back to the manifest.
   if (['Manifest', 'PermissionsBaseline', 'PermissionCombos', 'CaptureSignals', 'NetworkExfil'].includes(name)) {
     const manifest = anyRaw.manifest || {};
     const perms: string[] = Array.isArray(manifest.permissions) ? manifest.permissions as string[] : [];
     const hosts: string[] = Array.isArray(manifest.host_permissions) ? manifest.host_permissions as string[] : [];
     const details = (factor.details || {}) as { description?: unknown };
     const explanation = typeof details.description === 'string' ? details.description : undefined;
-    if (perms.length || hosts.length || explanation) {
+    const tokens = ids.map((id) => parseSyntheticEvidenceId(id).token).filter(Boolean);
+    const token = tokens[0];
+
+    if (name === 'Manifest') {
+      // token is a manifest issue (e.g. missing_csp, broad_host_access)
+      const issue = token;
+      if (issue || hosts.length || explanation) {
+        return {
+          kind: 'manifest', available: true,
+          manifestField: issue || 'permissions', hostPermission: hosts[0], explanation,
+          label: issue ? issue.replace(/_/g, ' ') : (perms[0] || hosts[0] || 'manifest'),
+        };
+      }
+      return { kind: 'manifest', available: false };
+    }
+
+    // Permission / combo / capture — token is the specific permission or signal.
+    const permission = token || perms[0];
+    if (permission || hosts.length || explanation) {
       return {
         kind: 'manifest', available: true,
-        permission: perms[0], hostPermission: hosts[0], manifestField: 'permissions',
-        explanation, label: perms[0] || hosts[0] || 'manifest',
+        permission, hostPermission: hosts[0], manifestField: 'permissions', explanation,
+        label: permission || hosts[0] || 'manifest',
       };
     }
     return { kind: 'manifest', available: false };
@@ -1097,13 +1207,15 @@ function resolveFactorEvidence(
     };
   }
 
-  // Fallback: resolve any evidence ids to code, else mark unavailable (summary-only).
-  const first = ids.map((id) => evLookup[id]).find(Boolean);
-  if (first && first.filePath) {
+  // Fallback: resolve any evidence ids to code (direct or synthetic), else
+  // mark unavailable (summary-only).
+  const direct = ids.map((id) => evLookup[id]).find((e) => e && e.filePath);
+  const hit = direct || resolveSyntheticCodeEvidence(ids, fileIndex);
+  if (hit && hit.filePath) {
     return {
-      kind: 'sast', available: true, filePath: first.filePath,
-      lineStart: first.lineStart, lineEnd: first.lineEnd, snippet: first.snippet,
-      evidenceIds: ids, sourceViewerPath: first.filePath, label: codeEvidenceLabel(first.filePath, first.lineStart),
+      kind: 'sast', available: true, filePath: hit.filePath,
+      lineStart: hit.lineStart, lineEnd: hit.lineEnd, snippet: hit.snippet,
+      evidenceIds: ids, sourceViewerPath: hit.filePath, label: codeEvidenceLabel(hit.filePath, hit.lineStart),
     };
   }
   return { kind: 'summary', available: false, evidenceIds: ids };

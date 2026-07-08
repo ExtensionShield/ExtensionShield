@@ -962,6 +962,36 @@
   line-height: 1.45;
   color: var(--extensionshield-text-secondary);
 }
+.finding-evidence-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--extensionshield-surface-muted, rgba(0, 0, 0, 0.03));
+  font-size: 0.8rem;
+  line-height: 1.4;
+
+  .fed-row { display: flex; gap: 6px; min-width: 0; }
+  .fed-key {
+    flex: 0 0 auto;
+    min-width: 84px;
+    font-weight: 600;
+    color: var(--extensionshield-text-secondary);
+  }
+  .fed-val { min-width: 0; overflow-wrap: anywhere; color: var(--extensionshield-text-primary); }
+  .fed-snippet {
+    margin: 2px 0 0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--extensionshield-code-bg, rgba(0, 0, 0, 0.06));
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
 .finding-severity {
   font-size: 0.7rem;
   font-weight: 700;

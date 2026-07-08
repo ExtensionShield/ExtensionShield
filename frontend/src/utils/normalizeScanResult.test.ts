@@ -17,6 +17,7 @@ import {
   hasScoring,
   hasScoringV2,
   coherentRiskLevel,
+  extractFindingsByLayer,
 } from './normalizeScanResult';
 import type { RawScanResult, ReportViewModel } from './reportTypes';
 
@@ -1327,5 +1328,130 @@ describe('Key Findings evidence links', () => {
     } as unknown as RawScanResult;
     const vm = normalizeScanResult(raw);
     expect(vm.keyFindings.some((k) => k.title === 'Publisher update age')).toBe(false);
+  });
+});
+
+// =============================================================================
+// EVIDENCE-LINKED KEY FINDINGS — synthetic-id resolution (audit follow-up)
+// =============================================================================
+
+describe('Key Findings synthetic evidence resolution', () => {
+  it('SAST-extracted finding (Google Docs style) maps to file + line + snippet', () => {
+    const raw = {
+      extension_id: 'gdocsev1234567890abcdefghijklmno',
+      sast_results: { sast_findings: { 'service_worker_bin_prod.js': [
+        { check_id: 'src.extension_shield.config.c2.exfiltration.base64_encoded_data',
+          start: { line: 58 }, path: 'service_worker_bin_prod.js',
+          extra: { severity: 'WARNING', message: 'Sends encoded data', lines: 'btoa(payload)' } },
+      ] } },
+      governance_bundle: { signal_pack: { evidence: [
+        { evidence_id: 'tool:sast:26605a6f', tool_name: 'sast', file_path: 'service_worker_bin_prod.js', line_start: 58 },
+      ] } },
+    } as unknown as RawScanResult;
+    const findings = extractFindingsByLayer(raw).security;
+    const coded = findings.find((f) => f.evidence && f.evidence.filePath === 'service_worker_bin_prod.js');
+    expect(coded).toBeDefined();
+    expect(coded!.evidence!.available).toBe(true);
+    expect(coded!.evidence!.lineStart).toBe(58);
+    expect(coded!.evidence!.snippet).toBe('btoa(payload)');
+    // no longer "Evidence not linked": there is structured, available evidence
+    expect(coded!.evidence!.kind).toBe('sast');
+  });
+
+  it('entropy/hidden-code factor (uBlock Lite style) maps to file path via signal_pack', () => {
+    const raw = {
+      extension_id: 'ublockev1234567890abcdefghijklmn',
+      final_verdict: 'ALLOW',
+      scoring_v2: {
+        overall_score: 86, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 82, risk: 0.18, confidence: 0.9, factors: [
+          { name: 'Obfuscation', severity: 0.99, confidence: 0.9, weight: 0.1, contribution: 0.2,
+            evidence_ids: ['entropy:file:js/jsonpath.js', 'entropy:file:rulesets/x.js'] },
+        ] },
+      },
+      governance_bundle: { signal_pack: { evidence: [
+        { evidence_id: 'tool:entropy:6572', tool_name: 'entropy', file_path: 'js/jsonpath.js' },
+      ] } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const hidden = vm.keyFindings.find((k) => k.title === 'Hidden Code');
+    expect(hidden).toBeDefined();
+    expect(hidden!.evidence!.available).toBe(true);
+    expect(hidden!.evidence!.filePath).toBe('js/jsonpath.js');
+  });
+
+  it('permission factor surfaces the specific permission from the synthetic id', () => {
+    const raw = {
+      extension_id: 'permev12345678901abcdefghijklmno',
+      final_verdict: 'ALLOW',
+      manifest: { permissions: ['storage', 'cookies'], host_permissions: ['<all_urls>'] },
+      scoring_v2: {
+        overall_score: 70, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        privacy_layer: { layer_name: 'privacy', score: 60, risk: 0.4, confidence: 0.9, factors: [
+          { name: 'PermissionsBaseline', severity: 0.67, confidence: 0.9, weight: 0.4, contribution: 0.2,
+            evidence_ids: ['perm:high_risk:desktopCapture', 'perm:high_risk:cookies'] },
+        ] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const perm = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'manifest');
+    expect(perm).toBeDefined();
+    expect(perm!.evidence!.permission).toBe('desktopCapture');
+  });
+
+  it('manifest factor surfaces the specific manifest issue from the synthetic id', () => {
+    const raw = {
+      extension_id: 'maniev123456789012abcdefghijklmn',
+      final_verdict: 'ALLOW',
+      manifest: { permissions: ['storage'], host_permissions: ['<all_urls>'] },
+      scoring_v2: {
+        overall_score: 80, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 78, risk: 0.22, confidence: 0.9, factors: [
+          { name: 'Manifest', severity: 0.6, confidence: 0.9, weight: 0.2, contribution: 0.12,
+            evidence_ids: ['manifest:issue:missing_csp', 'manifest:issue:broad_host_access'] },
+        ] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const mani = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'manifest');
+    expect(mani).toBeDefined();
+    expect(mani!.evidence!.manifestField).toBe('missing_csp');
+  });
+
+  it('a factor whose synthetic evidence has no matching signal_pack file stays summary-only', () => {
+    const raw = {
+      extension_id: 'noevmatch123456789abcdefghijklmn',
+      final_verdict: 'ALLOW',
+      scoring_v2: {
+        overall_score: 80, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 80, risk: 0.2, confidence: 0.9, factors: [
+          { name: 'Obfuscation', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.1,
+            evidence_ids: ['entropy:file:js/absent.js'] },
+        ] },
+      },
+      governance_bundle: { signal_pack: { evidence: [] } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const hidden = vm.keyFindings.find((k) => k.title === 'Hidden Code');
+    expect(hidden).toBeDefined();
+    expect(hidden!.evidence!.available).toBe(false);
+  });
+
+  it('coverage-cap ordering is preserved (coverage first) with evidence attached', () => {
+    const raw = {
+      extension_id: 'ordev1234567890123abcdefghijklmn',
+      final_verdict: 'NEEDS_REVIEW',
+      scoring_v2: {
+        overall_score: 65, decision: 'NEEDS_REVIEW', risk_level: 'medium', hard_gates_triggered: [], coverage_cap_applied: true,
+        security_layer: { layer_name: 'security', score: 65, risk: 0.35, confidence: 0.9, factors: [
+          { name: 'Obfuscation', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.1, evidence_ids: ['entropy:file:js/x.js'] },
+        ] },
+      },
+      sast_results: { scan_error: true, files_scanned: 0, sast_findings: {} },
+      virustotal_analysis: { enabled: true, files_found_in_vt: 5 },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings[0].title).toBe('Limited code coverage');
+    expect(vm.keyFindings[0].evidence!.analyzer).toBe('SAST');
   });
 });
