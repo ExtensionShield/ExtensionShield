@@ -1010,6 +1010,10 @@
   font-size: 0.82rem;
   color: var(--extensionshield-text-muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 28ch;
 }
 .finding-actions { display: flex; align-items: center; gap: 6px; }
 .finding-view-evidence {

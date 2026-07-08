@@ -18,6 +18,7 @@ import {
   hasScoringV2,
   coherentRiskLevel,
   extractFindingsByLayer,
+  toRelativeEvidencePath,
 } from './normalizeScanResult';
 import type { RawScanResult, ReportViewModel } from './reportTypes';
 
@@ -1453,5 +1454,104 @@ describe('Key Findings synthetic evidence resolution', () => {
     const vm = normalizeScanResult(raw);
     expect(vm.keyFindings[0].title).toBe('Limited code coverage');
     expect(vm.keyFindings[0].evidence!.analyzer).toBe('SAST');
+  });
+});
+
+// =============================================================================
+// EVIDENCE PATH NORMALIZATION — no local filesystem leaks (audit follow-up)
+// =============================================================================
+
+const LEAK_FRAGMENTS = ['/Users/', '/home/', 'extensions_storage', 'extracted_'];
+const ABS_PATH = '/Users/stanzin/Developer/ExtensionShield/extensions_storage/extracted_ghbmnn.crx_85418/service_worker_bin_prod.js';
+
+describe('toRelativeEvidencePath', () => {
+  it('strips the local prefix down to the archive-relative path', () => {
+    expect(toRelativeEvidencePath(ABS_PATH)).toBe('service_worker_bin_prod.js');
+    expect(toRelativeEvidencePath('/Users/x/ExtensionShield/extensions_storage/extracted_xxx/js/background.js'))
+      .toBe('js/background.js');
+    expect(toRelativeEvidencePath('/home/ci/extensions_storage/extracted_y/js/background-combo.js'))
+      .toBe('js/background-combo.js');
+  });
+
+  it('keeps already-relative paths unchanged', () => {
+    expect(toRelativeEvidencePath('js/jsonpath.js')).toBe('js/jsonpath.js');
+    expect(toRelativeEvidencePath('service_worker_bin_prod.js')).toBe('service_worker_bin_prod.js');
+  });
+
+  it('falls back to the basename for any other absolute/local path (no leak)', () => {
+    expect(toRelativeEvidencePath('/Users/stanzin/secret/app.js')).toBe('app.js');
+    expect(toRelativeEvidencePath('C:/Users/dev/ext/background.js')).toBe('background.js');
+  });
+
+  it('never emits a local machine/user path fragment', () => {
+    for (const p of [ABS_PATH, '/home/ci/extensions_storage/extracted_a/js/x.js', 'C:/Users/d/y.js']) {
+      const out = toRelativeEvidencePath(p);
+      for (const frag of LEAK_FRAGMENTS) expect(out.includes(frag)).toBe(false);
+    }
+  });
+});
+
+describe('Key Findings evidence display uses relative paths (no local leak)', () => {
+  it('SAST finding with an absolute finding.path renders a relative file:line and preserves raw sourceViewerPath', () => {
+    const raw = {
+      extension_id: 'relpath1234567890abcdefghijklmno',
+      sast_results: { sast_findings: { 'service_worker_bin_prod.js': [
+        { check_id: 'src.extension_shield.config.c2.exfiltration.base64_encoded_data',
+          start: { line: 58 }, path: ABS_PATH,
+          extra: { severity: 'WARNING', message: 'Sends encoded data', lines: 'btoa(payload)' } },
+      ] } },
+      governance_bundle: { signal_pack: { evidence: [
+        { evidence_id: 'tool:sast:26605a6f', tool_name: 'sast', file_path: 'service_worker_bin_prod.js', line_start: 58 },
+      ] } },
+    } as unknown as RawScanResult;
+    const coded = extractFindingsByLayer(raw).security.find((f) => f.evidence && f.evidence.available && f.evidence.filePath);
+    expect(coded).toBeDefined();
+    // Displayed path + label are relative...
+    expect(coded!.evidence!.filePath).toBe('service_worker_bin_prod.js');
+    expect(coded!.evidence!.label).toBe('service_worker_bin_prod.js:58');
+    // ...while the raw path is preserved internally for the source viewer.
+    expect(coded!.evidence!.sourceViewerPath).toBe(ABS_PATH);
+    // No leak in the displayed fields.
+    for (const frag of LEAK_FRAGMENTS) {
+      expect(String(coded!.evidence!.filePath).includes(frag)).toBe(false);
+      expect(String(coded!.evidence!.label).includes(frag)).toBe(false);
+    }
+  });
+
+  it('governance rule label is unchanged by path normalization', () => {
+    const raw = {
+      extension_id: 'govrule1234567890abcdefghijklmno',
+      final_verdict: 'NEEDS_REVIEW',
+      scoring_v2: { overall_score: 80, decision: 'NEEDS_REVIEW', risk_level: 'low', hard_gates_triggered: [] },
+      governance_bundle: { decision: {
+        final_verdict: 'NEEDS_REVIEW',
+        final_reasons: ['Verify clipboard access'],
+        rationale: '[CWS_LIMITED_USE::R5] matched',
+      } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const gov = vm.keyFindings.find((k) => k.evidence && k.evidence.kind === 'governance' && k.evidence.rulepack);
+    expect(gov!.evidence!.label).toBe('Rule CWS_LIMITED_USE::R5');
+  });
+
+  it('no key finding evidence field leaks a local path fragment (Obfuscation w/ absolute-looking source)', () => {
+    const raw = {
+      extension_id: 'noleakkf1234567890abcdefghijklmn',
+      final_verdict: 'ALLOW',
+      scoring_v2: {
+        overall_score: 86, decision: 'ALLOW', risk_level: 'low', hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 82, risk: 0.18, confidence: 0.9, factors: [
+          { name: 'Obfuscation', severity: 0.9, confidence: 0.9, weight: 0.1, contribution: 0.2, evidence_ids: ['entropy:file:js/jsonpath.js'] },
+        ] },
+      },
+      governance_bundle: { signal_pack: { evidence: [
+        { evidence_id: 'tool:entropy:6572', tool_name: 'entropy', file_path: 'js/jsonpath.js' },
+      ] } },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const displayText = vm.keyFindings
+      .map((k) => `${k.title} ${k.evidence?.label || ''} ${k.evidence?.filePath || ''}`)
+      .join(' | ');
+    for (const frag of LEAK_FRAGMENTS) expect(displayText.includes(frag)).toBe(false);
   });
 });

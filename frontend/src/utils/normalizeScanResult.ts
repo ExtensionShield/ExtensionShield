@@ -643,7 +643,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
       const lineStart = f.lineNum ?? spHit?.lineStart ?? null;
       const evidence: KeyFindingEvidence = filePath
         ? {
-            kind: 'sast', available: true, filePath,
+            kind: 'sast', available: true, filePath: toRelativeEvidencePath(filePath),
             lineStart, lineEnd: spHit?.lineEnd ?? null,
             snippet: f.snippet ?? spHit?.snippet, sourceViewerPath: filePath,
             label: codeEvidenceLabel(filePath, lineStart), evidenceIds: [],
@@ -1053,9 +1053,33 @@ function parseRulepackRule(rationale: unknown): { rulepack?: string; ruleId?: st
   return m ? { rulepack: m[1], ruleId: m[2] } : {};
 }
 
+/**
+ * Normalize a code-evidence path for DISPLAY: strip any local/machine prefix so
+ * only the extension/archive-relative path is shown (e.g.
+ * "/Users/…/extensions_storage/extracted_xxx/js/background.js" -> "js/background.js").
+ * Never returns a string containing "/Users/", "/home/", a drive root,
+ * "extensions_storage" or "extracted_". The raw path is preserved separately
+ * (evidence.sourceViewerPath) for internal use.
+ */
+export function toRelativeEvidencePath(path: unknown): string {
+  if (typeof path !== 'string' || !path) return '';
+  const s = path.replace(/\\/g, '/');
+  // Prefer the archive-relative tail after the extraction dir.
+  const extracted = s.match(/(?:^|\/)extracted_[^/]*\/(.+)$/);
+  if (extracted) return extracted[1];
+  const storage = s.match(/(?:^|\/)extensions_storage\/(.+)$/);
+  if (storage) return storage[1];
+  // Any remaining absolute/local path -> keep only the basename to avoid leaks.
+  if (s.startsWith('/') || /^[a-zA-Z]:\//.test(s) || /\/(?:Users|home)\//i.test(s)) {
+    return s.split('/').filter(Boolean).pop() || '';
+  }
+  return s;
+}
+
 function codeEvidenceLabel(filePath?: string, lineStart?: number | null): string | undefined {
   if (!filePath) return undefined;
-  return typeof lineStart === 'number' && lineStart > 0 ? `${filePath}:${lineStart}` : filePath;
+  const rel = toRelativeEvidencePath(filePath);
+  return typeof lineStart === 'number' && lineStart > 0 ? `${rel}:${lineStart}` : rel;
 }
 
 /**
@@ -1135,7 +1159,7 @@ function resolveFactorEvidence(
     if (hit && hit.filePath) {
       return {
         kind: 'sast', available: true,
-        filePath: hit.filePath, lineStart: hit.lineStart, lineEnd: hit.lineEnd,
+        filePath: toRelativeEvidencePath(hit.filePath), lineStart: hit.lineStart, lineEnd: hit.lineEnd,
         snippet: hit.snippet, evidenceIds: ids, sourceViewerPath: hit.filePath,
         label: codeEvidenceLabel(hit.filePath, hit.lineStart),
       };
@@ -1213,7 +1237,7 @@ function resolveFactorEvidence(
   const hit = direct || resolveSyntheticCodeEvidence(ids, fileIndex);
   if (hit && hit.filePath) {
     return {
-      kind: 'sast', available: true, filePath: hit.filePath,
+      kind: 'sast', available: true, filePath: toRelativeEvidencePath(hit.filePath),
       lineStart: hit.lineStart, lineEnd: hit.lineEnd, snippet: hit.snippet,
       evidenceIds: ids, sourceViewerPath: hit.filePath, label: codeEvidenceLabel(hit.filePath, hit.lineStart),
     };
