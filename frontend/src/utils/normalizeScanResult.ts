@@ -1068,6 +1068,46 @@ function buildCoverageKeyFindings(
 }
 
 /**
+ * Promote the governance Decision Authority's review/block reasons into Key
+ * Findings when a governance RULE (rulepack) — not a hard gate — drives the
+ * final verdict. Without this, a NEEDS_REVIEW/BLOCK caused by e.g. "Verify
+ * clipboard access is limited to user-initiated copy/paste" is invisible in Key
+ * Findings, leaving only an advisory factor (like publisher update age) showing.
+ *
+ * A triggered hard gate already produces its own prominent Key Finding, so this
+ * only fires when no gate did — the exact case where the real reason is hidden.
+ */
+function buildGovernanceReasonKeyFindings(
+  scoringV2: RawScoringV2 | null,
+  raw: RawScanResult
+): KeyFindingVM[] {
+  const hardGates = scoringV2?.hard_gates_triggered || [];
+  if (hardGates.length > 0) return [];
+
+  const verdict = (resolveFinalVerdict(raw, scoringV2) || '').toUpperCase();
+  if (verdict !== 'NEEDS_REVIEW' && verdict !== 'WARN' && verdict !== 'BLOCK') return [];
+
+  const decision = (raw.governance_bundle?.decision || {}) as {
+    final_reasons?: unknown; action_required?: unknown;
+  };
+  let reasons = (Array.isArray(decision.final_reasons) ? decision.final_reasons : [])
+    .filter((r): r is string => typeof r === 'string' && r.trim() !== '');
+  if (reasons.length === 0 && typeof decision.action_required === 'string' && decision.action_required.trim()) {
+    reasons = [decision.action_required];
+  }
+  if (reasons.length === 0) return [];
+
+  const severity: FindingSeverity = verdict === 'BLOCK' ? 'high' : 'medium';
+  return reasons.slice(0, 3).map((reason) => ({
+    title: reason,
+    severity,
+    layer: 'governance' as const,
+    summary: reason,
+    evidenceIds: [],
+  }));
+}
+
+/**
  * Build key findings from scoring_v2 data
  */
 function buildKeyFindings(
@@ -1094,26 +1134,36 @@ function buildKeyFindings(
   // real reason the extension needs review.
   buildCoverageKeyFindings(scoringV2, raw).forEach((f) => findings.push(f));
 
+  // 1c. Promote the governance Decision Authority's review/block reasons when a
+  // rulepack rule (not a hard gate) drives the verdict, so the actual review
+  // cause appears ahead of ordinary factor findings.
+  buildGovernanceReasonKeyFindings(scoringV2, raw).forEach((f) => findings.push(f));
+
   // 2. Add top 3 factors by riskContribution where severity >= 0.4
   const allFactors: Array<FactorVM & { layer: 'security' | 'privacy' | 'governance' }> = [];
   
   if (scoringV2?.security_layer?.factors) {
     scoringV2.security_layer.factors.forEach((f: RawFactorScore) => {
-      if ((f.severity ?? 0) >= 0.4) {
-        allFactors.push({
-          name: safeGet(f.name, 'Unknown'),
-          severity: safeGet(f.severity, 0),
-          confidence: safeGet(f.confidence, 0),
-          weight: f.weight,
-          riskContribution: f.contribution,
-          evidenceIds: safeGet(f.evidence_ids, []),
-          details: f.details,
-          layer: 'security',
-        });
-      }
+      const sev = f.severity ?? 0;
+      if (sev < 0.4) return;
+      // Publisher update age (Maintenance) under ~180 days (severity <= 0.4) is
+      // routine context, not direct security evidence — keep it as layer detail,
+      // never a Key Finding. It becomes eligible only at >180 days (severity >=
+      // 0.6), and even then stays advisory (capped below) unless corroborated.
+      if (f.name === 'Maintenance' && sev < 0.6) return;
+      allFactors.push({
+        name: safeGet(f.name, 'Unknown'),
+        severity: safeGet(f.severity, 0),
+        confidence: safeGet(f.confidence, 0),
+        weight: f.weight,
+        riskContribution: f.contribution,
+        evidenceIds: safeGet(f.evidence_ids, []),
+        details: f.details,
+        layer: 'security',
+      });
     });
   }
-  
+
   if (scoringV2?.privacy_layer?.factors) {
     scoringV2.privacy_layer.factors.forEach((f: RawFactorScore) => {
       if ((f.severity ?? 0) >= 0.4) {
