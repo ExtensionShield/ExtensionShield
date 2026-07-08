@@ -8,7 +8,6 @@ import {
   getSignalColorClass,
   getSignalDisplayLabel,
   resolveScanVerdict,
-  resolveRowProvenance,
 } from "../../utils/signalMapper";
 import RiskVerdictBadge from "../../components/report/RiskVerdictBadge";
 import { enrichScans } from "../../utils/scanEnrichment";
@@ -761,7 +760,7 @@ const ScannerPage = () => {
                           )}
                         </td>
                         <td>
-                          <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} warnings={resolveRowProvenance(scan).warnings} />
+                          <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} />
                         </td>
                         <td className="signals-cell">
                           <div className="signals-container">

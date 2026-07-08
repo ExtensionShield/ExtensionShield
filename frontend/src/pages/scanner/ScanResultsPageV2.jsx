@@ -36,6 +36,7 @@ import SEOHead from "../../components/SEOHead";
 import ScanActivityIndicator from "../../components/ScanActivityIndicator";
 import { useScan } from "../../context/ScanContext";
 import realScanService from "../../services/realScanService";
+import AdminRescanButton from "../../components/report/AdminRescanButton";
 import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extractFindingsByLayer } from "../../utils/normalizeScanResult";
 import { getExtensionIconUrl, EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
 import { isUUID } from "../../utils/extensionId";
@@ -640,6 +641,7 @@ const ScanResultsPageV2 = () => {
         <Link to="/scan" className="nav-back">
           ← Back
         </Link>
+        <AdminRescanButton url={isPrivateScan ? null : chromeStoreUrl} scanId={scanId} />
       </nav>
 
       {/* Status Messages */}
