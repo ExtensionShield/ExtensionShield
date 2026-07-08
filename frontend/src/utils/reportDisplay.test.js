@@ -120,6 +120,19 @@ describe('resolveAnalyzerCoverage — honest coverage states', () => {
     expect(at(rows, 'virustotal').state).toBe('partial');
   });
 
+  it('VirusTotal hash-not-found is Limited coverage — never malware, never clean/full', () => {
+    const rows = resolveAnalyzerCoverage({
+      virustotal_analysis: { enabled: true, files_analyzed: 5, files_found_in_vt: 0 },
+    });
+    const vt = at(rows, 'virustotal');
+    expect(vt.state).toBe('limited');
+    expect(vt.statusText).toMatch(/not found in the VirusTotal database/i);
+    // Unknown reputation must not read as a malware detection...
+    expect(vt.statusText).not.toMatch(/flagged|malicious|malware/i);
+    // ...nor as a clean/full pass.
+    expect(vt.state).not.toBe('full');
+  });
+
   it('Chrome Web Store listing with metadata is Full; ChromeStats absent is Not run', () => {
     const rows = resolveAnalyzerCoverage({
       metadata: { user_count: 1000, rating: 4.5, version: '1.0' },

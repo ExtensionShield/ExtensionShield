@@ -411,6 +411,27 @@ function severityToFindingLevel(severity: number): FindingSeverity {
   return 'low';
 }
 
+/**
+ * Floor a displayed/serialized risk level so it can never contradict the
+ * authoritative verdict. A BLOCK must not read as "low"/"none"; a NEEDS_REVIEW
+ * (WARN) must not imply fully safe. ALLOW / unrated pass through unchanged.
+ *
+ * Display/serialization coherence only — it does NOT change any numeric score,
+ * weight, or the stored risk_level; it only prevents the displayed band from
+ * telling a different story than the verdict.
+ */
+export function coherentRiskLevel(
+  decision: string | null | undefined,
+  riskLevel: string | null | undefined
+): string | null | undefined {
+  const verdict = (decision || '').toUpperCase();
+  const level = (riskLevel || '').toLowerCase();
+  const readsSafe = level === 'low' || level === 'none' || level === '';
+  if (verdict === 'BLOCK') return readsSafe ? 'high' : riskLevel;
+  if (verdict === 'WARN' || verdict === 'NEEDS_REVIEW') return readsSafe ? 'medium' : riskLevel;
+  return riskLevel;
+}
+
 const GATE_HUMAN_TITLE: Record<string, string> = {
   CRITICAL_SAST: 'Dangerous code pattern detected',
   SENSITIVE_EXFIL: 'May send your data to external servers',
@@ -431,7 +452,7 @@ const FACTOR_HUMAN_TITLE: Record<string, string> = {
   Manifest: 'Extension Config',
   ChromeStats: 'Threat Intel',
   Webstore: 'Store Reputation',
-  Maintenance: 'Update Freshness',
+  Maintenance: 'Publisher update age',
   PermissionsBaseline: 'Permission Risk',
   PermissionCombos: 'Dangerous Combos',
   NetworkExfil: 'Data Sharing',
@@ -974,6 +995,79 @@ function buildEvidenceIndex(raw: RawScanResult): Record<string, EvidenceItemVM> 
 }
 
 /**
+ * Build "limited coverage" key findings from the coverage-cap / insufficient-data
+ * state. When an analyzer could not clear the extension (SAST failed, no
+ * analyzable code was scanned, or VirusTotal reputation was unavailable), THAT —
+ * not an ordinary factor like publisher update age — is the real reason the
+ * extension needs review. These are surfaced ahead of factor findings so the
+ * headline reason matches the score driver. They are coverage limitations, not
+ * confirmed threats (each summary says so explicitly).
+ */
+function buildCoverageKeyFindings(
+  scoringV2: RawScoringV2 | null,
+  raw: RawScanResult
+): KeyFindingVM[] {
+  const anyV2 = (scoringV2 || {}) as { coverage_cap_applied?: boolean; coverage_cap_reason?: string };
+  const anyRaw = (raw || {}) as {
+    scoring_v2?: { coverage_cap_applied?: boolean };
+    governance_bundle?: { scoring_v2?: { coverage_cap_applied?: boolean; coverage_cap_reason?: string }; signal_pack?: Record<string, any> };
+    sast_results?: { scan_error?: boolean; files_scanned?: number; filesScanned?: number; sast_findings?: Record<string, unknown>; sastFindings?: Record<string, unknown> };
+    virustotal_analysis?: { enabled?: boolean; files_found_in_vt?: number };
+  };
+
+  const capApplied = Boolean(
+    anyV2.coverage_cap_applied ||
+    anyRaw.scoring_v2?.coverage_cap_applied ||
+    anyRaw.governance_bundle?.scoring_v2?.coverage_cap_applied
+  );
+  const insufficient = resolveInsufficientData(raw, scoringV2);
+  if (!capApplied && !insufficient) return [];
+
+  const findings: KeyFindingVM[] = [];
+  const mk = (title: string, summary: string): KeyFindingVM => ({
+    title, severity: 'high', layer: 'security', summary, evidenceIds: [],
+  });
+
+  const sp = (anyRaw.governance_bundle?.signal_pack || {}) as Record<string, any>;
+  const sast = (sp.sast || anyRaw.sast_results || {}) as {
+    scan_error?: boolean; files_scanned?: number; filesScanned?: number;
+    sast_findings?: Record<string, unknown>; sastFindings?: Record<string, unknown>;
+  };
+  const sastFiles = Number(sast.files_scanned ?? sast.filesScanned ?? 0);
+  const sastFindings = sast.sast_findings || sast.sastFindings;
+  const sastFindingsCount = sastFindings && typeof sastFindings === 'object' ? Object.keys(sastFindings).length : 0;
+  const sastRan = sastFiles > 0 || sastFindingsCount > 0;
+
+  if (sast.scan_error) {
+    findings.push(mk('Limited code coverage',
+      'The code analyzer (SAST) did not complete, so the extension’s code could not be checked. This is why it needs review — not a confirmed threat.'));
+  } else if (!sastRan) {
+    findings.push(mk('No analyzable code scanned',
+      'No analyzable code was scanned (often minified or bundled code). The code was not statically analyzed, so it cannot be cleared as safe.'));
+  }
+
+  const vt = (sp.virustotal || {}) as { enabled?: boolean; total_engines?: number; files_found_in_vt?: number };
+  const vtSummary = anyRaw.virustotal_analysis || {};
+  const vtEnabled = vt.enabled ?? vtSummary.enabled;
+  const vtEngines = Number(vt.total_engines ?? 0);
+  const vtFound = Number(vtSummary.files_found_in_vt ?? vt.files_found_in_vt ?? 0);
+  const vtAvailable = vtEnabled !== false && (vtEngines > 0 || vtFound > 0);
+  if (!vtAvailable) {
+    findings.push(mk('Limited malware reputation coverage',
+      'The extension’s files were not found in VirusTotal (or the malware scan was unavailable), so malware reputation could not be confirmed.'));
+  }
+
+  if (findings.length === 0) {
+    const reason = anyV2.coverage_cap_reason || anyRaw.governance_bundle?.scoring_v2?.coverage_cap_reason;
+    findings.push(mk('Limited analysis coverage',
+      typeof reason === 'string' && reason.trim()
+        ? reason
+        : 'Some analyzers did not run at scan time, so this extension could not be fully cleared.'));
+  }
+  return findings;
+}
+
+/**
  * Build key findings from scoring_v2 data
  */
 function buildKeyFindings(
@@ -981,7 +1075,7 @@ function buildKeyFindings(
   raw: RawScanResult
 ): KeyFindingVM[] {
   const findings: KeyFindingVM[] = [];
-  
+
   // 1. Add hard gates as high severity findings with correct layer classification
   const hardGates = scoringV2?.hard_gates_triggered || [];
   hardGates.forEach((gate: string) => {
@@ -994,7 +1088,12 @@ function buildKeyFindings(
       evidenceIds: [],
     });
   });
-  
+
+  // 1b. Promote coverage-cap / insufficient-data reasons ahead of ordinary factor
+  // findings (e.g. publisher update age) so the primary Key Finding explains the
+  // real reason the extension needs review.
+  buildCoverageKeyFindings(scoringV2, raw).forEach((f) => findings.push(f));
+
   // 2. Add top 3 factors by riskContribution where severity >= 0.4
   const allFactors: Array<FactorVM & { layer: 'security' | 'privacy' | 'governance' }> = [];
   
@@ -1049,6 +1148,14 @@ function buildKeyFindings(
     });
   }
   
+  // Publisher update age (Maintenance) is an advisory trust signal, not a
+  // code-safety finding. It must not be the SOLE high-severity key finding on its
+  // own — cap it at "medium" unless corroborated by a triggered gate or another
+  // genuinely high-severity factor.
+  const hasStrongEvidence =
+    hardGates.length > 0 ||
+    allFactors.some((f) => f.name !== 'Maintenance' && (f.severity ?? 0) >= 0.7);
+
   // Sort by contribution (descending) and take top 3
   allFactors
     .sort((a, b) => (b.riskContribution ?? 0) - (a.riskContribution ?? 0))
@@ -1057,12 +1164,18 @@ function buildKeyFindings(
       const humanTitle = humanizeFactorName(factor.name);
       const details = factor.details || {};
       const desc = typeof details === 'object' ? (details as any).description : '';
-      const level = factor.severity >= 0.7 ? 'significant' : factor.severity >= 0.4 ? 'moderate' : 'minor';
+
+      let findingSeverity = severityToFindingLevel(factor.severity);
+      if (factor.name === 'Maintenance' && findingSeverity === 'high' && !hasStrongEvidence) {
+        findingSeverity = 'medium';
+      }
+
+      const level = findingSeverity === 'high' ? 'significant' : findingSeverity === 'medium' ? 'moderate' : 'minor';
       const summary = desc || `${level.charAt(0).toUpperCase() + level.slice(1)} findings in ${humanTitle.toLowerCase()}`;
 
       findings.push({
         title: humanTitle,
-        severity: severityToFindingLevel(factor.severity),
+        severity: findingSeverity,
         layer: factor.layer,
         summary,
         evidenceIds: factor.evidenceIds,
@@ -1278,9 +1391,13 @@ export function normalizeScanResult(raw: RawScanResult): ReportViewModel {
     return bandFromScore(score);
   };
   
-  // Helper: get overall band (prefer overall risk_level, fallback to score thresholds)
+  // Helper: get overall band (prefer overall risk_level, fallback to score thresholds).
+  // The risk_level is floored by the authoritative verdict first, so a BLOCK/
+  // NEEDS_REVIEW can never render a "low"/"none" (green) overall band.
   const getOverallBand = (): ScoreBand => {
-    const riskLevelBand = bandFromRiskLevel(scoringV2?.risk_level);
+    const riskLevelBand = bandFromRiskLevel(
+      coherentRiskLevel(resolveFinalVerdict(raw, scoringV2), scoringV2?.risk_level)
+    );
     if (riskLevelBand !== null) return riskLevelBand;
     return bandFromScore(overallScore);
   };
