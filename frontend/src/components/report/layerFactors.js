@@ -9,7 +9,7 @@ const FACTOR_HUMAN = {
   Manifest:             { label: 'Extension Config',      category: 'code',   desc: 'Validates security settings in the extension manifest' },
   ChromeStats:          { label: 'Threat Intel',          category: 'threat', desc: 'Cross-references known threat databases' },
   Webstore:             { label: 'Store Reputation',      category: 'trust',  desc: 'Chrome Web Store ratings and user reviews' },
-  Maintenance:          { label: 'Update Freshness',      category: 'trust',  desc: 'How recently the extension was updated by its developer' },
+  Maintenance:          { label: 'Publisher update age',   category: 'trust',  desc: 'How recently the extension was updated by its developer' },
   PermissionsBaseline:  { label: 'Permission Risk',       category: 'access', desc: 'Evaluates the sensitivity of requested browser permissions' },
   PermissionCombos:     { label: 'Dangerous Combos',      category: 'access', desc: 'Flags risky combinations of permissions that enable data theft' },
   NetworkExfil:         { label: 'Data Sharing',          category: 'data',   desc: 'Detects if data is sent to external servers' },
@@ -45,11 +45,16 @@ export function humanizeFactor(factor) {
     desc: '',
   };
   const severity = factor.severity ?? 0;
+  // Publisher update age is a trust/caution signal, not a code-safety finding.
+  // It must never present as standalone "High severity" — cap it at an advisory
+  // "Caution" (amber) even when its raw severity is high (e.g. >365 days old).
+  const isAdvisoryTrust = factor.name === 'Maintenance';
   let status, statusType, tone;
   if (severity >= 0.4) {
     statusType = 'issues';
-    tone = severity >= 0.7 ? 'bad' : 'warn';
-    status = severity >= 0.7 ? 'High severity' : 'Issue';
+    const isHigh = severity >= 0.7 && !isAdvisoryTrust;
+    tone = isHigh ? 'bad' : 'warn';
+    status = isHigh ? 'High severity' : isAdvisoryTrust ? 'Caution' : 'Issue';
   } else if (isNotAnalyzed(factor)) {
     statusType = 'unknown';
     tone = 'neutral';

@@ -16,6 +16,7 @@ import {
   createEmptyReportViewModel,
   hasScoring,
   hasScoringV2,
+  coherentRiskLevel,
 } from './normalizeScanResult';
 import type { RawScanResult, ReportViewModel } from './reportTypes';
 
@@ -870,3 +871,174 @@ if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__runNormalizerAssertions = runRuntimeAssertions;
 }
 
+
+// =============================================================================
+// NARROW REPORTING/COVERAGE FIX TESTS (audit follow-up)
+// =============================================================================
+
+describe('Publisher update age (Maintenance) presentation', () => {
+  it('publisher age >365 days alone does NOT create a standalone HIGH key finding', () => {
+    const raw: RawScanResult = {
+      extension_id: 'staleonly1234567890abcdefghijklmn',
+      extension_name: 'Old But Clean',
+      scoring_v2: {
+        overall_score: 88,
+        security_score: 84,
+        privacy_score: 100,
+        governance_score: 100,
+        decision: 'NEEDS_REVIEW',
+        risk_level: 'low',
+        hard_gates_triggered: [],
+        security_layer: {
+          layer_name: 'security', score: 84, risk: 0.16, confidence: 0.9,
+          factors: [
+            { name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072, flags: ['stale_extension'] },
+          ],
+        },
+        privacy_layer: { layer_name: 'privacy', score: 100, risk: 0, confidence: 1, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+    } as unknown as RawScanResult;
+
+    const vm = normalizeScanResult(raw);
+    const maint = vm.keyFindings.find((f) => f.title === 'Publisher update age');
+    expect(maint).toBeDefined();
+    expect(maint!.severity).toBe('medium'); // advisory, NOT high
+    // No HIGH key finding at all (nothing corroborates the staleness).
+    expect(vm.keyFindings.some((f) => f.severity === 'high')).toBe(false);
+    // Renamed label — "Update Freshness" must not appear.
+    expect(vm.keyFindings.some((f) => /Update Freshness/i.test(f.title))).toBe(false);
+  });
+
+  it('publisher age CAN stay high when corroborated by a triggered gate', () => {
+    const raw: RawScanResult = {
+      extension_id: 'stalegate1234567890abcdefghijklmn',
+      scoring_v2: {
+        overall_score: 60, decision: 'BLOCK', risk_level: 'medium',
+        hard_gates_triggered: ['SENSITIVE_EXFIL'],
+        security_layer: { layer_name: 'security', score: 70, risk: 0.3, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072 }] },
+        privacy_layer: { layer_name: 'privacy', score: 40, risk: 0.6, confidence: 0.9, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const maint = vm.keyFindings.find((f) => f.title === 'Publisher update age');
+    expect(maint!.severity).toBe('high'); // corroborated by the SENSITIVE_EXFIL gate
+  });
+});
+
+describe('Coverage-cap reasons are promoted into Key Findings', () => {
+  it('coverage_cap_applied + Maintenance 0.8 surfaces the coverage reason FIRST (no-code)', () => {
+    const raw: RawScanResult = {
+      extension_id: 'nocode1234567890abcdefghijklmnop',
+      scoring_v2: {
+        overall_score: 80, decision: 'NEEDS_REVIEW', risk_level: 'low',
+        coverage_cap_applied: true,
+        coverage_cap_reason: 'SAST coverage missing; score capped at 80',
+        hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 85, risk: 0.15, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072 }] },
+        privacy_layer: { layer_name: 'privacy', score: 100, risk: 0, confidence: 1, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+      sast_results: { scan_error: false, files_scanned: 0, sast_findings: {} },
+      virustotal_analysis: { enabled: true, files_found_in_vt: 5 },
+    } as unknown as RawScanResult;
+
+    const vm = normalizeScanResult(raw);
+    // The PRIMARY key finding explains the real reason, not publisher update age.
+    expect(vm.keyFindings[0].title).toBe('No analyzable code scanned');
+    expect(vm.keyFindings[0].severity).toBe('high');
+    // Publisher update age is still present but demoted to advisory.
+    const maint = vm.keyFindings.find((f) => f.title === 'Publisher update age');
+    expect(maint!.severity).toBe('medium');
+  });
+
+  it('VirusTotal unavailable surfaces "Limited malware reputation coverage", not malware', () => {
+    const raw: RawScanResult = {
+      extension_id: 'vtunknown1234567890abcdefghijklmn',
+      scoring_v2: {
+        overall_score: 65, decision: 'NEEDS_REVIEW', risk_level: 'medium',
+        coverage_cap_applied: true,
+        hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 84, risk: 0.16, confidence: 0.9, factors: [] },
+        privacy_layer: { layer_name: 'privacy', score: 100, risk: 0, confidence: 1, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+      sast_results: { scan_error: false, files_scanned: 8, sast_findings: { 'a.js': [{}] } },
+      virustotal_analysis: { enabled: true, files_found_in_vt: 0 },
+    } as unknown as RawScanResult;
+
+    const vm = normalizeScanResult(raw);
+    const cov = vm.keyFindings.find((f) => f.title === 'Limited malware reputation coverage');
+    expect(cov).toBeDefined();
+    expect(/malware reputation could not be confirmed/i.test(cov!.summary)).toBe(true);
+    // Never presented as a confirmed malware finding.
+    expect(vm.keyFindings.some((f) => /flagged by antivirus/i.test(f.title))).toBe(false);
+  });
+});
+
+describe('Microsoft Defender-style regression: coverage cap, not Update Freshness', () => {
+  it('SAST-failure cap surfaces "Limited code coverage" as primary, not "Update Freshness HIGH"', () => {
+    const raw: RawScanResult = {
+      extension_id: 'defenderlike1234567890abcdefghij',
+      extension_name: 'Microsoft Defender-like',
+      metadata: { last_updated: 'February 15, 2025' },
+      scoring_v2: {
+        overall_score: 65, decision: 'NEEDS_REVIEW', risk_level: 'medium',
+        coverage_cap_applied: true,
+        coverage_cap_reason: 'SAST scan failed or was incomplete; cannot clear as safe without code-analysis coverage',
+        hard_gates_triggered: [],
+        security_layer: { layer_name: 'security', score: 84, risk: 0.16, confidence: 0.9,
+          factors: [{ name: 'Maintenance', severity: 0.8, confidence: 0.9, weight: 0.1, contribution: 0.072, flags: ['stale_extension'] }] },
+        privacy_layer: { layer_name: 'privacy', score: 100, risk: 0, confidence: 1, factors: [] },
+        governance_layer: { layer_name: 'governance', score: 100, risk: 0, confidence: 1, factors: [] },
+      },
+      sast_results: { scan_error: true, files_scanned: 0, sast_findings: {} },
+      virustotal_analysis: { enabled: true, files_found_in_vt: 5 },
+    } as unknown as RawScanResult;
+
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings[0].title).toBe('Limited code coverage');
+    // "Update Freshness" wording is gone; publisher update age is NOT the HIGH driver.
+    expect(vm.keyFindings.some((f) => /Update Freshness/i.test(f.title))).toBe(false);
+    const maint = vm.keyFindings.find((f) => f.title === 'Publisher update age');
+    expect(maint!.severity).toBe('medium');
+  });
+});
+
+describe('Verdict / risk-label coherence (coherentRiskLevel)', () => {
+  it('floors low/none risk under BLOCK and NEEDS_REVIEW', () => {
+    expect(coherentRiskLevel('BLOCK', 'low')).toBe('high');
+    expect(coherentRiskLevel('BLOCK', 'none')).toBe('high');
+    expect(coherentRiskLevel('BLOCK', '')).toBe('high');
+    expect(coherentRiskLevel('NEEDS_REVIEW', 'low')).toBe('medium');
+    expect(coherentRiskLevel('WARN', 'none')).toBe('medium');
+  });
+
+  it('does not downgrade an already-severe level, and passes ALLOW/unrated through', () => {
+    expect(coherentRiskLevel('BLOCK', 'high')).toBe('high');
+    expect(coherentRiskLevel('NEEDS_REVIEW', 'medium')).toBe('medium');
+    expect(coherentRiskLevel('ALLOW', 'low')).toBe('low');
+    expect(coherentRiskLevel(null, 'low')).toBe('low');
+  });
+
+  it('a BLOCK with a high score never renders a GOOD overall band', () => {
+    const raw: RawScanResult = {
+      extension_id: 'blockhigh1234567890abcdefghijklmn',
+      scoring_v2: { overall_score: 85, decision: 'BLOCK', risk_level: 'low' },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.scores.overall.band).toBe('BAD');
+  });
+
+  it('a NEEDS_REVIEW with a high score renders a WARN (never GOOD) overall band', () => {
+    const raw: RawScanResult = {
+      extension_id: 'reviewhigh1234567890abcdefghijklm',
+      scoring_v2: { overall_score: 97, decision: 'NEEDS_REVIEW', risk_level: 'none' },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.scores.overall.band).toBe('WARN');
+  });
+});

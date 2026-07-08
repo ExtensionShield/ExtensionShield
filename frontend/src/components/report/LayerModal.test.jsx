@@ -38,7 +38,7 @@ describe('LayerModal status mapping', () => {
   });
 
   it('a moderate finding (>=0.4) is an amber "Issue"', () => {
-    const result = humanizeFactor({ name: 'Maintenance', severity: 0.5 });
+    const result = humanizeFactor({ name: 'Obfuscation', severity: 0.5 });
     expect(result.status).toBe('Issue');
     expect(result.statusType).toBe('issues');
     expect(result.tone).toBe('warn');
@@ -49,6 +49,19 @@ describe('LayerModal status mapping', () => {
     expect(result.status).toBe('High severity');
     expect(result.statusType).toBe('issues');
     expect(result.tone).toBe('bad');
+  });
+
+  it('publisher update age (Maintenance) is advisory "Caution", never standalone "High severity"', () => {
+    // Even at a high raw severity (e.g. >365 days old = 0.8) it must not read as
+    // a red "High severity" code-safety finding — it is a trust/caution signal.
+    const stale = humanizeFactor({ name: 'Maintenance', severity: 0.8 });
+    expect(stale.status).toBe('Caution');
+    expect(stale.tone).toBe('warn');
+    expect(stale.label).toBe('Publisher update age');
+
+    const moderate = humanizeFactor({ name: 'Maintenance', severity: 0.5 });
+    expect(moderate.status).toBe('Caution');
+    expect(moderate.tone).toBe('warn');
   });
 
   it('an actual finding wins over the not-analyzed flag', () => {
