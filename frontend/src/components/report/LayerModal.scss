@@ -21,7 +21,8 @@
   bottom: auto !important;
   left: 50dvw !important;
   margin: 0 !important;
-  transform: translate3d(-50%, -50%, 0) !important;
+  translate: -50% -50% !important;
+  transform: none !important;
   z-index: 10000 !important;
 
   &[data-state="open"],
@@ -678,7 +679,8 @@
     bottom: auto !important;
     left: 50dvw !important;
     margin: 0 !important;
-    transform: translate3d(-50%, -50%, 0) !important;
+    translate: -50% -50% !important;
+    transform: none !important;
   }
 
   .lm-content {
