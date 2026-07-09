@@ -463,6 +463,24 @@
     }
   }
 
+  .summary-finding-evidence-ref {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--theme-text-muted);
+    overflow-wrap: anywhere;
+
+    &__label {
+      font-weight: 600;
+      color: var(--theme-text-secondary);
+    }
+
+    &--none {
+      font-style: italic;
+      opacity: 0.85;
+    }
+  }
+
   .top-findings-title {
     font-size: 0.6875rem;
     font-weight: 700;

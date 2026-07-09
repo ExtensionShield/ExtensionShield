@@ -455,7 +455,7 @@ class ExplanationBuilder:
     
     GATE_PLAIN_NAMES = {
         "CRITICAL_SAST": "dangerous code patterns",
-        "SENSITIVE_EXFIL": "data being sent to external servers",
+        "SENSITIVE_EXFIL": "permissions that could send data externally",
         "PURPOSE_MISMATCH": "behavior not matching its stated purpose",
         "VT_MALWARE": "antivirus flags",
         "TOS_VIOLATION": "policy violations",

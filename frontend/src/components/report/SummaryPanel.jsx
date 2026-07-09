@@ -52,6 +52,7 @@ const SummaryPanel = ({
       summary: finding.summary || finding.title || '',
       severity: typeof finding.severity === 'string' ? finding.severity : 'medium',
       evidenceIds: Array.isArray(finding.evidenceIds) ? finding.evidenceIds : [],
+      evidence: finding.evidence || null,
     }));
 
   const fallbackFindings = (keyFindings || [])
@@ -64,6 +65,7 @@ const SummaryPanel = ({
       summary: finding.summary || finding.title || '',
       severity: finding.severity || 'medium',
       evidenceIds: Array.isArray(finding.evidenceIds) ? finding.evidenceIds : [],
+      evidence: finding.evidence || null,
     }));
 
   const findingsToShow = (normalizedTopFindings.length > 0 ? normalizedTopFindings : fallbackFindings)
@@ -343,6 +345,14 @@ const SummaryPanel = ({
                 </span>
               </div>
               <p className="summary-finding-summary">{finding.summary}</p>
+              {finding.evidence && finding.evidence.available && finding.evidence.label && (
+                <p className="summary-finding-evidence-ref" title={finding.evidence.snippet || finding.evidence.reason || finding.evidence.finalReason || ''}>
+                  <span className="summary-finding-evidence-ref__label">Evidence:</span> {finding.evidence.label}
+                </p>
+              )}
+              {finding.evidence && finding.evidence.available === false && (
+                <p className="summary-finding-evidence-ref summary-finding-evidence-ref--none">Evidence: summary only</p>
+              )}
               {typeof onViewEvidence === 'function' && finding.evidenceIds.length > 0 && (
                 <button
                   type="button"

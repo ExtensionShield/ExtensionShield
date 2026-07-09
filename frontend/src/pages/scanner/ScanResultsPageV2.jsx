@@ -6,7 +6,7 @@ import {
   EvidenceDrawer,
   LayerModal,
   ResultFeedback,
-  AnalyzerCoverage,
+  EvidenceTechnicalDetails,
   SimilarExtensions,
 } from "../../components/report";
 import {
@@ -28,7 +28,7 @@ import {
   severityTone,
   findingCategory,
   preciseFindingTitle,
-  evidenceCountLabel,
+  resolveFindingEvidenceLabel,
 } from "../../utils/reportDisplay";
 import FileViewerModal from "../../components/FileViewerModal";
 import StatusMessage from "../../components/StatusMessage";
@@ -41,6 +41,7 @@ import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extr
 import { getExtensionIconUrl, EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
 import { isUUID } from "../../utils/extensionId";
 import { doesScanResultMatchIdentifier } from "../../utils/scanResultIdentity";
+import { REPORT_QUICK_NAV_ITEMS } from "./ScanResultsPageV2.constants";
 import "./ScanResultsPageV2.scss";
 
 /** True if text is an unresolved Chrome i18n placeholder (e.g. __MSG_appDesc__). */
@@ -105,6 +106,37 @@ function getDisplayDescription(scanResults) {
   }
   return null;
 }
+
+export const LayerCards = ({ layerCards, onOpenLayer }) => (
+  <section className="report-layers" id="layers" aria-label="Security, privacy, and governance breakdown">
+    {layerCards.map(({ key, label, Icon, score, band, count, explain }) => (
+      <button
+        type="button"
+        key={key}
+        className={`layer-card band-${String(band).toLowerCase()}`}
+        onClick={() => onOpenLayer(key)}
+        aria-label={`${label} details: ${count > 0 ? `${count} ${count === 1 ? "issue" : "issues"}` : "no issues"}`}
+      >
+        <div className="layer-card-head">
+          <span className="layer-card-name"><Icon size={16} aria-hidden="true" /> {label}</span>
+          <span className="layer-card-score">
+            {score ?? "—"}<span className="layer-card-score-max">/100</span>
+          </span>
+        </div>
+        {count > 0 ? (
+          <span className="layer-card-issues">{count} {count === 1 ? "issue" : "issues"}</span>
+        ) : (
+          <span className="layer-card-issues layer-card-issues--none">No issues</span>
+        )}
+        <div className="layer-card-bar" aria-hidden="true">
+          <span className="layer-card-bar-fill" style={{ width: `${Math.max(0, Math.min(100, score ?? 0))}%` }} />
+        </div>
+        <p className="layer-card-explain">{explain}</p>
+        <span className="layer-card-link">View details <ChevronRight size={14} aria-hidden="true" /></span>
+      </button>
+    ))}
+  </section>
+);
 
 /**
  * ScanResultsPageV2 - Redesigned results dashboard
@@ -622,12 +654,7 @@ const ScanResultsPageV2 = () => {
     ? scanResults.metadata.similar_extensions
     : [];
 
-  const quickNavItems = [
-    { id: "overview", label: "Overview" },
-    { id: "layers", label: "Security · Privacy · Governance" },
-    { id: "key-findings", label: "Key Findings" },
-    { id: "analyzer-coverage", label: "Analyzer Coverage" },
-  ];
+  const quickNavItems = REPORT_QUICK_NAV_ITEMS;
 
   const formatScanDate = (ts) =>
     ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
@@ -879,33 +906,7 @@ const ScanResultsPageV2 = () => {
 
           <div className="report-main">
             {/* Layer cards: Security / Privacy / Governance */}
-            <section className="report-layers" id="layers" aria-label="Security, privacy, and governance breakdown">
-              {layerCards.map(({ key, label, Icon, score, band, count, explain }) => (
-                <button
-                  type="button"
-                  key={key}
-                  className={`layer-card band-${String(band).toLowerCase()}`}
-                  onClick={() => openLayerModal(key)}
-                >
-                  <div className="layer-card-head">
-                    <span className="layer-card-name"><Icon size={16} aria-hidden="true" /> {label}</span>
-                    <span className="layer-card-score">
-                      {score ?? "—"}<span className="layer-card-score-max">/100</span>
-                    </span>
-                  </div>
-                  {count > 0 ? (
-                    <span className="layer-card-issues">{count} {count === 1 ? "issue" : "issues"}</span>
-                  ) : (
-                    <span className="layer-card-issues layer-card-issues--none">No issues</span>
-                  )}
-                  <div className="layer-card-bar">
-                    <span className="layer-card-bar-fill" style={{ width: `${Math.max(0, Math.min(100, score ?? 0))}%` }} />
-                  </div>
-                  <p className="layer-card-explain">{explain}</p>
-                  <span className="layer-card-link">View details <ChevronRight size={14} aria-hidden="true" /></span>
-                </button>
-              ))}
-            </section>
+            <LayerCards layerCards={layerCards} onOpenLayer={openLayerModal} />
 
             {/* Key Findings */}
             <section className="report-findings" id="key-findings">
@@ -921,6 +922,16 @@ const ScanResultsPageV2 = () => {
                     const tone = severityTone(f.level);
                     const open = expandedFinding === i;
                     const evCount = f.evidenceCount || 0;
+                    // Evidence label (display only — helper selects the existing
+                    // finding.evidence.label, never generates one). Resolvable IDs keep
+                    // the openable count + "View evidence"; otherwise fall back to the
+                    // structured evidence reference; "Evidence not linked" only when
+                    // neither IDs nor structured evidence exist.
+                    const ev = f.evidence;
+                    const evidenceText = resolveFindingEvidenceLabel(f, evCount);
+                    const evidenceTitle = ev && ev.available
+                      ? (ev.snippet || ev.reason || ev.finalReason || '')
+                      : '';
                     return (
                       <li className="finding-row" key={`${f.displayTitle}-${i}`}>
                         <div className="finding-main">
@@ -928,13 +939,30 @@ const ScanResultsPageV2 = () => {
                           <div className="finding-text">
                             <span className="finding-title">{f.displayTitle}</span>
                             {f.summary && open && <span className="finding-summary">{f.summary}</span>}
+                            {open && ev && ev.available && (
+                              <div className="finding-evidence-details">
+                                {ev.filePath && (
+                                  <div className="fed-row"><span className="fed-key">File</span>
+                                    <span className="fed-val">{ev.filePath}{typeof ev.lineStart === "number" && ev.lineStart > 0 ? `:${ev.lineStart}${typeof ev.lineEnd === "number" && ev.lineEnd > ev.lineStart ? `–${ev.lineEnd}` : ""}` : ""}</span></div>
+                                )}
+                                {ev.snippet && <pre className="fed-snippet">{ev.snippet}</pre>}
+                                {ev.permission && (<div className="fed-row"><span className="fed-key">Permission</span><span className="fed-val">{ev.permission}</span></div>)}
+                                {ev.hostPermission && (<div className="fed-row"><span className="fed-key">Host access</span><span className="fed-val">{ev.hostPermission}</span></div>)}
+                                {ev.kind === "manifest" && ev.manifestField && !ev.permission && (<div className="fed-row"><span className="fed-key">Manifest</span><span className="fed-val">{ev.manifestField}</span></div>)}
+                                {(ev.rulepack || ev.ruleId) && (<div className="fed-row"><span className="fed-key">Rule</span><span className="fed-val">{ev.rulepack ? `${ev.rulepack}${ev.ruleId ? `::${ev.ruleId}` : ""}` : ev.ruleId}</span></div>)}
+                                {ev.finalReason && (<div className="fed-row"><span className="fed-key">Reason</span><span className="fed-val">{ev.finalReason}</span></div>)}
+                                {ev.actionRequired && ev.actionRequired !== ev.finalReason && (<div className="fed-row"><span className="fed-key">Action</span><span className="fed-val">{ev.actionRequired}</span></div>)}
+                                {typeof ev.malicious === "number" && (<div className="fed-row"><span className="fed-key">VirusTotal</span><span className="fed-val">{ev.malicious} malicious · {ev.suspicious || 0} suspicious{ev.hash ? ` · ${String(ev.hash).slice(0, 12)}…` : ""}</span></div>)}
+                                {ev.analyzer && (<div className="fed-row"><span className="fed-key">Coverage</span><span className="fed-val">{ev.analyzer}{ev.reason ? ` — ${ev.reason}` : ""}</span></div>)}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <span className={`finding-severity tone-${tone}`} title={severityLabel(f.level)}>
                           {severityBadge(f.level)}
                         </span>
                         <span className="finding-category">{f.category}</span>
-                        <span className="finding-evidence">{evidenceCountLabel(evCount)}</span>
+                        <span className="finding-evidence" title={evidenceTitle}>{evidenceText}</span>
                         <div className="finding-actions">
                           {evCount > 0 && (
                             <button
@@ -945,7 +973,7 @@ const ScanResultsPageV2 = () => {
                               View evidence <ExternalLink size={13} aria-hidden="true" />
                             </button>
                           )}
-                          {f.summary && (
+                          {(f.summary || (ev && ev.available)) && (
                             <button
                               type="button"
                               className={`finding-expand${open ? " is-open" : ""}`}
@@ -964,8 +992,7 @@ const ScanResultsPageV2 = () => {
               )}
             </section>
 
-            {/* Analyzer Coverage — honest, always-visible coverage states */}
-            <AnalyzerCoverage rawScanResult={scanResults} />
+            <EvidenceTechnicalDetails rawScanResult={scanResults} viewModel={viewModel} />
           </div>
 
           {/* Right sidebar: Issue Overview, Quick Navigation, Similar Extensions */}

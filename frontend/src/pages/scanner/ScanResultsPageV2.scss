@@ -828,6 +828,16 @@
     border-color: var(--band-color);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   }
+  &:focus-visible {
+    outline: none;
+    border-color: var(--band-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-color) 35%, transparent);
+  }
+  &:active { transform: translateY(0); }
+  &:hover .layer-card-link svg,
+  &:focus-visible .layer-card-link svg {
+    transform: translateX(2px);
+  }
   &.band-good { --band-color: var(--risk-good); }
   &.band-warn { --band-color: var(--risk-warn); }
   &.band-bad  { --band-color: var(--risk-bad); }
@@ -893,6 +903,7 @@
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--extensionshield-accent);
+    svg { transition: transform 0.18s ease; }
   }
 }
 
@@ -962,6 +973,36 @@
   line-height: 1.45;
   color: var(--extensionshield-text-secondary);
 }
+.finding-evidence-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--extensionshield-surface-muted, rgba(0, 0, 0, 0.03));
+  font-size: 0.8rem;
+  line-height: 1.4;
+
+  .fed-row { display: flex; gap: 6px; min-width: 0; }
+  .fed-key {
+    flex: 0 0 auto;
+    min-width: 84px;
+    font-weight: 600;
+    color: var(--extensionshield-text-secondary);
+  }
+  .fed-val { min-width: 0; overflow-wrap: anywhere; color: var(--extensionshield-text-primary); }
+  .fed-snippet {
+    margin: 2px 0 0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--extensionshield-code-bg, rgba(0, 0, 0, 0.06));
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
 .finding-severity {
   font-size: 0.7rem;
   font-weight: 700;
@@ -980,6 +1021,10 @@
   font-size: 0.82rem;
   color: var(--extensionshield-text-muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 28ch;
 }
 .finding-actions { display: flex; align-items: center; gap: 6px; }
 .finding-view-evidence {

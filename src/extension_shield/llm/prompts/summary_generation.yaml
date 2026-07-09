@@ -10,7 +10,7 @@ summary_rewrite: |
     PLAIN ENGLISH CONTRACT - Translate all technical terms:
     - "Obfuscation" / "entropy" → "hidden or hard-to-read code"
     - "SAST" / "static analysis" → "code check" or "security scan"
-    - "Exfiltration" → "sends your data out"
+    - "Exfiltration" → "could expose data externally"
     - "webRequest permission" → "can see your web traffic"
     - "<all_urls>" / "*://*/*" → "runs on all websites"
     - "Content scripts" → "code that runs on pages you visit"
@@ -82,7 +82,7 @@ consumer_summary_unified: |
     |-----------|----------|
     | Obfuscation, entropy | "hidden or hard-to-read code" |
     | SAST, static analysis | "our security scan" |
-    | Exfiltration | "sends your data out" |
+    | Exfiltration | "could expose data externally" |
     | webRequest | "can see your web traffic" |
     | <all_urls> | "runs on all websites" |
     | activeTab, scripting | "can access the page you're viewing" / "runs scripts on pages" |
@@ -132,7 +132,7 @@ summary_generation: |
     MANDATORY TRANSLATIONS (always use plain English):
     - "Obfuscation" → "hidden or hard-to-read code"
     - "SAST findings" → "security scan found issues"
-    - "Exfiltration" → "sends your data out"
+    - "Exfiltration" → "could expose data externally"
     - "webRequest" → "can see your web traffic"
     - "<all_urls>" → "runs on all websites"
     - "eval" → "runs code it creates"

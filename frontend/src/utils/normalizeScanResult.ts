@@ -36,6 +36,7 @@ import type {
   FactorsByLayerVM,
   FactorVM,
   KeyFindingVM,
+  KeyFindingEvidence,
   FindingSeverity,
   PermissionsVM,
   EvidenceItemVM,
@@ -434,7 +435,7 @@ export function coherentRiskLevel(
 
 const GATE_HUMAN_TITLE: Record<string, string> = {
   CRITICAL_SAST: 'Dangerous code pattern detected',
-  SENSITIVE_EXFIL: 'May send your data to external servers',
+  SENSITIVE_EXFIL: 'Requests permissions that could send data externally',
   PURPOSE_MISMATCH: "Behavior doesn't match stated purpose",
   VT_MALWARE: 'Flagged by antivirus engines',
   TOS_VIOLATION: 'Chrome Web Store policy violation',
@@ -503,7 +504,7 @@ const SAST_BEHAVIOR_TITLE: Record<string, string> = {
   server_list: 'Contains hardcoded server list',
   periodic_beacon: 'Beacons to external servers',
   image_steganography: 'May hide data in images',
-  base64_encoded_data: 'Sends encoded data',
+  base64_encoded_data: 'Encoded data pattern detected',
   dns_tunneling: 'May tunnel data over DNS',
   url_and_userid: 'Sends user id to a URL',
   override_fetch_xhr: 'Intercepts network requests',
@@ -587,12 +588,15 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
   const scoringV2 = raw.scoring_v2 || raw.governance_bundle?.scoring_v2 || null;
   const sastResults = raw.sast_results;
   const permsAnalysis = raw.permissions_analysis;
+  // Evidence lookups (shared by the SAST + factor findings below).
+  const evLookup = buildEvidenceIndex(raw);
+  const fileIndex = buildSignalPackFileIndex(raw);
 
   // 1. Extract SAST findings for Security layer (prioritize high severity)
   if (sastResults) {
     const sastFindings = sastResults.sast_findings || sastResults.sastFindings || {};
-    const sastFindingsList: Array<{ severity: FindingSeverity; title: string; summary: string }> = [];
-    
+    const sastFindingsList: Array<{ severity: FindingSeverity; title: string; summary: string; checkId?: string; filePath: string; lineNum?: number; snippet?: string }> = [];
+
     if (typeof sastFindings === 'object' && !Array.isArray(sastFindings)) {
       Object.entries(sastFindings).forEach(([filePath, findings]) => {
         if (Array.isArray(findings)) {
@@ -602,7 +606,8 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             const message = extra.message || finding.check_id || 'SAST finding';
             const checkId = finding.check_id || 'unknown';
             const lineNum = finding.start?.line;
-            
+            const snippet = typeof extra.lines === 'string' ? extra.lines : undefined;
+
             // Map severity to finding level
             let findingSeverity: FindingSeverity = 'low';
             if (severity === 'CRITICAL' || severity === 'ERROR') {
@@ -615,28 +620,71 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
               severity: findingSeverity,
               title: humanizeSastCheckId(checkId),
               summary: message,
+              checkId: String(checkId),
+              filePath: finding.path || filePath,
+              lineNum: typeof lineNum === 'number' ? lineNum : undefined,
+              snippet,
             });
           });
         }
       });
     }
-    
+
     // Sort by severity (high > medium > low) and take top 10
     sastFindingsList.sort((a, b) => {
       const order = { high: 3, medium: 2, low: 1 };
       return (order[b.severity] || 0) - (order[a.severity] || 0);
     });
-    
+
     sastFindingsList.slice(0, 10).forEach(f => {
+      // Prefer the canonical signal_pack.evidence line for this file, else the
+      // finding's own start line. Evidence is display-only (not drawer-openable).
+      const spHit = f.filePath ? fileIndex[`sast::${f.filePath}`] : undefined;
+      const filePath = f.filePath || spHit?.filePath;
+      const lineStart = f.lineNum ?? spHit?.lineStart ?? null;
+      const evidence: KeyFindingEvidence = filePath
+        ? {
+            kind: 'sast', available: true, filePath: toRelativeEvidencePath(filePath),
+            lineStart, lineEnd: spHit?.lineEnd ?? null,
+            snippet: f.snippet ?? spHit?.snippet, sourceViewerPath: filePath,
+            label: codeEvidenceLabel(filePath, lineStart), evidenceIds: [],
+          }
+        : { kind: 'sast', available: false };
+      // Pattern-only exfil/encoded detections have no destination evidence here —
+      // clarify so the finding is not read as confirmed exfiltration.
+      const suffix = String(f.checkId || '').toLowerCase().split('.').pop() || '';
+      const PATTERN_ONLY_EXFIL = new Set([
+        'base64_encoded_data', 'periodic_beacon', 'image_steganography',
+        'dns_tunneling', 'override_fetch_xhr', 'url_and_userid',
+      ]);
+      let summary = f.summary.length > 100 ? `${f.summary.substring(0, 97)}...` : f.summary;
+      if (PATTERN_ONLY_EXFIL.has(suffix)) {
+        summary = `${summary} — no confirmed external destination shown.`;
+      }
       result.security.push({
         title: f.title,
         severity: f.severity,
         layer: 'security',
-        summary: f.summary.length > 100 ? `${f.summary.substring(0, 97)}...` : f.summary,
+        summary,
         evidenceIds: [],
+        evidence,
       });
     });
   }
+
+  // Attach the structured evidence a factor already carries (resolves synthetic
+  // ids to signal_pack.evidence by tool+file). Display-only; ordering unaffected.
+  const factorEvidence = (f: RawFactorScore, layer: 'security' | 'privacy' | 'governance'): KeyFindingEvidence =>
+    resolveFactorEvidence({
+      name: safeGet(f.name, 'Unknown'),
+      severity: safeGet(f.severity, 0),
+      confidence: safeGet(f.confidence, 0),
+      weight: f.weight,
+      riskContribution: f.contribution,
+      evidenceIds: safeGet(f.evidence_ids, []),
+      details: f.details,
+      layer,
+    }, raw, evLookup);
 
   // 2. Extract factors from scoring_v2 (already categorized by layer)
   // Only include factors with significant severity (>= 0.3) to avoid noise
@@ -651,6 +699,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             layer: 'security',
             summary: humanizeFactorSummary(f, 'security'),
             evidenceIds: safeGet(f.evidence_ids, []),
+            evidence: factorEvidence(f, 'security'),
           });
         }
       });
@@ -666,6 +715,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             layer: 'privacy',
             summary: humanizeFactorSummary(f, 'privacy'),
             evidenceIds: safeGet(f.evidence_ids, []),
+            evidence: factorEvidence(f, 'privacy'),
           });
         }
       });
@@ -681,6 +731,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             layer: 'governance',
             summary: humanizeFactorSummary(f, 'governance'),
             evidenceIds: safeGet(f.evidence_ids, []),
+            evidence: factorEvidence(f, 'governance'),
           });
         }
       });
@@ -776,7 +827,13 @@ function gateDecisionToBand(decision: string | null | undefined): ScoreBand | nu
 function factorIssueBand(layer: RawLayerScore | null | undefined): ScoreBand | null {
   const factors = layer?.factors;
   if (!Array.isArray(factors)) return null;
-  return factors.some((f) => (f?.severity ?? 0) >= 0.4) ? 'WARN' : null;
+  return factors.some((f) => {
+    // Publisher update age below the key-finding threshold (0.6) is routine
+    // context, not an issue — mirror the buildKeyFindings carve-out so the card
+    // band agrees with its own "No issues" pill instead of showing amber.
+    if (f?.name === 'Maintenance' && (f?.severity ?? 0) < 0.6) return false;
+    return (f?.severity ?? 0) >= 0.4;
+  }) ? 'WARN' : null;
 }
 
 /**
@@ -1003,6 +1060,209 @@ function buildEvidenceIndex(raw: RawScanResult): Record<string, EvidenceItemVM> 
  * headline reason matches the score driver. They are coverage limitations, not
  * confirmed threats (each summary says so explicitly).
  */
+// =============================================================================
+// KEY FINDING EVIDENCE — additive, verifiable references (never fabricated)
+// =============================================================================
+
+/** Parse a "[CWS_LIMITED_USE::R5]" rulepack::rule token from a governance rationale. */
+function parseRulepackRule(rationale: unknown): { rulepack?: string; ruleId?: string } {
+  if (typeof rationale !== 'string') return {};
+  const m = rationale.match(/\[([A-Za-z0-9_]+)::([A-Za-z0-9_]+)\]/);
+  return m ? { rulepack: m[1], ruleId: m[2] } : {};
+}
+
+/**
+ * Normalize a code-evidence path for DISPLAY: strip any local/machine prefix so
+ * only the extension/archive-relative path is shown (e.g.
+ * "/Users/…/extensions_storage/extracted_xxx/js/background.js" -> "js/background.js").
+ * Never returns a string containing "/Users/", "/home/", a drive root,
+ * "extensions_storage" or "extracted_". The raw path is preserved separately
+ * (evidence.sourceViewerPath) for internal use.
+ */
+export function toRelativeEvidencePath(path: unknown): string {
+  if (typeof path !== 'string' || !path) return '';
+  const s = path.replace(/\\/g, '/');
+  // Prefer the archive-relative tail after the extraction dir.
+  const extracted = s.match(/(?:^|\/)extracted_[^/]*\/(.+)$/);
+  if (extracted) return extracted[1];
+  const storage = s.match(/(?:^|\/)extensions_storage\/(.+)$/);
+  if (storage) return storage[1];
+  // Any remaining absolute/local path -> keep only the basename to avoid leaks.
+  if (s.startsWith('/') || /^[a-zA-Z]:\//.test(s) || /\/(?:Users|home)\//i.test(s)) {
+    return s.split('/').filter(Boolean).pop() || '';
+  }
+  return s;
+}
+
+function codeEvidenceLabel(filePath?: string, lineStart?: number | null): string | undefined {
+  if (!filePath) return undefined;
+  const rel = toRelativeEvidencePath(filePath);
+  return typeof lineStart === 'number' && lineStart > 0 ? `${rel}:${lineStart}` : rel;
+}
+
+/**
+ * Parse a synthetic factor evidence id into (tool, file, token). Factor ids
+ * encode the signal, not a content hash, e.g.:
+ *   "entropy:file:js/jsonpath.js"                         -> tool=entropy, file=js/jsonpath.js
+ *   "sast:src...base64_encoded_data:service_worker.js"    -> tool=sast,    file=service_worker.js
+ *   "perm:high_risk:cookies" / "manifest:issue:missing_csp" / "combo:broad_host_access"
+ * The file is the last ":"-segment (extension file paths use "/", not ":");
+ * the token is that same last segment, used for permission/manifest references.
+ */
+function parseSyntheticEvidenceId(id: unknown): { tool: string; file: string; token: string } {
+  if (typeof id !== 'string' || !id.includes(':')) return { tool: '', file: '', token: '' };
+  const parts = id.split(':');
+  const last = parts[parts.length - 1];
+  return { tool: parts[0].toLowerCase(), file: last, token: last };
+}
+
+/**
+ * Index signal_pack.evidence by `${tool_name}::${file_path}` so a factor's
+ * synthetic id (which shares the tool + file, not the content hash) can be
+ * resolved to the real file/line/snippet the payload already carries.
+ */
+function buildSignalPackFileIndex(raw: RawScanResult): Record<string, EvidenceItemVM> {
+  const idx: Record<string, EvidenceItemVM> = {};
+  try {
+    extractEvidenceItems(raw).forEach(({ evidence }) => {
+      if (evidence && evidence.toolName && evidence.filePath) {
+        idx[`${String(evidence.toolName).toLowerCase()}::${evidence.filePath}`] = evidence;
+      }
+    });
+  } catch { /* never throw — evidence is best-effort */ }
+  return idx;
+}
+
+/** Resolve the first file-backed (sast/entropy) synthetic id to its signal-pack evidence. */
+function resolveSyntheticCodeEvidence(
+  ids: string[],
+  fileIndex: Record<string, EvidenceItemVM>,
+): EvidenceItemVM | null {
+  for (const id of ids) {
+    const { tool, file } = parseSyntheticEvidenceId(id);
+    if ((tool === 'sast' || tool === 'entropy') && file) {
+      const hit = fileIndex[`${tool}::${file}`];
+      if (hit && hit.filePath) return hit;
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve a structured evidence reference for a scoring-factor finding using the
+ * evidence the payload already carries. Never fabricates: returns
+ * `{ available: false }` when nothing is resolvable.
+ */
+function resolveFactorEvidence(
+  factor: FactorVM & { layer: string },
+  raw: RawScanResult,
+  evLookup: Record<string, EvidenceItemVM>,
+): KeyFindingEvidence {
+  const name = factor.name;
+  const ids = Array.isArray(factor.evidenceIds) ? factor.evidenceIds : [];
+  const anyRaw = raw as unknown as {
+    virustotal_analysis?: any;
+    manifest?: { permissions?: unknown; host_permissions?: unknown };
+    metadata?: { last_updated?: unknown };
+  };
+  // Synthetic factor ids (entropy:file:*, sast:*:file) don't match the
+  // content-hash-keyed evidence index; resolve them by (tool, file) instead.
+  const fileIndex = buildSignalPackFileIndex(raw);
+
+  // SAST / obfuscation — resolve to file/line/snippet, first by direct id then by
+  // the (tool, file) match against signal_pack.evidence.
+  if (name === 'SAST' || name === 'Obfuscation') {
+    const direct = ids.map((id) => evLookup[id]).find((e) => e && e.filePath);
+    const hit = direct || resolveSyntheticCodeEvidence(ids, fileIndex);
+    if (hit && hit.filePath) {
+      return {
+        kind: 'sast', available: true,
+        filePath: toRelativeEvidencePath(hit.filePath), lineStart: hit.lineStart, lineEnd: hit.lineEnd,
+        snippet: hit.snippet, evidenceIds: ids, sourceViewerPath: hit.filePath,
+        label: codeEvidenceLabel(hit.filePath, hit.lineStart),
+      };
+    }
+    return { kind: 'sast', available: false, evidenceIds: ids };
+  }
+
+  // VirusTotal / threat intel — reputation counts + first file hash.
+  if (name === 'VirusTotal' || name === 'ChromeStats') {
+    const vt = anyRaw.virustotal_analysis || {};
+    const fileResults = Array.isArray(vt.file_results) ? vt.file_results : [];
+    const hash = fileResults[0]?.hashes?.sha256 || fileResults[0]?.hashes?.sha1;
+    const threat = vt.summary?.threat_level;
+    const available = vt.enabled !== false && (Number(vt.files_found_in_vt ?? 0) > 0 || Number(vt.files_analyzed ?? 0) > 0);
+    if (available) {
+      return {
+        kind: 'virustotal', available: true, hash,
+        malicious: Number(vt.total_malicious ?? 0), suspicious: Number(vt.total_suspicious ?? 0),
+        coverageState: threat,
+        label: threat ? `VirusTotal: ${threat}` : `VirusTotal: ${Number(vt.total_malicious ?? 0)} malicious`,
+      };
+    }
+    return { kind: 'virustotal', available: false };
+  }
+
+  // Manifest / permission factors — surface the SPECIFIC permission or manifest
+  // issue named in the synthetic evidence id, falling back to the manifest.
+  if (['Manifest', 'PermissionsBaseline', 'PermissionCombos', 'CaptureSignals', 'NetworkExfil'].includes(name)) {
+    const manifest = anyRaw.manifest || {};
+    const perms: string[] = Array.isArray(manifest.permissions) ? manifest.permissions as string[] : [];
+    const hosts: string[] = Array.isArray(manifest.host_permissions) ? manifest.host_permissions as string[] : [];
+    const details = (factor.details || {}) as { description?: unknown };
+    const explanation = typeof details.description === 'string' ? details.description : undefined;
+    const tokens = ids.map((id) => parseSyntheticEvidenceId(id).token).filter(Boolean);
+    const token = tokens[0];
+
+    if (name === 'Manifest') {
+      // token is a manifest issue (e.g. missing_csp, broad_host_access)
+      const issue = token;
+      if (issue || hosts.length || explanation) {
+        return {
+          kind: 'manifest', available: true,
+          manifestField: issue || 'permissions', hostPermission: hosts[0], explanation,
+          label: issue ? issue.replace(/_/g, ' ') : (perms[0] || hosts[0] || 'manifest'),
+        };
+      }
+      return { kind: 'manifest', available: false };
+    }
+
+    // Permission / combo / capture — token is the specific permission or signal.
+    const permission = token || perms[0];
+    if (permission || hosts.length || explanation) {
+      return {
+        kind: 'manifest', available: true,
+        permission, hostPermission: hosts[0], manifestField: 'permissions', explanation,
+        label: permission || hosts[0] || 'manifest',
+      };
+    }
+    return { kind: 'manifest', available: false };
+  }
+
+  // Publisher update age (Maintenance) — advisory context from the store listing.
+  if (name === 'Maintenance') {
+    const lastUpdated = anyRaw.metadata?.last_updated;
+    return {
+      kind: 'summary', available: Boolean(lastUpdated),
+      explanation: 'Based on the store listing last-updated date.',
+      label: typeof lastUpdated === 'string' ? `Updated ${lastUpdated}` : undefined,
+    };
+  }
+
+  // Fallback: resolve any evidence ids to code (direct or synthetic), else
+  // mark unavailable (summary-only).
+  const direct = ids.map((id) => evLookup[id]).find((e) => e && e.filePath);
+  const hit = direct || resolveSyntheticCodeEvidence(ids, fileIndex);
+  if (hit && hit.filePath) {
+    return {
+      kind: 'sast', available: true, filePath: toRelativeEvidencePath(hit.filePath),
+      lineStart: hit.lineStart, lineEnd: hit.lineEnd, snippet: hit.snippet,
+      evidenceIds: ids, sourceViewerPath: hit.filePath, label: codeEvidenceLabel(hit.filePath, hit.lineStart),
+    };
+  }
+  return { kind: 'summary', available: false, evidenceIds: ids };
+}
+
 function buildCoverageKeyFindings(
   scoringV2: RawScoringV2 | null,
   raw: RawScanResult
@@ -1024,8 +1284,8 @@ function buildCoverageKeyFindings(
   if (!capApplied && !insufficient) return [];
 
   const findings: KeyFindingVM[] = [];
-  const mk = (title: string, summary: string): KeyFindingVM => ({
-    title, severity: 'high', layer: 'security', summary, evidenceIds: [],
+  const mk = (title: string, summary: string, evidence: KeyFindingEvidence): KeyFindingVM => ({
+    title, severity: 'high', layer: 'security', summary, evidenceIds: [], evidence,
   });
 
   const sp = (anyRaw.governance_bundle?.signal_pack || {}) as Record<string, any>;
@@ -1040,10 +1300,12 @@ function buildCoverageKeyFindings(
 
   if (sast.scan_error) {
     findings.push(mk('Limited code coverage',
-      'The code analyzer (SAST) did not complete, so the extension’s code could not be checked. This is why it needs review — not a confirmed threat.'));
+      'The code analyzer (SAST) did not complete, so the extension’s code could not be checked. This is why it needs review — not a confirmed threat.',
+      { kind: 'coverage', available: true, analyzer: 'SAST', reason: 'Code analysis (SAST) failed to complete', coverageState: 'failed', label: 'Coverage: SAST failed' }));
   } else if (!sastRan) {
     findings.push(mk('No analyzable code scanned',
-      'No analyzable code was scanned (often minified or bundled code). The code was not statically analyzed, so it cannot be cleared as safe.'));
+      'No analyzable code was scanned (often minified or bundled code). The code was not statically analyzed, so it cannot be cleared as safe.',
+      { kind: 'coverage', available: true, analyzer: 'SAST', reason: 'No analyzable code was scanned', coverageState: 'no_code_scanned', label: 'Coverage: no code scanned' }));
   }
 
   const vt = (sp.virustotal || {}) as { enabled?: boolean; total_engines?: number; files_found_in_vt?: number };
@@ -1054,15 +1316,17 @@ function buildCoverageKeyFindings(
   const vtAvailable = vtEnabled !== false && (vtEngines > 0 || vtFound > 0);
   if (!vtAvailable) {
     findings.push(mk('Limited malware reputation coverage',
-      'The extension’s files were not found in VirusTotal (or the malware scan was unavailable), so malware reputation could not be confirmed.'));
+      'The extension’s files were not found in VirusTotal (or the malware scan was unavailable), so malware reputation could not be confirmed.',
+      { kind: 'coverage', available: true, analyzer: 'VirusTotal', reason: 'Files not found in VirusTotal, or the malware scan was unavailable', coverageState: 'unavailable', label: 'Coverage: VirusTotal unavailable' }));
   }
 
   if (findings.length === 0) {
     const reason = anyV2.coverage_cap_reason || anyRaw.governance_bundle?.scoring_v2?.coverage_cap_reason;
-    findings.push(mk('Limited analysis coverage',
-      typeof reason === 'string' && reason.trim()
-        ? reason
-        : 'Some analyzers did not run at scan time, so this extension could not be fully cleared.'));
+    const reasonText = typeof reason === 'string' && reason.trim()
+      ? reason
+      : 'Some analyzers did not run at scan time, so this extension could not be fully cleared.';
+    findings.push(mk('Limited analysis coverage', reasonText,
+      { kind: 'coverage', available: true, analyzer: 'multiple', reason: reasonText, coverageState: 'limited', label: 'Coverage limited' }));
   }
   return findings;
 }
@@ -1088,7 +1352,7 @@ function buildGovernanceReasonKeyFindings(
   if (verdict !== 'NEEDS_REVIEW' && verdict !== 'WARN' && verdict !== 'BLOCK') return [];
 
   const decision = (raw.governance_bundle?.decision || {}) as {
-    final_reasons?: unknown; action_required?: unknown;
+    final_reasons?: unknown; action_required?: unknown; rationale?: unknown;
   };
   let reasons = (Array.isArray(decision.final_reasons) ? decision.final_reasons : [])
     .filter((r): r is string => typeof r === 'string' && r.trim() !== '');
@@ -1098,12 +1362,20 @@ function buildGovernanceReasonKeyFindings(
   if (reasons.length === 0) return [];
 
   const severity: FindingSeverity = verdict === 'BLOCK' ? 'high' : 'medium';
+  const { rulepack, ruleId } = parseRulepackRule(decision.rationale);
+  const actionRequired = typeof decision.action_required === 'string' ? decision.action_required : undefined;
+  const label = rulepack && ruleId ? `Rule ${rulepack}::${ruleId}` : 'Governance rule';
   return reasons.slice(0, 3).map((reason) => ({
     title: reason,
     severity,
     layer: 'governance' as const,
     summary: reason,
     evidenceIds: [],
+    evidence: {
+      kind: 'governance' as const,
+      available: true,
+      rulepack, ruleId, finalReason: reason, actionRequired, label,
+    },
   }));
 }
 
@@ -1115,6 +1387,8 @@ function buildKeyFindings(
   raw: RawScanResult
 ): KeyFindingVM[] {
   const findings: KeyFindingVM[] = [];
+  // Resolve evidence ids -> file/line/snippet once for factor findings below.
+  const evLookup = buildEvidenceIndex(raw);
 
   // 1. Add hard gates as high severity findings with correct layer classification
   const hardGates = scoringV2?.hard_gates_triggered || [];
@@ -1126,6 +1400,12 @@ function buildKeyFindings(
       layer: layer,
       summary: humanizeGateId(gate),
       evidenceIds: [],
+      evidence: {
+        kind: 'governance',
+        available: true,
+        ruleId: gate,
+        label: `Gate: ${humanizeGateId(gate)}`,
+      },
     });
   });
 
@@ -1229,6 +1509,7 @@ function buildKeyFindings(
         layer: factor.layer,
         summary,
         evidenceIds: factor.evidenceIds,
+        evidence: resolveFactorEvidence(factor, raw, evLookup),
       });
     });
   
@@ -1242,10 +1523,11 @@ function buildKeyFindings(
         layer: 'governance',
         summary: reason,
         evidenceIds: [],
+        evidence: { kind: 'summary', available: false },
       });
     });
   }
-  
+
   // 4. If still no findings, add from legacy summary.key_findings
   if (findings.length === 0 && raw.summary?.key_findings) {
     raw.summary.key_findings.forEach((finding: string) => {
@@ -1255,10 +1537,11 @@ function buildKeyFindings(
         layer: 'security',
         summary: finding,
         evidenceIds: [],
+        evidence: { kind: 'summary', available: false },
       });
     });
   }
-  
+
   return findings;
 }
 

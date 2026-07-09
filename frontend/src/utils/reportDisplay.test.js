@@ -8,6 +8,7 @@ import {
   preciseFindingTitle,
   normalizeVerdictKey,
   evidenceCountLabel,
+  resolveFindingEvidenceLabel,
 } from './reportDisplay';
 
 const CHROMESTATS_DEFAULT = {
@@ -215,5 +216,46 @@ describe('resolveIssueOverview', () => {
   it('handles numeric severities and empty input', () => {
     expect(resolveIssueOverview([{ severity: 0.9 }, { severity: 0.5 }]).total).toBe(2);
     expect(resolveIssueOverview([]).total).toBe(0);
+  });
+});
+
+describe('resolveFindingEvidenceLabel — Key Findings row evidence label', () => {
+  it('shows the structured evidence label when there are no resolvable evidence IDs', () => {
+    const finding = { title: 'Limited malware reputation coverage', evidence: { available: true, label: 'Coverage: VirusTotal unavailable' } };
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: Coverage: VirusTotal unavailable');
+  });
+
+  it('shows a SAST file:line structured label when IDs are empty', () => {
+    const finding = { title: 'Code Safety', evidence: { available: true, kind: 'sast', label: 'js/content.js:12' } };
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: js/content.js:12');
+  });
+
+  it('keeps the existing openable count label when resolvable evidence IDs exist (gates the View evidence button)', () => {
+    const finding = { title: 'Code Safety', evidence: { available: true, label: 'js/content.js:12' } };
+    expect(resolveFindingEvidenceLabel(finding, 2)).toBe('2 evidence items');
+    expect(resolveFindingEvidenceLabel(finding, 1)).toBe('1 evidence item');
+  });
+
+  it('shows "Evidence: summary only" for available:false findings', () => {
+    const finding = { title: 'Passes checks', evidence: { available: false } };
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: summary only');
+  });
+
+  it('shows "Evidence: summary only" when structured evidence exists but has no label (never "not linked")', () => {
+    const finding = { title: 'x', evidence: { available: true } };
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: summary only');
+  });
+
+  it('shows "Evidence not linked" only when there are no IDs and no structured evidence', () => {
+    expect(resolveFindingEvidenceLabel({ title: 'x' }, 0)).toBe('Evidence not linked');
+    expect(resolveFindingEvidenceLabel({ title: 'x', evidence: null }, 0)).toBe('Evidence not linked');
+    expect(resolveFindingEvidenceLabel(null, 0)).toBe('Evidence not linked');
+  });
+
+  it('is label-only and never mutates the finding (ordering/severity unaffected)', () => {
+    const finding = { title: 'x', severity: 'high', evidence: { available: true, label: 'Rule CWS_LIMITED_USE::R5' } };
+    const before = JSON.stringify(finding);
+    resolveFindingEvidenceLabel(finding, 0);
+    expect(JSON.stringify(finding)).toBe(before);
   });
 });
