@@ -108,6 +108,30 @@ describe('SummaryPanel', () => {
     expect(screen.queryByText('High Risk')).toBeNull();
   });
 
+  it('renders summary-only finding evidence without placeholder wording', () => {
+    render(
+      <SummaryPanel
+        scores={{
+          overall: { score: 57, band: 'WARN', confidence: 0.7 },
+          decision: 'WARN',
+        }}
+        rawScanResult={{ scoring_v2: { decision: 'NEEDS_REVIEW', overall_score: 57 } }}
+        topFindings={[
+          {
+            title: 'Policy Review',
+            summary: 'Potential policy issue needs review.',
+            severity: 'medium',
+            evidenceIds: [],
+            evidence: { available: false, kind: 'summary' },
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Based on summary only')).toBeInTheDocument();
+    expect(screen.queryByText(/Evidence: summary only/i)).toBeNull();
+  });
+
   it('UX calibration: a high-score REVIEW shows a plain evidence-backed bridge, not a failure', () => {
     render(
       <SummaryPanel

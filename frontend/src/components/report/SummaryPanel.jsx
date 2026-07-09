@@ -351,7 +351,7 @@ const SummaryPanel = ({
                 </p>
               )}
               {finding.evidence && finding.evidence.available === false && (
-                <p className="summary-finding-evidence-ref summary-finding-evidence-ref--none">Evidence: summary only</p>
+                <p className="summary-finding-evidence-ref summary-finding-evidence-ref--none">Based on summary only</p>
               )}
               {typeof onViewEvidence === 'function' && finding.evidenceIds.length > 0 && (
                 <button

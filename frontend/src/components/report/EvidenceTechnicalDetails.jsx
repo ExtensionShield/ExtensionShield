@@ -34,7 +34,7 @@ const ANALYZER_ICON = {
 
 const LOCAL_PATH_RE = /(?:\/Users\/|\/home\/|\b[A-Za-z]:\/(?!\/)|extensions_storage\/|extracted_[^/\s]+\/)\S+/g;
 const HIGH_RISK_PERMISSIONS = new Set(['cookies', 'debugger', 'downloads', 'history', 'management', 'nativeMessaging', 'proxy', 'webRequest', 'webRequestBlocking']);
-const MEDIUM_RISK_PERMISSIONS = new Set(['tabs', 'webNavigation', 'activeTab', 'scripting', 'clipboardRead', 'clipboardWrite', 'identity']);
+const MEDIUM_RISK_PERMISSIONS = new Set(['tabs', 'webNavigation', 'activeTab', 'scripting', 'clipboardRead', 'clipboardWrite', 'identity', 'tabCapture', 'desktopCapture']);
 
 function asArray(value) {
   if (!value) return [];
@@ -87,7 +87,11 @@ function formatDate(iso) {
 }
 
 function permissionExplanation(name, type) {
-  if (type === 'Host') return 'Allows access to pages matching this host pattern.';
+  if (type === 'Host') {
+    return String(name).includes('<all_urls>') || String(name).includes('*://*/*')
+      ? 'Allows access to all matching web pages. This broad capability increases review scope, but is not proof of misuse.'
+      : 'Allows access to pages matching this host pattern.';
+  }
   const lower = String(name).toLowerCase();
   const explanations = {
     tabs: 'Read browser tab metadata and interact with tab state.',
@@ -98,6 +102,9 @@ function permissionExplanation(name, type) {
     webrequestblocking: 'Block or modify network requests.',
     scripting: 'Inject scripts into allowed pages.',
     activetab: 'Access the active tab after user interaction.',
+    tabcapture: 'Capture audio or video from a browser tab when the extension invokes the capture flow.',
+    desktopcapture: 'Request capture of a screen, window, or tab through Chrome’s desktop capture flow.',
+    debugger: 'Attach to a browser target through the DevTools protocol. Powerful capability; review whether it matches the extension purpose.',
     history: 'Read browsing history.',
     downloads: 'Manage browser downloads.',
   };
@@ -241,7 +248,7 @@ function extractNetworkRows(raw, viewModel) {
         target: cleanText(host),
         kind: 'Capability',
         status: 'Declared access',
-        evidence: 'Host permission; not proof of network exfiltration.',
+        evidence: 'Host permission capability; not proof of network exfiltration.',
       });
     });
   }
@@ -334,14 +341,16 @@ function EvidenceTechnicalDetails({ rawScanResult, viewModel }) {
   const data = useMemo(() => {
     const raw = rawScanResult || {};
     const vm = viewModel || {};
+    const coverage = resolveAnalyzerCoverage(raw);
     return {
       permissions: buildPermissionsRows(vm),
       manifest: buildManifestRows(raw),
       code: extractSastRows(raw, vm),
+      codeStatus: coverage.find((row) => row.key === 'sast') || null,
       network: extractNetworkRows(raw, vm),
       virustotal: extractVirusTotalRows(raw),
       governance: extractGovernanceRows(raw),
-      coverage: resolveAnalyzerCoverage(raw),
+      coverage,
     };
   }, [rawScanResult, viewModel]);
   const counts = buildCounts(data);
@@ -377,7 +386,7 @@ function EvidenceTechnicalDetails({ rawScanResult, viewModel }) {
       <div className="etd-panel" id={`etd-panel-${activeTab}`} role="tabpanel" aria-labelledby={`etd-tab-${activeTab}`}>
         {activeTab === 'permissions' && <PermissionsPanel rows={data.permissions} />}
         {activeTab === 'manifest' && <ManifestPanel rows={data.manifest} />}
-        {activeTab === 'code' && <CodePanel rows={data.code} />}
+        {activeTab === 'code' && <CodePanel rows={data.code} status={data.codeStatus} />}
         {activeTab === 'network' && <NetworkPanel rows={data.network} />}
         {activeTab === 'virustotal' && <VirusTotalPanel summary={data.virustotal.summary} rows={data.virustotal.rows} />}
         {activeTab === 'governance' && <GovernancePanel rows={data.governance} />}
@@ -422,8 +431,20 @@ function ManifestPanel({ rows }) {
   );
 }
 
-function CodePanel({ rows }) {
-  if (!rows.length) return <EmptyState>No SAST findings or code evidence were included in the scan payload.</EmptyState>;
+function CodePanel({ rows, status }) {
+  if (!rows.length) {
+    let message = 'No SAST findings or code evidence were included in the scan payload.';
+    if (status?.state === 'failed') {
+      message = 'Code/SAST did not complete. No SAST findings are available from this scan.';
+    } else if (status?.state === 'no_code_scanned') {
+      message = 'Code/SAST analyzed 0 files. The extension code was not statically analyzed; this is not a clean result.';
+    } else if (status?.state === 'not_run') {
+      message = 'Code/SAST did not run for this scan. No code evidence is available.';
+    } else if (status?.state === 'scanned' || status?.state === 'full') {
+      message = 'Code/SAST ran and reported no code findings in the scan payload.';
+    }
+    return <EmptyState>{message}</EmptyState>;
+  }
   return (
     <div className="etd-list">
       {rows.map((row) => (

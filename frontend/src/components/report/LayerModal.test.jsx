@@ -125,7 +125,7 @@ describe('LayerModal triage ordering', () => {
 
   it('separates the three tiers correctly', () => {
     const { issues, notAnalyzed, cleared } = triageFactors(factors);
-    expect(issues.map((i) => i.label)).toEqual(['Policy Violations', 'Screen Capture']); // severe first
+    expect(issues.map((i) => i.label)).toEqual(['Potential Policy Issue', 'Screen Capture']); // severe first
     expect(notAnalyzed.map((i) => i.label)).toEqual(['Data Sharing']);
     expect(cleared.map((i) => i.label)).toEqual(['Code Safety', 'Store Reputation']); // alphabetical
   });
@@ -156,6 +156,13 @@ describe('factorEvidenceCaption', () => {
       .toBe('Last updated 508 days ago');
     expect(factorEvidenceCaption({ name: 'Maintenance', details: { days_since_update: 1 } }))
       .toBe('Last updated 1 day ago');
+  });
+
+  it('renders permission combo evidence with the actual combination', () => {
+    expect(factorEvidenceCaption({
+      name: 'PermissionCombos',
+      details: { triggered_combos: ['debugger+tabs', 'broad_host_access'] },
+    })).toBe('Combination: debugger + tabs, broad host access');
   });
 
   it('renders a relative file:line reference and never a local absolute path', () => {

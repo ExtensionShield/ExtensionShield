@@ -325,7 +325,8 @@ export function evidenceCountLabel(count) {
  *    (the "View evidence" button is gated on the same count, unchanged).
  *  - else structured finding.evidence:
  *      available + label -> "Evidence: <label>"
- *      otherwise (available:false, or present but unlabelled) -> "Evidence: summary only"
+ *      otherwise (available:false, or present but unlabelled) -> a plain
+ *      summary/reason-only label, not placeholder text
  *  - else (no IDs and no structured evidence) -> "Evidence not linked".
  *
  * Never generates a new label — it only selects the existing finding.evidence.label.
@@ -335,7 +336,8 @@ export function resolveFindingEvidenceLabel(finding, evidenceCount) {
   if (n > 0) return evidenceCountLabel(n);
   const ev = finding && finding.evidence;
   if (ev && ev.available === true && ev.label) return `Evidence: ${ev.label}`;
-  if (ev) return 'Evidence: summary only';
+  if (ev && ev.available === true) return 'Based on reported reason only';
+  if (ev) return 'Based on summary only';
   return evidenceCountLabel(0);
 }
 

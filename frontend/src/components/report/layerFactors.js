@@ -21,6 +21,35 @@ function scrubLocalPaths(text) {
   return LOCAL_PATH_RE.test(cleaned) ? '' : cleaned;
 }
 
+function asStringArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.flatMap(asStringArray).filter(Boolean);
+  if (typeof value === 'string') {
+    return value.split(',').map((v) => v.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function humanizeSignalToken(token) {
+  return String(token || '')
+    .trim()
+    .replace(/^prohibited_perm:/, '')
+    .replace(/broad_host_access/g, 'broad host access')
+    .replace(/travel_docs_tos_automation_risk/g, 'travel-docs automation policy risk')
+    .replace(/travel_docs_third_party_processor_risk/g, 'travel-docs third-party processor policy risk')
+    .replace(/broad_access_with_vt_detection/g, 'broad access with malware reputation detection')
+    .replace(/\+/g, ' + ')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function summarizeTokens(values, limit = 5) {
+  const unique = Array.from(new Set(values.map(humanizeSignalToken).filter(Boolean)));
+  if (!unique.length) return '';
+  const shown = unique.slice(0, limit).join(', ');
+  return unique.length > limit ? `${shown} +${unique.length - limit} more` : shown;
+}
+
 /**
  * Build a short, truthful evidence caption for a single factor from real
  * analyzer output only — never invents text. Preference order:
@@ -37,6 +66,32 @@ export function factorEvidenceCaption(factor) {
 
   if (typeof details.description === 'string' && details.description.trim()) {
     return scrubLocalPaths(details.description);
+  }
+
+  if (factor?.name === 'PermissionsBaseline') {
+    const permissions = [
+      ...asStringArray(details.high_risk_permissions),
+      ...asStringArray(details.unreasonable_permissions),
+      ...asStringArray(details.permission),
+      ...asStringArray(details.permission_name),
+    ];
+    const text = summarizeTokens(permissions);
+    if (text) return `Sensitive permissions: ${text}`;
+  }
+
+  if (factor?.name === 'PermissionCombos') {
+    const combos = [
+      ...asStringArray(details.triggered_combos),
+      ...asStringArray(details.combo),
+      ...asStringArray(details.combination),
+    ];
+    const text = summarizeTokens(combos);
+    if (text) return `Combination: ${text}`;
+  }
+
+  if (factor?.name === 'ToSViolations') {
+    const text = summarizeTokens(asStringArray(details.violations));
+    if (text) return `Potential policy flags: ${text}`;
   }
 
   const days = details.days_since_update;
@@ -117,6 +172,22 @@ export function factorEvidenceDetails(factor) {
 
   const hostPermission = details.hostPermission ?? details.host_permissions ?? details.host;
   if (hostPermission !== permission) pushEvidenceRow(rows, 'Host access', hostPermission);
+
+  const highRiskPermissions = summarizeTokens([
+    ...asStringArray(details.high_risk_permissions),
+    ...asStringArray(details.unreasonable_permissions),
+  ]);
+  pushEvidenceRow(rows, 'Sensitive permissions', highRiskPermissions);
+
+  const triggeredCombos = summarizeTokens([
+    ...asStringArray(details.triggered_combos),
+    ...asStringArray(details.combo),
+    ...asStringArray(details.combination),
+  ]);
+  pushEvidenceRow(rows, 'Combination', triggeredCombos);
+
+  const policyFlags = summarizeTokens(asStringArray(details.violations));
+  pushEvidenceRow(rows, 'Policy flags', policyFlags);
 
   const manifestField = details.manifest_field ?? details.manifestField ?? details.field;
   pushEvidenceRow(rows, 'Manifest', manifestField);
@@ -309,10 +380,10 @@ const FACTOR_HUMAN = {
   Webstore:             { label: 'Store Reputation',      category: 'trust',  desc: 'Chrome Web Store ratings and user reviews' },
   Maintenance:          { label: 'Publisher update age',   category: 'trust',  desc: 'How recently the extension was updated by its developer' },
   PermissionsBaseline:  { label: 'Permission Risk',       category: 'access', desc: 'Evaluates the sensitivity of requested browser permissions' },
-  PermissionCombos:     { label: 'Dangerous Combos',      category: 'access', desc: 'Flags risky combinations of permissions that enable data theft' },
+  PermissionCombos:     { label: 'Dangerous Combos',      category: 'access', desc: 'Flags risky permission combinations or broad-access capability signals' },
   NetworkExfil:         { label: 'Data Sharing',          category: 'data',   desc: 'Detects if data is sent to external servers' },
   CaptureSignals:       { label: 'Screen Capture',        category: 'data',   desc: 'Checks for screen or tab recording capabilities' },
-  ToSViolations:        { label: 'Policy Violations',     category: 'policy', desc: 'Checks compliance with Chrome Web Store policies' },
+  ToSViolations:        { label: 'Potential Policy Issue', category: 'policy', desc: 'Surfaces potential Chrome Web Store policy issues from governance evidence' },
   Consistency:          { label: 'Behavior Match',        category: 'policy', desc: 'Compares stated purpose vs actual behavior' },
   DisclosureAlignment:  { label: 'Disclosure Accuracy',   category: 'policy', desc: 'Validates privacy policy against actual data collection' },
 };

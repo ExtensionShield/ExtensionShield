@@ -236,14 +236,14 @@ describe('resolveFindingEvidenceLabel — Key Findings row evidence label', () =
     expect(resolveFindingEvidenceLabel(finding, 1)).toBe('1 evidence item');
   });
 
-  it('shows "Evidence: summary only" for available:false findings', () => {
+  it('shows a non-placeholder summary-only label for available:false findings', () => {
     const finding = { title: 'Passes checks', evidence: { available: false } };
-    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: summary only');
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Based on summary only');
   });
 
-  it('shows "Evidence: summary only" when structured evidence exists but has no label (never "not linked")', () => {
+  it('shows a reported-reason label when structured evidence exists but has no label (never "not linked")', () => {
     const finding = { title: 'x', evidence: { available: true } };
-    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: summary only');
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Based on reported reason only');
   });
 
   it('shows "Evidence not linked" only when there are no IDs and no structured evidence', () => {
