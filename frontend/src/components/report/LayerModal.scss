@@ -8,10 +8,9 @@
 }
 
 .lm-dialog-smooth {
-  left: auto !important;
-  right: clamp(12px, 3vw, 28px) !important;
   top: 50% !important;
-  transform: translateY(-50%) !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
 
   &[data-state="open"],
   &[data-state="closed"] {
@@ -62,8 +61,8 @@
 }
 
 @keyframes lmDrawerIn {
-  from { opacity: 0; transform: translateY(-50%) translateX(18px) scale(0.99); }
-  to   { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.99); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 .lm-header-wrap,
@@ -660,16 +659,15 @@
 
 @media (max-width: 700px) {
   .lm-dialog-smooth {
-    inset: auto 10px 10px 10px !important;
-    top: auto !important;
-    right: 10px !important;
-    left: 10px !important;
-    transform: none !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, -50%) !important;
   }
 
   .lm-content {
-    width: auto;
-    max-width: none;
+    width: calc(100vw - 20px);
+    max-width: 520px;
     max-height: calc(100vh - 20px);
   }
 
