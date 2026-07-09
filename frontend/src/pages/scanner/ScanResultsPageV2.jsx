@@ -6,7 +6,6 @@ import {
   EvidenceDrawer,
   LayerModal,
   ResultFeedback,
-  AnalyzerCoverage,
   EvidenceTechnicalDetails,
   SimilarExtensions,
 } from "../../components/report";
@@ -42,6 +41,7 @@ import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extr
 import { getExtensionIconUrl, EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
 import { isUUID } from "../../utils/extensionId";
 import { doesScanResultMatchIdentifier } from "../../utils/scanResultIdentity";
+import { REPORT_QUICK_NAV_ITEMS } from "./ScanResultsPageV2.constants";
 import "./ScanResultsPageV2.scss";
 
 /** True if text is an unresolved Chrome i18n placeholder (e.g. __MSG_appDesc__). */
@@ -654,12 +654,7 @@ const ScanResultsPageV2 = () => {
     ? scanResults.metadata.similar_extensions
     : [];
 
-  const quickNavItems = [
-    { id: "overview", label: "Overview" },
-    { id: "layers", label: "Security · Privacy · Governance" },
-    { id: "key-findings", label: "Key Findings" },
-    { id: "analyzer-coverage", label: "Analyzer Coverage" },
-  ];
+  const quickNavItems = REPORT_QUICK_NAV_ITEMS;
 
   const formatScanDate = (ts) =>
     ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
@@ -996,9 +991,6 @@ const ScanResultsPageV2 = () => {
                 </ul>
               )}
             </section>
-
-            {/* Analyzer Coverage — honest, always-visible coverage states */}
-            <AnalyzerCoverage rawScanResult={scanResults} />
 
             <EvidenceTechnicalDetails rawScanResult={scanResults} viewModel={viewModel} />
           </div>

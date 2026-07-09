@@ -30,10 +30,29 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--extensionshield-border);
   overflow-x: auto;
+  scrollbar-color: rgba(100, 116, 139, 0.58) rgba(148, 163, 184, 0.12);
   scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.12);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(100, 116, 139, 0.58);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(71, 85, 105, 0.68);
+  }
 }
 
 .etd-tab {
@@ -131,7 +150,7 @@
 }
 
 .etd-coverage .etd-row {
-  grid-template-columns: 1fr 0.9fr 1.6fr 1.8fr;
+  grid-template-columns: minmax(190px, 1.5fr) minmax(130px, 0.85fr) minmax(220px, 1.4fr) minmax(110px, 0.7fr);
 }
 
 .etd-key-row {
@@ -174,6 +193,33 @@
   min-width: 0;
   color: var(--extensionshield-text-muted);
   overflow-wrap: anywhere;
+}
+
+.etd-coverage-analyzer {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+
+  svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: var(--extensionshield-text-muted);
+  }
+}
+
+.etd-coverage-checks {
+  display: block;
+  margin-top: 3px;
+  color: var(--extensionshield-text-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.etd-coverage-status {
+  color: var(--extensionshield-text-secondary);
+  line-height: 1.42;
 }
 
 .etd-pill {

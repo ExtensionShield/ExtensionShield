@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Landmark, Lock, Shield } from 'lucide-react';
 import { LayerCards } from './ScanResultsPageV2';
+import { REPORT_QUICK_NAV_ITEMS } from './ScanResultsPageV2.constants';
 
 describe('LayerCards', () => {
   it('renders real score, status count, summary, progress affordance, and CTA', () => {
@@ -52,5 +53,15 @@ describe('LayerCards', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Security details: 2 issues/i }));
     expect(onOpenLayer).toHaveBeenCalledWith('security');
+  });
+});
+
+describe('ScanResultsPageV2 report flow', () => {
+  it('links quick navigation to Evidence & Technical Details instead of the removed Analyzer Coverage section', () => {
+    expect(REPORT_QUICK_NAV_ITEMS).not.toContainEqual(expect.objectContaining({ id: 'analyzer-coverage' }));
+    expect(REPORT_QUICK_NAV_ITEMS).toContainEqual({
+      id: 'evidence-technical-details',
+      label: 'Evidence & Technical Details / Coverage',
+    });
   });
 });

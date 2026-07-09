@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  BarChart3,
   CheckCircle2,
   Code2,
   FileJson2,
@@ -8,6 +9,7 @@ import {
   ScrollText,
   ShieldCheck,
   SlidersHorizontal,
+  Store,
 } from 'lucide-react';
 import { toRelativeEvidencePath } from '../../utils/normalizeScanResult';
 import { resolveAnalyzerCoverage } from '../../utils/reportDisplay';
@@ -22,6 +24,13 @@ const TABS = [
   { key: 'governance', label: 'Governance', Icon: ScrollText },
   { key: 'coverage', label: 'Coverage', Icon: SlidersHorizontal },
 ];
+
+const ANALYZER_ICON = {
+  sast: Code2,
+  virustotal: ShieldCheck,
+  listing: Store,
+  chromestats: BarChart3,
+};
 
 const LOCAL_PATH_RE = /(?:\/Users\/|\/home\/|\b[A-Za-z]:\/(?!\/)|extensions_storage\/|extracted_[^/\s]+\/)\S+/g;
 const HIGH_RISK_PERMISSIONS = new Set(['cookies', 'debugger', 'downloads', 'history', 'management', 'nativeMessaging', 'proxy', 'webRequest', 'webRequestBlocking']);
@@ -68,6 +77,13 @@ function EmptyState({ children = 'No evidence was included for this group in the
       <span>{children}</span>
     </div>
   );
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function permissionExplanation(name, type) {
@@ -502,16 +518,25 @@ function CoveragePanel({ rows }) {
   return (
     <div className="etd-table etd-coverage" role="table" aria-label="Analyzer coverage details">
       <div className="etd-row etd-row-head" role="row">
-        <span role="columnheader">Analyzer</span><span role="columnheader">Coverage</span><span role="columnheader">Status</span><span role="columnheader">Checks</span>
+        <span role="columnheader">Analyzer</span><span role="columnheader">Coverage</span><span role="columnheader">Status</span><span role="columnheader">Last updated</span>
       </div>
-      {rows.map((row) => (
-        <div className="etd-row" role="row" key={row.key}>
-          <span role="cell" className="etd-strong">{row.label}</span>
-          <span role="cell"><Pill tone={row.tone}>{row.coverageLabel}</Pill></span>
-          <span role="cell">{row.statusText}</span>
-          <span role="cell" className="etd-muted">{row.whatItChecks}</span>
-        </div>
-      ))}
+      {rows.map((row) => {
+        const Icon = ANALYZER_ICON[row.key] || Code2;
+        return (
+          <div className="etd-row" role="row" key={row.key}>
+            <span role="cell" className="etd-coverage-analyzer">
+              <Icon size={16} aria-hidden="true" />
+              <span>
+                <span className="etd-strong">{row.label}</span>
+                <span className="etd-coverage-checks">{row.whatItChecks}</span>
+              </span>
+            </span>
+            <span role="cell"><Pill tone={row.tone}>{row.coverageLabel}</Pill></span>
+            <span role="cell" className="etd-coverage-status">{row.statusText}</span>
+            <span role="cell" className="etd-muted">{formatDate(row.lastUpdated)}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import EvidenceTechnicalDetails from './EvidenceTechnicalDetails';
 
 const rawScanResult = {
-  timestamp: '2026-07-08T00:00:00Z',
+  timestamp: '2026-07-08T12:00:00Z',
   manifest: {
     manifest_version: 3,
     permissions: ['tabs', 'storage'],
@@ -154,7 +154,10 @@ describe('EvidenceTechnicalDetails', () => {
     const panel = screen.getByRole('tabpanel');
     expect(within(panel).getByText('SAST')).toBeInTheDocument();
     expect(within(panel).getByText('VirusTotal')).toBeInTheDocument();
+    expect(within(panel).getByText(/Code patterns, security anti-patterns, risky functions/)).toBeInTheDocument();
+    expect(within(panel).getByText(/Known malicious files, URLs, and domains/)).toBeInTheDocument();
     expect(within(panel).getByText(/Completed on scanned files/)).toBeInTheDocument();
+    expect(within(panel).getAllByText('Jul 8, 2026').length).toBeGreaterThan(0);
   });
 
   it('renders a safe empty state when data is missing', () => {
