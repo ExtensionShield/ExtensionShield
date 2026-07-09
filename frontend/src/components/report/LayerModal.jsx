@@ -259,7 +259,7 @@ const LayerModal = ({
                 <div className="lm-title-block">
                   <span className="lm-title">{config.title}</span>
                   <span className="lm-summary">
-                    {pluralize(issues.length, 'open issue')} · {pluralize(cleared.length, 'cleared')} · {pluralize(notAnalyzed.length, 'not analyzed')}
+                    {pluralize(issues.length, 'open issue')} · {pluralize(cleared.length, 'cleared', 'cleared')} · {pluralize(notAnalyzed.length, 'not analyzed', 'not analyzed')}
                   </span>
                 </div>
               </div>

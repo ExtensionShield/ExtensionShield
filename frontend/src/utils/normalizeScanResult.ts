@@ -827,7 +827,13 @@ function gateDecisionToBand(decision: string | null | undefined): ScoreBand | nu
 function factorIssueBand(layer: RawLayerScore | null | undefined): ScoreBand | null {
   const factors = layer?.factors;
   if (!Array.isArray(factors)) return null;
-  return factors.some((f) => (f?.severity ?? 0) >= 0.4) ? 'WARN' : null;
+  return factors.some((f) => {
+    // Publisher update age below the key-finding threshold (0.6) is routine
+    // context, not an issue — mirror the buildKeyFindings carve-out so the card
+    // band agrees with its own "No issues" pill instead of showing amber.
+    if (f?.name === 'Maintenance' && (f?.severity ?? 0) < 0.6) return false;
+    return (f?.severity ?? 0) >= 0.4;
+  }) ? 'WARN' : null;
 }
 
 /**

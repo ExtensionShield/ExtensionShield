@@ -73,6 +73,20 @@ describe('LayerModal status mapping', () => {
     expect(moderate.tone).toBe('warn');
   });
 
+  it('advisory publisher update age below 0.6 is NOT counted as an open issue', () => {
+    // Under the key-finding threshold (0.6, ~180 days) it is routine context,
+    // so the modal must not count it among "Open Issues" (matches the card /
+    // Issue Overview / Key Findings, which all exclude it). At >= 0.6 it stays a
+    // visible caution in the issues tier.
+    const routine = humanizeFactor({ name: 'Maintenance', severity: 0.4 });
+    expect(routine.statusType).not.toBe('issues');
+    expect(routine.status).toBe('Caution');
+
+    const olderThan180d = humanizeFactor({ name: 'Maintenance', severity: 0.6 });
+    expect(olderThan180d.statusType).toBe('issues');
+    expect(olderThan180d.status).toBe('Caution');
+  });
+
   it('an actual finding wins over the not-analyzed flag', () => {
     const result = humanizeFactor({
       name: 'NetworkExfil',
@@ -82,9 +96,19 @@ describe('LayerModal status mapping', () => {
     expect(result.statusType).toBe('issues');
   });
 
-  it('isNotAnalyzed only fires on the explicit coverage flag', () => {
+  it('isNotAnalyzed fires on real did-not-run signals, not on clean scans', () => {
+    // Network/exfil analyzer coverage flag.
     expect(isNotAnalyzed({ details: { network_analysis_enabled: false } })).toBe(true);
     expect(isNotAnalyzed({ details: { network_analysis_enabled: true } })).toBe(false);
+    // VirusTotal with zero engines = no coverage (hash not in DB / rate-limited).
+    expect(isNotAnalyzed({ name: 'VirusTotal', details: { total_engines: 0 } })).toBe(true);
+    // A real clean VT scan reports dozens of engines -> genuinely "Clear".
+    expect(isNotAnalyzed({ name: 'VirusTotal', details: { total_engines: 75 } })).toBe(false);
+    // SAST that scanned no code (minified-only / download failed).
+    expect(isNotAnalyzed({ name: 'SAST', details: { files_scanned: 0, deduped_findings: 0 } })).toBe(true);
+    // SAST that actually scanned files with no findings -> genuinely "Clear".
+    expect(isNotAnalyzed({ name: 'SAST', details: { files_scanned: 8, deduped_findings: 0 } })).toBe(false);
+    // No details / unrelated factor -> not flagged.
     expect(isNotAnalyzed({ details: {} })).toBe(false);
     expect(isNotAnalyzed({})).toBe(false);
   });

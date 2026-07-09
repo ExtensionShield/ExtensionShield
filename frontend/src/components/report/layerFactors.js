@@ -325,7 +325,15 @@ const FACTOR_HUMAN = {
 export function isNotAnalyzed(factor) {
   const details = factor?.details;
   if (!details || typeof details !== 'object') return false;
+  // Network/exfil analyzer explicitly reports it did not run.
   if (details.network_analysis_enabled === false) return true;
+  // VirusTotal returned no coverage (hash not in DB / unavailable / rate-limited):
+  // zero engines scanned. A real clean scan reports dozens of engines, so a
+  // severity-0 VT factor with 0 engines is "did not run", not "clean".
+  if (factor?.name === 'VirusTotal' && Number(details.total_engines) === 0) return true;
+  // SAST analyzed no code (minified/bundled-only, or the download failed):
+  // 0 files scanned and nothing deduped means it could not clear code safety.
+  if (factor?.name === 'SAST' && Number(details.files_scanned) === 0 && !details.deduped_findings) return true;
   return false;
 }
 
@@ -349,10 +357,15 @@ export function humanizeFactor(factor) {
   const isAdvisoryTrust = factor.name === 'Maintenance';
   let status, statusType, tone;
   if (severity >= 0.4) {
-    statusType = 'issues';
     const isHigh = severity >= 0.7 && !isAdvisoryTrust;
     tone = isHigh ? 'bad' : 'warn';
     status = isHigh ? 'High severity' : isAdvisoryTrust ? 'Caution' : 'Issue';
+    // Publisher update age below the key-finding threshold (0.6, matching
+    // buildKeyFindings in normalizeScanResult) is routine context, not an open
+    // issue. Keep the "Caution" label but do not count it among issues, so the
+    // modal agrees with the card / Issue Overview / Key Findings, which all
+    // exclude it. At >= 0.6 (>180 days) it remains a visible caution.
+    statusType = (isAdvisoryTrust && severity < 0.6) ? 'clear' : 'issues';
   } else if (isNotAnalyzed(factor)) {
     statusType = 'unknown';
     tone = 'neutral';
