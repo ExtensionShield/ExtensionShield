@@ -7,6 +7,7 @@ import {
   LayerModal,
   ResultFeedback,
   AnalyzerCoverage,
+  EvidenceTechnicalDetails,
   SimilarExtensions,
 } from "../../components/report";
 import {
@@ -998,6 +999,8 @@ const ScanResultsPageV2 = () => {
 
             {/* Analyzer Coverage — honest, always-visible coverage states */}
             <AnalyzerCoverage rawScanResult={scanResults} />
+
+            <EvidenceTechnicalDetails rawScanResult={scanResults} viewModel={viewModel} />
           </div>
 
           {/* Right sidebar: Issue Overview, Quick Navigation, Similar Extensions */}
