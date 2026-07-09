@@ -250,6 +250,13 @@
     color: var(--theme-text-muted);
   }
 
+  // "Policy decision:" tag — keeps the governance rulepack outcome visibly
+  // distinct from the numeric governance score.
+  .summary-why-authority-tag {
+    font-weight: 800;
+    color: var(--theme-text-secondary);
+  }
+
   // Explicit analyzer coverage (SAST / VirusTotal / network) — readable contrast.
   .summary-analyzers {
     margin: 8px 0;

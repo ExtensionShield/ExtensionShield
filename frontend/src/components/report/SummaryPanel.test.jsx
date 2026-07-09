@@ -157,4 +157,59 @@ describe('SummaryPanel', () => {
     // Not harsh block language on a review.
     expect(screen.queryByText(/do not install/i)).toBeNull();
   });
+
+  it('explains a governance rulepack verdict as a Policy decision, distinct from the score', () => {
+    render(
+      <SummaryPanel
+        scores={{
+          overall: { score: 65, band: 'WARN', confidence: 0.78 },
+          decision: 'BLOCK',
+          decisionAuthority: 'baseline_governance',
+          reasons: ['Block — Limited Use policy requires explicit PII declaration'],
+        }}
+        rawScanResult={{
+          scoring_v2: { decision: 'BLOCK', overall_score: 65 },
+          governance_bundle: {
+            decision: { final_reasons: ['Block — Limited Use policy requires explicit PII declaration'] },
+          },
+        }}
+        keyFindings={[
+          {
+            title: 'Limited Use policy',
+            severity: 'high',
+            layer: 'governance',
+            evidence: { kind: 'governance', rulepack: 'CWS_LIMITED_USE', ruleId: 'R2' },
+          },
+        ]}
+      />
+    );
+
+    // The verdict basis is surfaced as a governance policy review with its rule id...
+    expect(
+      screen.getByText(/Decided by Chrome Web Store policy review \(governance rule CWS_LIMITED_USE::R2\)\./i)
+    ).toBeInTheDocument();
+    // ...and tagged a "Policy decision" so it reads as separate from the numeric score.
+    expect(screen.getByText(/Policy decision:/i)).toBeInTheDocument();
+  });
+
+  it('names the hard gate that drove the verdict, and does not tag it a Policy decision', () => {
+    render(
+      <SummaryPanel
+        scores={{
+          overall: { score: 85, band: 'WARN', confidence: 0.8 },
+          decision: 'BLOCK',
+          decisionAuthority: 'hard_gate',
+          reasons: ['Loads and runs code from a remote/external source'],
+        }}
+        rawScanResult={{
+          scoring_v2: { decision: 'BLOCK', overall_score: 85, hard_gates_triggered: ['PURPOSE_MISMATCH'] },
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText(/Decided by a hard security\/privacy gate \(PURPOSE_MISMATCH\)\./i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Policy decision:/i)).toBeNull();
+  });
 });

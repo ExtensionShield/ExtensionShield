@@ -274,6 +274,8 @@ function factorIssueRow(item, index) {
     title: item.label,
     category: item.category,
     source: item.category,
+    domain: item.domain,
+    domainLabel: item.domainLabel,
     status: item.status,
     statusType: item.statusType,
     tone: item.tone,
@@ -388,6 +390,133 @@ const FACTOR_HUMAN = {
   DisclosureAlignment:  { label: 'Disclosure Accuracy',   category: 'policy', desc: 'Validates privacy policy against actual data collection' },
 };
 
+// ---------------------------------------------------------------------------
+// Report domain classification (PRESENTATION ONLY).
+//
+// The scoring engine groups factors into Security / Privacy / Governance
+// scoring LAYERS (backend src/extension_shield/scoring/weights.py). For the
+// report we present a concept-first grouping so reputation / maintenance
+// context does not read as direct technical-security evidence. This is a
+// display lens only: it never changes a score, weight, cap, or verdict. Each
+// factor's scoring home is unchanged — e.g. Webstore / ChromeStats /
+// Maintenance are still scored inside the Security layer but are presented
+// here under "Reputation & Maintenance Context".
+// ---------------------------------------------------------------------------
+
+export const REPORT_DOMAIN = {
+  TECHNICAL_SECURITY: 'technical-security',
+  PRIVACY_DATA_ACCESS: 'privacy-data-access',
+  GOVERNANCE_POLICY: 'governance-policy',
+  REPUTATION_MAINTENANCE: 'reputation-maintenance',
+  COVERAGE_CONFIDENCE: 'coverage-confidence',
+};
+
+// Ordered domain metadata. `shortLabel` is the compact chip label (kept
+// distinct from the Security/Privacy/Governance layer-card titles). `note` is
+// an advisory caption shown where the domain's signals appear.
+export const REPORT_DOMAINS = [
+  {
+    id: REPORT_DOMAIN.TECHNICAL_SECURITY,
+    label: 'Technical Security',
+    shortLabel: 'Technical Security',
+    question: 'Did the code, package, or manifest show technical risk?',
+  },
+  {
+    id: REPORT_DOMAIN.PRIVACY_DATA_ACCESS,
+    label: 'Privacy & Data Access',
+    shortLabel: 'Privacy & Data',
+    question: 'What user data can this extension access, capture, or transmit?',
+  },
+  {
+    id: REPORT_DOMAIN.GOVERNANCE_POLICY,
+    label: 'Governance / Policy / Disclosure',
+    shortLabel: 'Governance / Policy',
+    question: 'Does the declared purpose, disclosure, and policy posture match what it can do?',
+  },
+  {
+    id: REPORT_DOMAIN.REPUTATION_MAINTENANCE,
+    label: 'Reputation & Maintenance Context',
+    shortLabel: 'Reputation',
+    question: 'What context affects trust, freshness, and review priority?',
+    note: 'Context signal — informs confidence, not a standalone verdict.',
+  },
+  {
+    id: REPORT_DOMAIN.COVERAGE_CONFIDENCE,
+    label: 'Coverage & Confidence',
+    shortLabel: 'Coverage',
+    question: 'How complete was the scan, and where should you be cautious?',
+  },
+];
+
+const REPORT_DOMAIN_BY_ID = REPORT_DOMAINS.reduce((acc, d) => {
+  acc[d.id] = d;
+  return acc;
+}, {});
+
+// Explicit factor -> domain map. Reuses the FACTOR_HUMAN categories, with the
+// two overrides the category alone cannot express:
+//   - VirusTotal (category 'threat') is technical malware evidence.
+//   - ChromeStats (category 'threat') is reputation / threat-intel CONTEXT.
+const FACTOR_DOMAIN = {
+  SAST: REPORT_DOMAIN.TECHNICAL_SECURITY,
+  VirusTotal: REPORT_DOMAIN.TECHNICAL_SECURITY,
+  Obfuscation: REPORT_DOMAIN.TECHNICAL_SECURITY,
+  Manifest: REPORT_DOMAIN.TECHNICAL_SECURITY,
+  PermissionsBaseline: REPORT_DOMAIN.PRIVACY_DATA_ACCESS,
+  PermissionCombos: REPORT_DOMAIN.PRIVACY_DATA_ACCESS,
+  NetworkExfil: REPORT_DOMAIN.PRIVACY_DATA_ACCESS,
+  CaptureSignals: REPORT_DOMAIN.PRIVACY_DATA_ACCESS,
+  ToSViolations: REPORT_DOMAIN.GOVERNANCE_POLICY,
+  Consistency: REPORT_DOMAIN.GOVERNANCE_POLICY,
+  DisclosureAlignment: REPORT_DOMAIN.GOVERNANCE_POLICY,
+  Webstore: REPORT_DOMAIN.REPUTATION_MAINTENANCE,
+  ChromeStats: REPORT_DOMAIN.REPUTATION_MAINTENANCE,
+  Maintenance: REPORT_DOMAIN.REPUTATION_MAINTENANCE,
+};
+
+// Fallback for an unknown factor: map its FACTOR_HUMAN category to a domain.
+const CATEGORY_DOMAIN = {
+  code: REPORT_DOMAIN.TECHNICAL_SECURITY,
+  threat: REPORT_DOMAIN.TECHNICAL_SECURITY,
+  access: REPORT_DOMAIN.PRIVACY_DATA_ACCESS,
+  data: REPORT_DOMAIN.PRIVACY_DATA_ACCESS,
+  policy: REPORT_DOMAIN.GOVERNANCE_POLICY,
+  trust: REPORT_DOMAIN.REPUTATION_MAINTENANCE,
+  coverage: REPORT_DOMAIN.COVERAGE_CONFIDENCE,
+};
+
+/**
+ * Resolve a factor (or factor name) to its report-domain metadata. Explicit
+ * factor map first, then the factor's FACTOR_HUMAN category, then Technical
+ * Security as a safe default. Presentation only — never affects any score.
+ */
+export function domainForFactor(factorOrName) {
+  const name = typeof factorOrName === 'string' ? factorOrName : factorOrName?.name;
+  let id = FACTOR_DOMAIN[name];
+  if (!id) {
+    const category = FACTOR_HUMAN[name]?.category;
+    id = CATEGORY_DOMAIN[category] || REPORT_DOMAIN.TECHNICAL_SECURITY;
+  }
+  return REPORT_DOMAIN_BY_ID[id];
+}
+
+/**
+ * Group scoring factors into the ordered report domains for a concept-first
+ * presentation. Returns only the domains that actually have factors. Pure
+ * display grouping — factors and their scores are passed through untouched.
+ */
+export function groupFactorsByDomain(factors = []) {
+  const buckets = new Map();
+  (Array.isArray(factors) ? factors : []).forEach((factor) => {
+    const domain = domainForFactor(factor);
+    if (!buckets.has(domain.id)) buckets.set(domain.id, []);
+    buckets.get(domain.id).push(factor);
+  });
+  return REPORT_DOMAINS
+    .filter((domain) => buckets.has(domain.id))
+    .map((domain) => ({ domain, factors: buckets.get(domain.id) }));
+}
+
 /**
  * A check whose underlying analysis did not run has no coverage and must not be
  * shown as "Clear" (that overstates certainty). The network/exfil analyzer
@@ -421,6 +550,7 @@ export function humanizeFactor(factor) {
     category: 'other',
     desc: '',
   };
+  const domain = domainForFactor(factor);
   const severity = factor.severity ?? 0;
   // Publisher update age is a trust/caution signal, not a code-safety finding.
   // It must never present as standalone "High severity" — cap it at an advisory
@@ -446,7 +576,17 @@ export function humanizeFactor(factor) {
     tone = 'good';
     status = 'Clear';
   }
-  return { ...info, status, statusType, tone, severity, evidence: factorEvidenceCaption(factor), raw: factor };
+  return {
+    ...info,
+    domain: domain.id,
+    domainLabel: domain.shortLabel,
+    status,
+    statusType,
+    tone,
+    severity,
+    evidence: factorEvidenceCaption(factor),
+    raw: factor,
+  };
 }
 
 /**

@@ -352,3 +352,85 @@ export function resolveIssueOverview(findings) {
   });
   return { ...counts, total: counts.high + counts.medium + counts.low + counts.info };
 }
+
+/**
+ * Labels that keep the numeric governance-layer SCORE distinct from the
+ * governance rulepack POLICY DECISION — they are separate concepts and can
+ * disagree (a high governance score can still carry a policy review/block).
+ */
+export const GOVERNANCE_SCORE_LABEL = 'Governance score';
+export const POLICY_DECISION_LABEL = 'Policy decision';
+
+/** Title-case an unknown authority token as a readable fallback. */
+function humanizeAuthorityToken(authority) {
+  return String(authority || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (ch) => ch.toUpperCase())
+    .trim();
+}
+
+/**
+ * Explain WHICH authority produced the final verdict, in one plain sentence.
+ *
+ * The backend Decision Authority (src/extension_shield/scoring/decision.py)
+ * resolves the verdict through a fixed precedence chain; this surfaces that
+ * precedence to the reader so a governance-rule or coverage-driven review is
+ * never mistaken for a technical-security or reputation finding. Display only.
+ *
+ * A reputation/maintenance signal is never an authority in the chain, so it can
+ * never be rendered here as the decision basis.
+ *
+ * Returns a rich sentence for a known authority, or `null` for an unrecognized
+ * token (callers fall back to a humanized label).
+ */
+export function describeDecisionAuthority(authority, context = {}) {
+  const {
+    coverageCapApplied = false,
+    ruleId = null,
+    rulepack = null,
+    gate = null,
+  } = context;
+
+  const rule = rulepack && ruleId ? `${rulepack}::${ruleId}` : (ruleId || rulepack || null);
+
+  switch (authority) {
+    case 'org_block':
+      return 'Decided by organization policy (blocklist).';
+    case 'org_allow_exception':
+      return 'Decided by organization policy (allow exception).';
+    case 'baseline_governance':
+      return rule
+        ? `Decided by Chrome Web Store policy review (governance rule ${rule}).`
+        : 'Decided by Chrome Web Store policy review (governance policy rule).';
+    case 'hard_gate':
+      return `Decided by a hard security/privacy gate${gate ? ` (${gate})` : ''}.`;
+    case 'score_threshold':
+      return coverageCapApplied
+        ? 'Limited by analysis coverage; needs review.'
+        : 'Decided by overall score threshold.';
+    case 'insufficient_data':
+    case 'low_confidence':
+      return 'Limited by analysis coverage; needs review.';
+    case 'score_pass':
+      return 'All checks passed.';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Full "why this verdict" element model: the plain sentence, whether a
+ * governance rulepack drove it (so the UI can tag it a POLICY_DECISION distinct
+ * from the governance score), and a humanized fallback label for unknown
+ * authorities. Returns null when there is no authority to explain.
+ */
+export function resolveDecisionAuthorityDisplay(authority, context = {}) {
+  if (!authority) return null;
+  const description = describeDecisionAuthority(authority, context);
+  return {
+    authority,
+    description,
+    fallbackLabel: humanizeAuthorityToken(authority),
+    isPolicyDecision: authority === 'baseline_governance',
+  };
+}

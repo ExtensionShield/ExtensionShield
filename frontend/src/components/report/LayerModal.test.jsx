@@ -356,4 +356,31 @@ describe('LayerModal rendering', () => {
     expect(document.body.textContent).toContain('background.js:12');
     expect(document.body.textContent).not.toMatch(/\/Users|\/home|extensions_storage|extracted_/);
   });
+
+  it('tags each factor with its report domain and shows the reputation context note', () => {
+    // A Security-layer modal that mixes a technical factor and a reputation
+    // factor: both are scored in Security, but they must read as different
+    // report domains, and the reputation disclaimer must appear.
+    renderModal({
+      factors: [
+        { name: 'Webstore', severity: 0.5, details: { rating_avg: 2.1 } },
+        { name: 'SAST', severity: 0.5 },
+      ],
+      keyFindings: [],
+    });
+
+    // Domain chips (kept distinct from the "Security" layer title).
+    expect(screen.getByText('Reputation')).toBeInTheDocument();
+    expect(screen.getByText('Technical Security')).toBeInTheDocument();
+    // Reputation/maintenance disclaimer.
+    expect(
+      screen.getByText('Context signal — informs confidence, not a standalone verdict.')
+    ).toBeInTheDocument();
+  });
+
+  it('does not show the reputation context note when no reputation factor is present', () => {
+    // Default fixture: Manifest / SAST / VirusTotal / NetworkExfil — no reputation.
+    renderModal();
+    expect(screen.queryByText(/Context signal — informs confidence/)).toBeNull();
+  });
 });
