@@ -828,6 +828,16 @@
     border-color: var(--band-color);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   }
+  &:focus-visible {
+    outline: none;
+    border-color: var(--band-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-color) 35%, transparent);
+  }
+  &:active { transform: translateY(0); }
+  &:hover .layer-card-link svg,
+  &:focus-visible .layer-card-link svg {
+    transform: translateX(2px);
+  }
   &.band-good { --band-color: var(--risk-good); }
   &.band-warn { --band-color: var(--risk-warn); }
   &.band-bad  { --band-color: var(--risk-bad); }
@@ -893,6 +903,7 @@
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--extensionshield-accent);
+    svg { transition: transform 0.18s ease; }
   }
 }
 

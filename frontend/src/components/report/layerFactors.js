@@ -2,6 +2,63 @@
 // module (no React components) so they stay unit-testable and don't trip
 // react-refresh/only-export-components in the LayerModal component file.
 
+import { toRelativeEvidencePath } from '../../utils/normalizeScanResult';
+
+// Local-filesystem fragments that must never reach the UI (matches the audited
+// LEAK_FRAGMENTS guard). Used to scrub free-text captions before display.
+const LOCAL_PATH_RE = /\/Users\/|\/home\/|extensions_storage|extracted_|[A-Za-z]:[\\/]/;
+
+/**
+ * Scrub a free-text caption so it can never render a local absolute path.
+ * Path-like tokens are rewritten to their extension-relative form; if anything
+ * still looks local afterward, the caption is dropped entirely (returns '').
+ */
+function scrubLocalPaths(text) {
+  const s = String(text || '').trim();
+  if (!s) return '';
+  if (!LOCAL_PATH_RE.test(s)) return s;
+  const cleaned = s.replace(/\S+/g, (tok) => (LOCAL_PATH_RE.test(tok) ? toRelativeEvidencePath(tok) : tok));
+  return LOCAL_PATH_RE.test(cleaned) ? '' : cleaned;
+}
+
+/**
+ * Build a short, truthful evidence caption for a single factor from real
+ * analyzer output only — never invents text. Preference order:
+ *   1. an explicit human `description` from the analyzer,
+ *   2. publisher update age (`days_since_update`),
+ *   3. a file[:line] reference (path always made extension-relative),
+ *   4. a `reason` string.
+ * Returns '' when the factor carries no presentable evidence. Any path is run
+ * through the leak guard so `/Users`, `/home`, `extensions_storage`, and
+ * `extracted_` fragments can never render.
+ */
+export function factorEvidenceCaption(factor) {
+  const details = (factor && typeof factor.details === 'object' && factor.details) || {};
+
+  if (typeof details.description === 'string' && details.description.trim()) {
+    return scrubLocalPaths(details.description);
+  }
+
+  const days = details.days_since_update;
+  if (typeof days === 'number' && Number.isFinite(days) && days >= 0) {
+    return `Last updated ${days} day${days === 1 ? '' : 's'} ago`;
+  }
+
+  const file = details.file ?? details.path ?? details.file_path;
+  if (typeof file === 'string' && file.trim()) {
+    const rel = toRelativeEvidencePath(file);
+    const lineRaw = details.line ?? details.line_number;
+    const line = Number(lineRaw);
+    return Number.isFinite(line) && line > 0 ? `${rel}:${line}` : rel;
+  }
+
+  if (typeof details.reason === 'string' && details.reason.trim()) {
+    return scrubLocalPaths(details.reason);
+  }
+
+  return '';
+}
+
 const FACTOR_HUMAN = {
   SAST:                 { label: 'Code Safety',           category: 'code',   desc: 'Scans source code for known vulnerability patterns' },
   VirusTotal:           { label: 'Malware Scan',          category: 'threat', desc: 'Checks against 70+ antivirus engines for malicious code' },
@@ -64,7 +121,7 @@ export function humanizeFactor(factor) {
     tone = 'good';
     status = 'Clear';
   }
-  return { ...info, status, statusType, tone, severity, raw: factor };
+  return { ...info, status, statusType, tone, severity, evidence: factorEvidenceCaption(factor), raw: factor };
 }
 
 /**

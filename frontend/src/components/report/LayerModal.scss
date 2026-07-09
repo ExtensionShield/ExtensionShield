@@ -277,6 +277,30 @@
   background: var(--theme-bg-tertiary);
 }
 
+/* Truthful, path-safe evidence caption for a flagged / not-analyzed row.
+   Wraps to its own line under the check name (flex-basis: 100%). */
+.lm-check-evidence {
+  flex: 1 0 100%;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--theme-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lm-check-evidence-key {
+  flex-shrink: 0;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--theme-text-muted);
+}
+
 .lm-check-status {
   flex-shrink: 0;
   font-size: 0.625rem;

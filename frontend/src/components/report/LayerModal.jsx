@@ -130,6 +130,12 @@ const PrimaryCheckRow = ({ item, index }) => (
       {CATEGORY_TAG[item.category] && (
         <span className="lm-check-tag">{CATEGORY_TAG[item.category]}</span>
       )}
+      {item.evidence && (
+        <span className="lm-check-evidence" title={item.evidence}>
+          <span className="lm-check-evidence-key">Evidence</span>
+          {item.evidence}
+        </span>
+      )}
     </span>
     <span className={`lm-check-status lm-status-${item.statusType}`}>{item.status}</span>
   </div>

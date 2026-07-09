@@ -10,7 +10,7 @@
  * Pure logic only — no rendering required.
  */
 import { describe, it, expect } from 'vitest';
-import { humanizeFactor, isNotAnalyzed, triageFactors } from './layerFactors';
+import { factorEvidenceCaption, humanizeFactor, isNotAnalyzed, triageFactors } from './layerFactors';
 
 describe('LayerModal status mapping', () => {
   it('Data Sharing with no network coverage is "Not analyzed", not "Clear"', () => {
@@ -109,5 +109,45 @@ describe('LayerModal triage ordering', () => {
     expect(issues).toEqual([]);
     expect(notAnalyzed).toEqual([]);
     expect(cleared).toEqual([]);
+  });
+});
+
+describe('factorEvidenceCaption', () => {
+  it('prefers an explicit analyzer description', () => {
+    expect(factorEvidenceCaption({ name: 'SAST', details: { description: 'Reads document.cookie' } }))
+      .toBe('Reads document.cookie');
+  });
+
+  it('renders publisher update age from days_since_update', () => {
+    expect(factorEvidenceCaption({ name: 'Maintenance', details: { days_since_update: 508 } }))
+      .toBe('Last updated 508 days ago');
+    expect(factorEvidenceCaption({ name: 'Maintenance', details: { days_since_update: 1 } }))
+      .toBe('Last updated 1 day ago');
+  });
+
+  it('renders a relative file:line reference and never a local absolute path', () => {
+    const cap = factorEvidenceCaption({
+      name: 'SAST',
+      details: { file: '/Users/x/ExtensionShield/extensions_storage/extracted_a/js/background.js', line: 42 },
+    });
+    expect(cap).toBe('js/background.js:42');
+    expect(cap).not.toMatch(/\/Users|\/home|extensions_storage|extracted_/);
+  });
+
+  it('drops a free-text caption that would leak a local path', () => {
+    expect(factorEvidenceCaption({ name: 'SAST', details: { description: 'see /Users/stanzin/secret/app.js' } }))
+      .toBe('see app.js');
+  });
+
+  it('falls back to reason, then to empty string when no evidence exists', () => {
+    expect(factorEvidenceCaption({ name: 'X', details: { reason: 'Rate limited' } })).toBe('Rate limited');
+    expect(factorEvidenceCaption({ name: 'X', details: {} })).toBe('');
+    expect(factorEvidenceCaption({ name: 'X' })).toBe('');
+    expect(factorEvidenceCaption(null)).toBe('');
+  });
+
+  it('is attached to humanized factors', () => {
+    const h = humanizeFactor({ name: 'Maintenance', severity: 0.8, details: { days_since_update: 400 } });
+    expect(h.evidence).toBe('Last updated 400 days ago');
   });
 });
