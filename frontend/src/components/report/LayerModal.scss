@@ -7,10 +7,22 @@
   --lm-ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+.dialog-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+}
+
 .lm-dialog-smooth {
+  position: fixed !important;
+  inset: 50% auto auto 50% !important;
   top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
   left: 50% !important;
+  margin: 0 !important;
   transform: translate(-50%, -50%) !important;
+  z-index: 10000 !important;
 
   &[data-state="open"],
   &[data-state="closed"] {
@@ -61,7 +73,7 @@
 }
 
 @keyframes lmDrawerIn {
-  from { opacity: 0; transform: translate(-50%, -48%) scale(0.99); }
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)) scale(0.99); }
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
@@ -659,9 +671,13 @@
 
 @media (max-width: 700px) {
   .lm-dialog-smooth {
+    position: fixed !important;
+    inset: 50% auto auto 50% !important;
     top: 50% !important;
-    left: 50% !important;
     right: auto !important;
+    bottom: auto !important;
+    left: 50% !important;
+    margin: 0 !important;
     transform: translate(-50%, -50%) !important;
   }
 
