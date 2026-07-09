@@ -16,10 +16,14 @@ to explain and tune:
    `scoring/weights.py:26-28` — 30% of the Security layer is
    reputation/context, not direct technical-security evidence.
 2. **A few signals are counted in more than one place** (duplicate-risk):
-   - **privacy-policy** absence is scored in `Webstore` (Security,
-     `normalizers.py:587-589`) *and* `DisclosureAlignment` (Governance,
-     `engine.py:695-706`), and is also a governance rulepack concern
-     (`CWS_LIMITED_USE.yaml`).
+   - **privacy-policy** absence — **RESOLVED in PR-2 (scoring_version 2.1.1).**
+     Was scored in `Webstore` (Security) *and* `DisclosureAlignment` (Governance).
+     `normalize_webstore_trust` (`normalizers.py`) no longer adds severity for a
+     missing privacy policy; `DisclosureAlignment` (`engine.py`) is now the sole
+     scored owner. Webstore retains `no_privacy_policy` as listing context only.
+     The `SENSITIVE_EXFIL` gate and the governance rulepacks still read the raw
+     `has_privacy_policy` field independently — that is a separate hard-gate /
+     policy concern (factor-vs-gate), unchanged here and tracked for PR-3.
    - **broad-host access** contributes to `Manifest` posture, `PermissionCombos`,
      `NetworkExfil`, the governance factors, and the `SENSITIVE_EXFIL` gate.
    - **purpose-mismatch**, **exfil**, and **ToS/policy** are each represented by
@@ -114,7 +118,10 @@ analyzer, or golden-snapshot change:
 
 ## Follow-up PR sequence (planned)
 
-1. **PR-2** — privacy-policy counted once (`DisclosureAlignment` owns it).
+1. **PR-2 — DONE (scoring_version 2.1.1)** — privacy-policy counted once
+   (`DisclosureAlignment` owns it). Removed the `Webstore` severity contribution
+   for a missing privacy policy; kept it as listing context/evidence. Golden
+   snapshots unchanged (they read static fixture values, not live scoring).
 2. **PR-3** — de-duplicate broad-host / purpose-mismatch / exfil / ToS
    (factor-vs-gate) so the same evidence is not double-penalized.
 3. **PR-4** — optional Security internal rebalance (`weights_version` bump).

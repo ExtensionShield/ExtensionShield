@@ -103,7 +103,10 @@ class ScoringEngine:
     # permission gate rework). Rows stamped with an older version are treated as
     # model_stale so they are re-scored on read and rescanned on trigger, instead
     # of serving pre-recalibration verdicts.
-    VERSION = "2.1.0"
+    # Bumped 2.1.0 -> 2.1.1: privacy-policy absence is no longer scored by the
+    # Security/Webstore factor (it was a double-count); Governance/DisclosureAlignment
+    # is now the sole scored owner. See docs/adr/0002-scoring-layer-ownership.md.
+    VERSION = "2.1.1"
     
     def __init__(
         self,
