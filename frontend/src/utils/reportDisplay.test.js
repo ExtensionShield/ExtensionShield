@@ -9,6 +9,10 @@ import {
   normalizeVerdictKey,
   evidenceCountLabel,
   resolveFindingEvidenceLabel,
+  describeDecisionAuthority,
+  resolveDecisionAuthorityDisplay,
+  GOVERNANCE_SCORE_LABEL,
+  POLICY_DECISION_LABEL,
 } from './reportDisplay';
 
 const CHROMESTATS_DEFAULT = {
@@ -236,14 +240,14 @@ describe('resolveFindingEvidenceLabel — Key Findings row evidence label', () =
     expect(resolveFindingEvidenceLabel(finding, 1)).toBe('1 evidence item');
   });
 
-  it('shows "Evidence: summary only" for available:false findings', () => {
+  it('shows a non-placeholder summary-only label for available:false findings', () => {
     const finding = { title: 'Passes checks', evidence: { available: false } };
-    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: summary only');
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Based on summary only');
   });
 
-  it('shows "Evidence: summary only" when structured evidence exists but has no label (never "not linked")', () => {
+  it('shows a reported-reason label when structured evidence exists but has no label (never "not linked")', () => {
     const finding = { title: 'x', evidence: { available: true } };
-    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Evidence: summary only');
+    expect(resolveFindingEvidenceLabel(finding, 0)).toBe('Based on reported reason only');
   });
 
   it('shows "Evidence not linked" only when there are no IDs and no structured evidence', () => {
@@ -257,5 +261,77 @@ describe('resolveFindingEvidenceLabel — Key Findings row evidence label', () =
     const before = JSON.stringify(finding);
     resolveFindingEvidenceLabel(finding, 0);
     expect(JSON.stringify(finding)).toBe(before);
+  });
+});
+
+describe('describeDecisionAuthority — verdict authority explanation', () => {
+  it('names a governance rulepack decision with its rule id (Chrome Web Store policy review)', () => {
+    expect(
+      describeDecisionAuthority('baseline_governance', { rulepack: 'CWS_LIMITED_USE', ruleId: 'R2' })
+    ).toBe('Decided by Chrome Web Store policy review (governance rule CWS_LIMITED_USE::R2).');
+  });
+
+  it('degrades gracefully when the rule id is unknown', () => {
+    expect(describeDecisionAuthority('baseline_governance', {})).toBe(
+      'Decided by Chrome Web Store policy review (governance policy rule).'
+    );
+  });
+
+  it('names the hard gate that drove a block', () => {
+    expect(describeDecisionAuthority('hard_gate', { gate: 'SENSITIVE_EXFIL' })).toBe(
+      'Decided by a hard security/privacy gate (SENSITIVE_EXFIL).'
+    );
+  });
+
+  it('reads a coverage-capped score threshold as a coverage limitation, not a threat', () => {
+    expect(describeDecisionAuthority('score_threshold', { coverageCapApplied: true })).toBe(
+      'Limited by analysis coverage; needs review.'
+    );
+    expect(describeDecisionAuthority('score_threshold', { coverageCapApplied: false })).toBe(
+      'Decided by overall score threshold.'
+    );
+  });
+
+  it('treats insufficient-data / low-confidence as coverage limitations', () => {
+    expect(describeDecisionAuthority('insufficient_data')).toBe('Limited by analysis coverage; needs review.');
+    expect(describeDecisionAuthority('low_confidence')).toBe('Limited by analysis coverage; needs review.');
+  });
+
+  it('reports a clean pass and organization overrides', () => {
+    expect(describeDecisionAuthority('score_pass')).toBe('All checks passed.');
+    expect(describeDecisionAuthority('org_block')).toBe('Decided by organization policy (blocklist).');
+    expect(describeDecisionAuthority('org_allow_exception')).toBe('Decided by organization policy (allow exception).');
+  });
+
+  it('returns null for an unrecognized authority token', () => {
+    expect(describeDecisionAuthority('coverage_cap')).toBeNull();
+    expect(describeDecisionAuthority(undefined)).toBeNull();
+  });
+});
+
+describe('resolveDecisionAuthorityDisplay — full authority element model', () => {
+  it('flags only a governance rulepack outcome as a Policy decision (distinct from the governance score)', () => {
+    const gov = resolveDecisionAuthorityDisplay('baseline_governance', { rulepack: 'CWS_LIMITED_USE', ruleId: 'R2' });
+    expect(gov.isPolicyDecision).toBe(true);
+    expect(gov.description).toMatch(/Chrome Web Store policy review/);
+
+    const gate = resolveDecisionAuthorityDisplay('hard_gate', { gate: 'PURPOSE_MISMATCH' });
+    expect(gate.isPolicyDecision).toBe(false);
+
+    // The score and the policy decision are labelled as separate concepts.
+    expect(GOVERNANCE_SCORE_LABEL).toBe('Governance score');
+    expect(POLICY_DECISION_LABEL).toBe('Policy decision');
+  });
+
+  it('gives a humanized fallback label (and null description) for unknown authorities', () => {
+    const d = resolveDecisionAuthorityDisplay('coverage_cap');
+    expect(d.description).toBeNull();
+    expect(d.fallbackLabel).toBe('Coverage Cap');
+    expect(d.isPolicyDecision).toBe(false);
+  });
+
+  it('returns null when there is no authority', () => {
+    expect(resolveDecisionAuthorityDisplay(null)).toBeNull();
+    expect(resolveDecisionAuthorityDisplay('')).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import './SummaryPanel.scss';
 import { normalizeHighlights, resolveCoverage, resolveProvenance, resolveAnalyzerStatus } from '../../utils/normalizeScanResult';
+import { resolveDecisionAuthorityDisplay, POLICY_DECISION_LABEL } from '../../utils/reportDisplay';
 
 /**
  * SummaryPanel – consumer-friendly scan summary.
@@ -36,6 +37,22 @@ const SummaryPanel = ({
   const decisionAuthority = typeof scores?.decisionAuthority === 'string' && scores.decisionAuthority.trim()
     ? scores.decisionAuthority
     : null;
+
+  // "Why this verdict" authority element: state WHICH authority in the backend
+  // Decision Authority chain produced the verdict (governance rule / hard gate /
+  // limited coverage / score), derived from data the payload already carries.
+  // A reputation/maintenance signal is never an authority in the chain, so it
+  // can never surface here as the decision basis.
+  const authorityScoringV2 = rawScanResult?.scoring_v2 || rawScanResult?.governance_bundle?.scoring_v2 || {};
+  const authorityGovFinding = (keyFindings || []).find(
+    (f) => f?.evidence?.kind === 'governance' && (f.evidence.ruleId || f.evidence.rulepack)
+  );
+  const authorityDisplay = resolveDecisionAuthorityDisplay(decisionAuthority, {
+    coverageCapApplied: Boolean(authorityScoringV2.coverage_cap_applied),
+    rulepack: authorityGovFinding?.evidence?.rulepack || null,
+    ruleId: authorityGovFinding?.evidence?.ruleId || null,
+    gate: Array.isArray(authorityScoringV2.hard_gates_triggered) ? authorityScoringV2.hard_gates_triggered[0] : null,
+  });
 
   // SAST/engine keyFindings – use for Quick Summary concerns when they add value
   const engineConcerns = (keyFindings || [])
@@ -134,13 +151,6 @@ const SummaryPanel = ({
       tone: 'neutral',
       detail: 'Not enough structured data is available to confidently classify this extension yet.',
     };
-  };
-
-  const formatDecisionAuthority = (authority) => {
-    if (!authority) return null;
-    return authority
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (ch) => ch.toUpperCase());
   };
 
   const riskHeadline = getRiskHeadline();
@@ -311,8 +321,19 @@ const SummaryPanel = ({
             </ul>
           </div>
         )}
-        {decisionAuthority && (
-          <p className="summary-why-authority">Decision basis: {formatDecisionAuthority(decisionAuthority)}</p>
+        {authorityDisplay && (
+          authorityDisplay.description ? (
+            <p className="summary-why-authority" data-authority={authorityDisplay.authority}>
+              {authorityDisplay.isPolicyDecision && (
+                <strong className="summary-why-authority-tag">{POLICY_DECISION_LABEL}: </strong>
+              )}
+              {authorityDisplay.description}
+            </p>
+          ) : (
+            <p className="summary-why-authority" data-authority={authorityDisplay.authority}>
+              Decision basis: {authorityDisplay.fallbackLabel}
+            </p>
+          )
         )}
       </details>
     );
@@ -351,7 +372,7 @@ const SummaryPanel = ({
                 </p>
               )}
               {finding.evidence && finding.evidence.available === false && (
-                <p className="summary-finding-evidence-ref summary-finding-evidence-ref--none">Evidence: summary only</p>
+                <p className="summary-finding-evidence-ref summary-finding-evidence-ref--none">Based on summary only</p>
               )}
               {typeof onViewEvidence === 'function' && finding.evidenceIds.length > 0 && (
                 <button

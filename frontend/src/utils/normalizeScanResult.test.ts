@@ -953,7 +953,7 @@ describe('Coverage-cap reasons are promoted into Key Findings', () => {
     const vm = normalizeScanResult(raw);
     // The PRIMARY key finding explains the real reason, not publisher update age.
     expect(vm.keyFindings[0].title).toBe('No analyzable code scanned');
-    expect(vm.keyFindings[0].severity).toBe('high');
+    expect(vm.keyFindings[0].severity).toBe('medium');
     // Publisher update age is still present but demoted to advisory.
     const maint = vm.keyFindings.find((f) => f.title === 'Publisher update age');
     expect(maint!.severity).toBe('medium');
@@ -1231,6 +1231,71 @@ describe('Key Findings evidence links', () => {
     expect(f).toBeDefined();
     expect(f!.evidence!.permission).toBe('tabs');
     expect(f!.evidence!.hostPermission).toBe('<all_urls>');
+  });
+
+  it('permission risk summary names concrete permissions instead of generic moderate-findings text', () => {
+    const raw = {
+      extension_id: 'permsummary123456789abcdefghijk',
+      final_verdict: 'NEEDS_REVIEW',
+      manifest: { permissions: ['storage', 'debugger', 'tabCapture'], host_permissions: ['*://*/*'] },
+      scoring_v2: {
+        overall_score: 57, decision: 'NEEDS_REVIEW', risk_level: 'medium', hard_gates_triggered: [],
+        privacy_layer: { layer_name: 'privacy', score: 41, risk: 0.59, confidence: 0.8,
+          factors: [{ name: 'PermissionsBaseline', severity: 0.62, confidence: 0.9, weight: 0.4, contribution: 0.2,
+            evidence_ids: ['perm:high_risk:debugger', 'perm:high_risk:tabCapture'],
+            details: { high_risk_permissions: ['debugger', 'tabCapture'], total_permissions: 3 } }] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const perm = vm.keyFindings.find((k) => k.title === 'Permission Risk');
+    expect(perm).toBeDefined();
+    expect(perm!.summary).toContain('debugger');
+    expect(perm!.summary).toContain('tabCapture');
+    expect(perm!.summary).not.toMatch(/Moderate findings in/i);
+    expect(perm!.evidence!.label).toContain('debugger');
+  });
+
+  it('dangerous-combo evidence shows the actual combination and broad-access signal', () => {
+    const raw = {
+      extension_id: 'combosummary123456789abcdefghi',
+      final_verdict: 'NEEDS_REVIEW',
+      manifest: { permissions: ['debugger', 'tabs'], host_permissions: ['*://*/*'] },
+      scoring_v2: {
+        overall_score: 57, decision: 'NEEDS_REVIEW', risk_level: 'medium', hard_gates_triggered: [],
+        privacy_layer: { layer_name: 'privacy', score: 41, risk: 0.59, confidence: 0.8,
+          factors: [{ name: 'PermissionCombos', severity: 0.7, confidence: 1, weight: 0.25, contribution: 0.175,
+            evidence_ids: ['combo:debugger+tabs', 'combo:broad_host_access'],
+            details: { triggered_combos: ['debugger+tabs', 'broad_host_access'] } }] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    const combo = vm.keyFindings.find((k) => k.title === 'Dangerous Combos');
+    expect(combo).toBeDefined();
+    expect(combo!.summary).toContain('debugger + tabs');
+    expect(combo!.summary).toContain('broad host access');
+    expect(combo!.summary).toMatch(/capability signal, not proof of abuse/i);
+    expect(combo!.evidence!.label).toContain('debugger + tabs');
+  });
+
+  it('potential policy issues are not worded as confirmed Chrome Web Store violations', () => {
+    const raw = {
+      extension_id: 'policysummary123456789abcdefg',
+      final_verdict: 'NEEDS_REVIEW',
+      scoring_v2: {
+        overall_score: 57, decision: 'NEEDS_REVIEW', risk_level: 'medium',
+        hard_gates_triggered: ['TOS_VIOLATION'],
+        governance_layer: { layer_name: 'governance', score: 49, risk: 0.51, confidence: 0.8,
+          factors: [{ name: 'ToSViolations', severity: 0.5, confidence: 0.9, weight: 0.5, contribution: 0.25,
+            evidence_ids: ['tos:prohibited_perm:debugger'],
+            details: { violations: ['prohibited_perm:debugger'] } }] },
+      },
+    } as unknown as RawScanResult;
+    const vm = normalizeScanResult(raw);
+    expect(vm.keyFindings.some((k) => k.title === 'Potential Chrome Web Store policy issue')).toBe(true);
+    const policy = vm.keyFindings.find((k) => k.title === 'Potential Policy Issue');
+    expect(policy).toBeDefined();
+    expect(policy!.summary).toMatch(/Potential policy issue/i);
+    expect(policy!.summary).not.toMatch(/Chrome Web Store policy violation/i);
   });
 
   it('VirusTotal finding includes hash and result counts when present', () => {

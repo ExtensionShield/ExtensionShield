@@ -361,6 +361,26 @@
   text-transform: uppercase;
 }
 
+// Report-domain chip (Technical Security / Privacy & Data / Governance / Policy
+// / Reputation / Coverage). Slightly stronger than the plain category tag so the
+// concept-first grouping reads clearly on each factor row.
+.lm-check-tag--domain {
+  color: var(--theme-text-secondary);
+  background: var(--theme-bg-secondary);
+}
+
+// Reputation/maintenance disclaimer shown once per layer when a reputation
+// factor (Store Reputation, Threat Intel, Publisher update age) is present.
+.lm-reputation-note {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--theme-text-muted);
+  background: var(--theme-bg-tertiary);
+  border-radius: 6px;
+}
+
 .lm-check-evidence {
   display: block;
   min-width: 0;

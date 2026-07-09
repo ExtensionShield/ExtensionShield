@@ -438,7 +438,7 @@ const GATE_HUMAN_TITLE: Record<string, string> = {
   SENSITIVE_EXFIL: 'Requests permissions that could send data externally',
   PURPOSE_MISMATCH: "Behavior doesn't match stated purpose",
   VT_MALWARE: 'Flagged by antivirus engines',
-  TOS_VIOLATION: 'Chrome Web Store policy violation',
+  TOS_VIOLATION: 'Potential Chrome Web Store policy issue',
   MANIFEST_POSTURE: 'Suspicious extension configuration',
   CAPTURE_SIGNALS: 'May capture your screen or input',
 };
@@ -458,7 +458,7 @@ const FACTOR_HUMAN_TITLE: Record<string, string> = {
   PermissionCombos: 'Dangerous Combos',
   NetworkExfil: 'Data Sharing',
   CaptureSignals: 'Screen Capture',
-  ToSViolations: 'Policy Violations',
+  ToSViolations: 'Potential Policy Issue',
   Consistency: 'Behavior Match',
   DisclosureAlignment: 'Disclosure Accuracy',
 };
@@ -532,6 +532,46 @@ function humanizeFactorName(name: string): string {
   return FACTOR_HUMAN_TITLE[name] || name.replace(/([A-Z])/g, ' $1').trim();
 }
 
+function stringList(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((v) => stringList(v))
+      .filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function humanizeRiskToken(token: unknown): string {
+  const raw = String(token || '').trim();
+  if (!raw) return '';
+  return raw
+    .replace(/^prohibited_perm:/, '')
+    .replace(/^policy:/, '')
+    .replace(/broad_host_access/g, 'broad host access')
+    .replace(/travel_docs_tos_automation_risk/g, 'travel-docs automation policy risk')
+    .replace(/travel_docs_third_party_processor_risk/g, 'travel-docs third-party processor policy risk')
+    .replace(/broad_access_with_vt_detection/g, 'broad access with malware reputation detection')
+    .replace(/\+/g, ' + ')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function readableList(values: unknown[], limit = 5): string {
+  const clean = values.map(humanizeRiskToken).filter(Boolean);
+  const unique = Array.from(new Set(clean));
+  const shown = unique.slice(0, limit);
+  const extra = unique.length > limit ? ` +${unique.length - limit} more` : '';
+  return `${shown.join(', ')}${extra}`;
+}
+
 function humanizeFactorSummary(factor: RawFactorScore, layer: string): string {
   const name = factor.name || 'Unknown';
   const severity = factor.severity ?? 0;
@@ -539,6 +579,47 @@ function humanizeFactorSummary(factor: RawFactorScore, layer: string): string {
   const desc = typeof details === 'object' ? (details as any).description : '';
 
   if (desc) return desc;
+
+  if (typeof details === 'object' && details) {
+    const d = details as Record<string, unknown>;
+    if (name === 'PermissionsBaseline') {
+      const permissions = [
+        ...stringList(d.high_risk_permissions),
+        ...stringList(d.unreasonable_permissions),
+        ...stringList(d.permission),
+        ...stringList(d.permission_name),
+      ];
+      const label = readableList(permissions);
+      return label
+        ? `Sensitive permissions declared: ${label}. Review whether these capabilities are required for the stated purpose.`
+        : 'Sensitive browser permissions were declared. Review whether these capabilities are required for the stated purpose.';
+    }
+    if (name === 'PermissionCombos') {
+      const combos = [
+        ...stringList(d.triggered_combos),
+        ...stringList(d.combo),
+        ...stringList(d.combination),
+      ];
+      const label = readableList(combos);
+      return label
+        ? `Risky permission combination or broad-access signal: ${label}. This is a capability signal, not proof of abuse.`
+        : 'Risky permission combination or broad-access signal detected. This is a capability signal, not proof of abuse.';
+    }
+    if (name === 'ToSViolations') {
+      const flags = stringList(d.violations);
+      const label = readableList(flags);
+      return label
+        ? `Potential policy issue: ${label}. Review against Chrome Web Store policy before treating this as a confirmed violation.`
+        : 'Potential Chrome Web Store policy issue. Review the governance evidence before treating this as a confirmed violation.';
+    }
+    if (name === 'Maintenance') {
+      const days = Number(d.days_since_update);
+      if (Number.isFinite(days) && days >= 0) {
+        return `Publisher update age: last updated ${days} day${days === 1 ? '' : 's'} ago. This is maintenance context, not a confirmed security threat.`;
+      }
+      return 'Publisher update age is maintenance context, not a confirmed security threat.';
+    }
+  }
 
   const level = severity >= 0.7 ? 'significant' : severity >= 0.4 ? 'moderate' : 'minor';
   const humanName = humanizeFactorName(name).toLowerCase();
@@ -1209,7 +1290,7 @@ function resolveFactorEvidence(
     const manifest = anyRaw.manifest || {};
     const perms: string[] = Array.isArray(manifest.permissions) ? manifest.permissions as string[] : [];
     const hosts: string[] = Array.isArray(manifest.host_permissions) ? manifest.host_permissions as string[] : [];
-    const details = (factor.details || {}) as { description?: unknown };
+    const details = (factor.details || {}) as Record<string, unknown> & { description?: unknown };
     const explanation = typeof details.description === 'string' ? details.description : undefined;
     const tokens = ids.map((id) => parseSyntheticEvidenceId(id).token).filter(Boolean);
     const token = tokens[0];
@@ -1227,13 +1308,32 @@ function resolveFactorEvidence(
       return { kind: 'manifest', available: false };
     }
 
+    const triggeredCombos = [
+      ...stringList(details.triggered_combos),
+      ...stringList(details.combo),
+      ...stringList(details.combination),
+    ];
+    const highRiskPermissions = [
+      ...stringList(details.high_risk_permissions),
+      ...stringList(details.unreasonable_permissions),
+    ];
+    const labelParts = name === 'PermissionCombos'
+      ? (triggeredCombos.length ? triggeredCombos : tokens)
+      : (highRiskPermissions.length ? highRiskPermissions : tokens);
+    const labelText = readableList(labelParts.length ? labelParts : [token || perms[0] || hosts[0]]);
+
     // Permission / combo / capture — token is the specific permission or signal.
-    const permission = token || perms[0];
+    const permission = name === 'PermissionCombos'
+      ? (labelText || token || perms[0])
+      : (token || highRiskPermissions[0] || perms[0]);
     if (permission || hosts.length || explanation) {
       return {
         kind: 'manifest', available: true,
-        permission, hostPermission: hosts[0], manifestField: 'permissions', explanation,
-        label: permission || hosts[0] || 'manifest',
+        permission,
+        hostPermission: hosts.join(', ') || undefined,
+        manifestField: 'permissions',
+        explanation: explanation || humanizeFactorSummary(factor as RawFactorScore, factor.layer),
+        label: labelText || permission || hosts[0] || 'manifest',
       };
     }
     return { kind: 'manifest', available: false };
@@ -1285,7 +1385,7 @@ function buildCoverageKeyFindings(
 
   const findings: KeyFindingVM[] = [];
   const mk = (title: string, summary: string, evidence: KeyFindingEvidence): KeyFindingVM => ({
-    title, severity: 'high', layer: 'security', summary, evidenceIds: [], evidence,
+    title, severity: 'medium', layer: 'security', summary, evidenceIds: [], evidence,
   });
 
   const sp = (anyRaw.governance_bundle?.signal_pack || {}) as Record<string, any>;
@@ -1492,16 +1592,13 @@ function buildKeyFindings(
     .slice(0, 3)
     .forEach((factor) => {
       const humanTitle = humanizeFactorName(factor.name);
-      const details = factor.details || {};
-      const desc = typeof details === 'object' ? (details as any).description : '';
 
       let findingSeverity = severityToFindingLevel(factor.severity);
       if (factor.name === 'Maintenance' && findingSeverity === 'high' && !hasStrongEvidence) {
         findingSeverity = 'medium';
       }
 
-      const level = findingSeverity === 'high' ? 'significant' : findingSeverity === 'medium' ? 'moderate' : 'minor';
-      const summary = desc || `${level.charAt(0).toUpperCase() + level.slice(1)} findings in ${humanTitle.toLowerCase()}`;
+      const summary = humanizeFactorSummary(factor as RawFactorScore, factor.layer);
 
       findings.push({
         title: humanTitle,
@@ -2014,4 +2111,3 @@ export function isDevelopmentMode(): boolean {
 
 // Default export
 export default normalizeScanResult;
-

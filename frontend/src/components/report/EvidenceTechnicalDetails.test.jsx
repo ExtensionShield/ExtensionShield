@@ -109,6 +109,29 @@ describe('EvidenceTechnicalDetails', () => {
     expect(within(panel).getByText('Host')).toBeInTheDocument();
   });
 
+  it('explains broad host, debugger, and capture permissions as capabilities without claiming abuse', () => {
+    renderDetails(
+      {
+        manifest: { permissions: ['debugger', 'tabCapture', 'desktopCapture'], host_permissions: ['*://*/*'] },
+      },
+      {
+        permissions: {
+          apiPermissions: ['debugger', 'tabCapture', 'desktopCapture'],
+          hostPermissions: ['*://*/*'],
+          highRiskPermissions: ['debugger'],
+          broadHostPatterns: ['*://*/*'],
+        },
+        evidenceIndex: {},
+      }
+    );
+
+    const panel = screen.getByRole('tabpanel');
+    expect(within(panel).getByText(/DevTools protocol/i)).toBeInTheDocument();
+    expect(within(panel).getByText(/Capture audio or video from a browser tab/i)).toBeInTheDocument();
+    expect(within(panel).getByText(/Request capture of a screen, window, or tab/i)).toBeInTheDocument();
+    expect(within(panel).getByText(/capability increases review scope, but is not proof of misuse/i)).toBeInTheDocument();
+  });
+
   it('renders manifest, CSP, host, and content script fields', () => {
     renderDetails();
     clickTab(/Manifest/);
@@ -127,6 +150,19 @@ describe('EvidenceTechnicalDetails', () => {
     expect(screen.getByText('eval(userInput);')).toBeInTheDocument();
     expect(container.textContent).not.toContain('/Users/');
     expect(container.textContent).not.toContain('extensions_storage');
+  });
+
+  it('shows failed/not-analyzed Code/SAST status when no SAST findings are present', () => {
+    renderDetails(
+      {
+        timestamp: '2026-07-08T12:00:00Z',
+        sast_results: { scan_error: true, files_scanned: 0, sast_findings: {} },
+      },
+      { permissions: {}, evidenceIndex: {} }
+    );
+    clickTab(/Code\/SAST/);
+    expect(screen.getByText(/Code\/SAST did not complete/i)).toBeInTheDocument();
+    expect(screen.queryByText(/code is clean/i)).toBeNull();
   });
 
   it('renders VirusTotal coverage, counts, hash, and file details', () => {

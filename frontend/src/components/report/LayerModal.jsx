@@ -8,8 +8,14 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { AlertTriangle, Check, ChevronDown, HelpCircle, Info, Landmark, Lock, Shield } from 'lucide-react';
-import { buildLayerModalModel } from './layerFactors';
+import { buildLayerModalModel, REPORT_DOMAIN, REPORT_DOMAINS } from './layerFactors';
 import './LayerModal.scss';
+
+// Advisory caption shown once per layer when a reputation/maintenance-context
+// factor (Store Reputation, Threat Intel, Publisher update age) is present, so
+// these context signals are not read as standalone security verdicts.
+const REPUTATION_CONTEXT_NOTE =
+  REPORT_DOMAINS.find((d) => d.id === REPORT_DOMAIN.REPUTATION_MAINTENANCE)?.note || '';
 
 // Short, sentence-case tags used as a secondary caption on flagged/uncovered rows.
 const CATEGORY_TAG = {
@@ -159,7 +165,9 @@ const PrimaryCheckRow = ({ item, index, expanded, onToggle }) => {
           {item.title || item.label}
           {item.description && <InfoTooltip text={item.description} />}
         </span>
-        {CATEGORY_TAG[item.category] ? (
+        {item.domainLabel ? (
+          <span className="lm-check-tag lm-check-tag--domain" data-domain={item.domain}>{item.domainLabel}</span>
+        ) : CATEGORY_TAG[item.category] ? (
           <span className="lm-check-tag">{CATEGORY_TAG[item.category]}</span>
         ) : item.source ? (
           <span className="lm-check-tag">{item.source}</span>
@@ -228,6 +236,11 @@ const LayerModal = ({
     [factors, keyFindings, gateResults, layerReasons]
   );
   const hasChecks = all.length > 0;
+  // Reputation/maintenance factors (e.g. Store Reputation, Publisher update age)
+  // are scored inside the Security layer but are trust CONTEXT, not standalone
+  // security evidence. Surface the disclaimer once when any are present.
+  const hasReputationContext = [...issues, ...notAnalyzed, ...cleared]
+    .some((row) => row.domain === REPORT_DOMAIN.REPUTATION_MAINTENANCE);
   const tabs = [
     { key: 'issues', label: 'Open Issues', count: issues.length },
     { key: 'cleared', label: 'Cleared', count: cleared.length },
@@ -295,6 +308,10 @@ const LayerModal = ({
               </button>
             ))}
           </div>
+
+          {hasReputationContext && REPUTATION_CONTEXT_NOTE && (
+            <p className="lm-reputation-note">{REPUTATION_CONTEXT_NOTE}</p>
+          )}
 
           {activeTab === 'issues' && (
             <section className="lm-tier lm-tier--issues" id="lm-panel-issues" role="tabpanel" aria-label="Open issues">
