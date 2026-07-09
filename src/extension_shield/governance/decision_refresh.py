@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # stored verdict: rulepack `advisory` semantics, a rule's verdict, the resolve()
 # precedence chain, or this recompute. Rows whose stored decision_version differs
 # are refreshed on read (see api/payload_helpers.upgrade_legacy_payload).
-DECISION_VERSION = "1.0.0"
+DECISION_VERSION = "2.1.0"
 
 _RULEPACKS_DIR = Path(__file__).parent / "rulepacks"
 
