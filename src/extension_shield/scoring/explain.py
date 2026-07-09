@@ -26,6 +26,21 @@ from extension_shield.scoring.models import (
 )
 
 
+def _current_scoring_version() -> str:
+    """Single source of truth for the emitted ``scoring_version``.
+
+    The canonical version lives on ``ScoringEngine.VERSION``. It is imported
+    lazily (inside the function, not at module scope) because ``engine.py``
+    imports this module at load time — a module-level ``from ...engine import
+    ScoringEngine`` here would create a circular import. Resolving at call time
+    is safe: the engine module is always fully loaded before any explanation is
+    built. This keeps ``explain.py`` from drifting behind the engine version.
+    """
+    from extension_shield.scoring.engine import ScoringEngine
+
+    return ScoringEngine.VERSION
+
+
 # =============================================================================
 # EXPLANATION DATA STRUCTURES
 # =============================================================================
@@ -136,7 +151,8 @@ class ExplanationPayload:
     hard_gates: Dict[str, Any] = field(default_factory=dict)
     triggered_gates: List[str] = field(default_factory=list)
     
-    scoring_version: str = "2.0.0"
+    # Sourced from ScoringEngine.VERSION so this never drifts behind the engine.
+    scoring_version: str = field(default_factory=_current_scoring_version)
     weights_version: str = "v1"
     computed_at: str = ""
     overall_confidence: float = 1.0  # Per Phase 1 fixups: layer-weighted avg of layer confidences
@@ -202,17 +218,19 @@ class ExplanationBuilder:
     
     def __init__(
         self,
-        scoring_version: str = "2.0.0",
+        scoring_version: Optional[str] = None,
         weights_version: str = "v1",
     ):
         """
         Initialize ExplanationBuilder.
-        
+
         Args:
-            scoring_version: Version of the scoring engine
+            scoring_version: Version of the scoring engine. Defaults to the
+                canonical ScoringEngine.VERSION when not supplied, so the emitted
+                metadata never drifts behind the engine.
             weights_version: Version of the weight preset used
         """
-        self.scoring_version = scoring_version
+        self.scoring_version = scoring_version if scoring_version is not None else _current_scoring_version()
         self.weights_version = weights_version
     
     def build(
@@ -730,18 +748,19 @@ class ExplanationBuilder:
 def build_explanation(
     result: ScoringResult,
     gate_results: List[GateResult],
-    scoring_version: str = "2.0.0",
+    scoring_version: Optional[str] = None,
     weights_version: str = "v1",
 ) -> ExplanationPayload:
     """
     Convenience function to build explanation from ScoringResult.
-    
+
     Args:
         result: Complete ScoringResult
         gate_results: List of GateResult from evaluation
-        scoring_version: Scoring engine version
+        scoring_version: Scoring engine version. Defaults to the canonical
+            ScoringEngine.VERSION when not supplied.
         weights_version: Weight preset version
-        
+
     Returns:
         ExplanationPayload
     """
