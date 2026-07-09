@@ -293,6 +293,40 @@ def _pm_behavior_suffix(check_id: str) -> str:
     return (check_id or "").strip().lower().split(".")[-1]
 
 
+# Placeholder / non-evidential snippets seen on minified/bundled single-line
+# files. These must NOT, on their own, support a high-confidence BLOCK.
+_PM_PLACEHOLDER_SNIPPETS = frozenset({
+    "", "requires login", "<snippet>", "...", "n/a", "na", "none", "null",
+})
+
+
+def _pm_standalone_high_quality(finding: "SastFindingNormalized", corroborated: bool) -> bool:
+    """Whether a standalone-dangerous SAST behavior is backed by high-quality
+    evidence strong enough to hard-BLOCK.
+
+    BLOCK is allowed only when EITHER:
+      - there is corroborating concrete evidence (a suspicious external
+        destination, remote-code loading, or read-secret+exfil), OR
+      - the match itself is real file/line evidence: line_number > 1 with a
+        non-placeholder code snippet that supports the behavior.
+
+    A line-1 match in a minified/bundled file with a weak/placeholder snippet and
+    no corroboration is NOT high-quality -> the gate downgrades to WARN (review),
+    so the final result is NEEDS_REVIEW, not BLOCK.
+    """
+    if corroborated:
+        return True
+    line = getattr(finding, "line_number", None)
+    snippet = (getattr(finding, "code_snippet", None) or "").strip()
+    return (
+        isinstance(line, int)
+        and line > 1
+        and bool(snippet)
+        and snippet.lower() not in _PM_PLACEHOLDER_SNIPPETS
+        and len(snippet) >= 8
+    )
+
+
 # =============================================================================
 # HARD GATES CLASS
 # =============================================================================
@@ -907,7 +941,11 @@ class HardGates:
         key_capture: List[str] = []
         exfil: List[str] = []
         remote_code: List[str] = []
-        standalone_dangerous: List[str] = []
+        # Standalone-dangerous findings are collected with their finding object so
+        # their evidence quality can be checked before they are allowed to BLOCK.
+        standalone_findings: List[tuple] = []
+        standalone_dangerous: List[str] = []  # high-quality -> BLOCK
+        standalone_weak: List[str] = []       # weak/line-1/placeholder -> REVIEW
         benign_compat: List[str] = []
         credentialed_send: List[str] = []
         suspicious_external: List[str] = []
@@ -924,7 +962,7 @@ class HardGates:
             if suffix in _PM_SUSPICIOUS_EXTERNAL:
                 suspicious_external.append(suffix)
             if suffix in _PM_STANDALONE_DANGEROUS:
-                standalone_dangerous.append(suffix)
+                standalone_findings.append((suffix, finding))
             if suffix in _PM_REMOTE_CODE:
                 remote_code.append(suffix)
             elif suffix in _PM_SECRET_READ:
@@ -942,6 +980,18 @@ class HardGates:
         # conservative: ambiguous cases become REVIEW, never SAFE.
         if (secret_read or key_capture) and not exfil and (credentialed_send or suspicious_external):
             exfil.extend(sorted(set(credentialed_send + suspicious_external)))
+
+        # Evidence-quality guard: a standalone-dangerous behavior may hard-BLOCK
+        # only with high-quality evidence — a corroborating concrete signal, or a
+        # real file/line match (line > 1, non-placeholder snippet). A line-1
+        # minified match with a weak/placeholder snippet and no corroboration is
+        # downgraded to WARN so the final result is NEEDS_REVIEW, not BLOCK.
+        corroborated_concrete = bool(suspicious_external) or bool(remote_code) or bool(secret_read and exfil)
+        for suffix, finding in standalone_findings:
+            if _pm_standalone_high_quality(finding, corroborated_concrete):
+                standalone_dangerous.append(suffix)
+            else:
+                standalone_weak.append(suffix)
 
         # Concerning permission combinations on an extension that CLAIMS to be a
         # simple/benign utility (purpose vs capability mismatch).
@@ -973,6 +1023,13 @@ class HardGates:
         # Ambiguous cases become REVIEW, never SAFE.
         # ------------------------------------------------------------------
         review_reasons: List[str] = []
+        if standalone_weak:
+            review_reasons.append(
+                "Potential "
+                + ", ".join(sorted(set(standalone_weak)))
+                + " pattern in minified/bundled code (weak match) — review; not a "
+                "confirmed behavior without file/line or destination evidence"
+            )
         if secret_read and not exfil:
             review_reasons.append(
                 "Reads form/credential values — review whether it stays local"
@@ -1022,6 +1079,7 @@ class HardGates:
             + [f"mismatch:key_capture:{s}" for s in sorted(set(key_capture))]
             + [f"mismatch:exfil:{s}" for s in sorted(set(exfil))]
             + [f"mismatch:standalone:{s}" for s in sorted(set(standalone_dangerous))]
+            + [f"mismatch:standalone_weak:{s}" for s in sorted(set(standalone_weak))]
         )[:6]
         return GateResult(
             gate_id=gate_id,
@@ -1125,9 +1183,9 @@ class HardGates:
         if has_network or has_network_patterns:
             risk_factors += 1
             if has_network:
-                reasons.append("Can send data to external servers")
+                reasons.append("Requests permissions that could send data externally")
             if has_network_patterns:
-                reasons.append(f"Code contains patterns that send data externally")
+                reasons.append("Code contains patterns that could send data externally")
         
         if not has_privacy_policy:
             risk_factors += 1
@@ -1135,6 +1193,13 @@ class HardGates:
         
         # WARN if 2+ risk factors (sensitive + network + no privacy)
         if risk_factors >= 2:
+            # This gate is a capability/disclosure warning, not proof of
+            # exfiltration. Make that explicit so the finding is not read as a
+            # confirmed data-theft behavior.
+            reasons.append(
+                "Capability warning; not confirmed exfiltration unless source/destination "
+                "evidence is shown"
+            )
             return GateResult(
                 gate_id=gate_id,
                 decision="WARN",

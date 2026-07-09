@@ -101,8 +101,44 @@ def test_remote_code_loading_blocks():
     assert r.decision == "BLOCK"          # Indian Visa case (also has secret+exfil)
 
 
-def test_standalone_clipboard_hijack_blocks():
+def _pm_findings(findings, api_permissions=None, name="Tool", description="A helper", broad=False):
+    gates = HardGates()
+    sast = SastSignalPack(deduped_findings=findings, files_scanned=1, confidence=0.9)
+    perms = PermissionsSignalPack(api_permissions=api_permissions or [], has_broad_host_access=broad)
+    return gates.evaluate_purpose_mismatch(
+        {"name": name, "description": description}, sast, perms
+    )
+
+
+def test_standalone_weak_line1_placeholder_does_not_block():
+    # Evidence-quality guard: a standalone-dangerous rule that matched at line 1 in
+    # a minified file with a placeholder snippet ("requires login") and no
+    # corroboration is a weak match -> REVIEW, not BLOCK (Save to Pinterest case).
     r = _pm(["src.extension_shield.config.credential.theft.clipboard_hijack"])
+    assert r.decision == "WARN"
+    r2 = _pm(["src.extension_shield.config.cookie.theft.cookie_exfiltration"])
+    assert r2.decision == "WARN"
+
+
+def test_standalone_high_quality_evidence_blocks():
+    # Real file/line evidence (line > 1, non-placeholder snippet) still BLOCKs.
+    hq = SastFindingNormalized(
+        check_id="src.extension_shield.config.credential.theft.clipboard_hijack",
+        file_path="content.js", line_number=42, severity="ERROR",
+        message="Reads clipboard and replaces wallet address",
+        code_snippet="navigator.clipboard.readText().then(t=>replaceAddr(t))",
+    )
+    r = _pm_findings([hq])
+    assert r.decision == "BLOCK"
+
+
+def test_standalone_weak_but_corroborated_by_suspicious_domain_blocks():
+    # A weak standalone match corroborated by a concrete suspicious external
+    # destination still BLOCKs.
+    r = _pm([
+        "src.extension_shield.config.cookie.theft.cookie_exfiltration",
+        "src.extension_shield.config.c2.communication.random_domain_pattern",
+    ])
     assert r.decision == "BLOCK"
 
 

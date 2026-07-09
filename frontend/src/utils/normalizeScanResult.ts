@@ -435,7 +435,7 @@ export function coherentRiskLevel(
 
 const GATE_HUMAN_TITLE: Record<string, string> = {
   CRITICAL_SAST: 'Dangerous code pattern detected',
-  SENSITIVE_EXFIL: 'May send your data to external servers',
+  SENSITIVE_EXFIL: 'Requests permissions that could send data externally',
   PURPOSE_MISMATCH: "Behavior doesn't match stated purpose",
   VT_MALWARE: 'Flagged by antivirus engines',
   TOS_VIOLATION: 'Chrome Web Store policy violation',
@@ -504,7 +504,7 @@ const SAST_BEHAVIOR_TITLE: Record<string, string> = {
   server_list: 'Contains hardcoded server list',
   periodic_beacon: 'Beacons to external servers',
   image_steganography: 'May hide data in images',
-  base64_encoded_data: 'Sends encoded data',
+  base64_encoded_data: 'Encoded data pattern detected',
   dns_tunneling: 'May tunnel data over DNS',
   url_and_userid: 'Sends user id to a URL',
   override_fetch_xhr: 'Intercepts network requests',
@@ -595,7 +595,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
   // 1. Extract SAST findings for Security layer (prioritize high severity)
   if (sastResults) {
     const sastFindings = sastResults.sast_findings || sastResults.sastFindings || {};
-    const sastFindingsList: Array<{ severity: FindingSeverity; title: string; summary: string; filePath: string; lineNum?: number; snippet?: string }> = [];
+    const sastFindingsList: Array<{ severity: FindingSeverity; title: string; summary: string; checkId?: string; filePath: string; lineNum?: number; snippet?: string }> = [];
 
     if (typeof sastFindings === 'object' && !Array.isArray(sastFindings)) {
       Object.entries(sastFindings).forEach(([filePath, findings]) => {
@@ -620,6 +620,7 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
               severity: findingSeverity,
               title: humanizeSastCheckId(checkId),
               summary: message,
+              checkId: String(checkId),
               filePath: finding.path || filePath,
               lineNum: typeof lineNum === 'number' ? lineNum : undefined,
               snippet,
@@ -649,11 +650,22 @@ export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
             label: codeEvidenceLabel(filePath, lineStart), evidenceIds: [],
           }
         : { kind: 'sast', available: false };
+      // Pattern-only exfil/encoded detections have no destination evidence here —
+      // clarify so the finding is not read as confirmed exfiltration.
+      const suffix = String(f.checkId || '').toLowerCase().split('.').pop() || '';
+      const PATTERN_ONLY_EXFIL = new Set([
+        'base64_encoded_data', 'periodic_beacon', 'image_steganography',
+        'dns_tunneling', 'override_fetch_xhr', 'url_and_userid',
+      ]);
+      let summary = f.summary.length > 100 ? `${f.summary.substring(0, 97)}...` : f.summary;
+      if (PATTERN_ONLY_EXFIL.has(suffix)) {
+        summary = `${summary} — no confirmed external destination shown.`;
+      }
       result.security.push({
         title: f.title,
         severity: f.severity,
         layer: 'security',
-        summary: f.summary.length > 100 ? `${f.summary.substring(0, 97)}...` : f.summary,
+        summary,
         evidenceIds: [],
         evidence,
       });

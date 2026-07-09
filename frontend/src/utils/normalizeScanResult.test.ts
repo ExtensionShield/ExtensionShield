@@ -546,9 +546,11 @@ describe('normalizeScanResult', () => {
         },
       });
       
-      const sensitiveExfilFinding = result.keyFindings.find(f => f.title === 'May send your data to external servers');
+      const sensitiveExfilFinding = result.keyFindings.find(f => f.title === 'Requests permissions that could send data externally');
       expect(sensitiveExfilFinding).toBeDefined();
       expect(sensitiveExfilFinding?.layer).toBe('privacy');
+      // Capability wording must not imply confirmed exfiltration.
+      expect(result.keyFindings.some(f => /may send your data to external servers/i.test(f.title))).toBe(false);
     });
 
     it('should apply gate-based band override to layer tiles (CRITICAL_SAST -> Security tile becomes BAD)', () => {
@@ -1553,5 +1555,22 @@ describe('Key Findings evidence display uses relative paths (no local leak)', ()
       .map((k) => `${k.title} ${k.evidence?.label || ''} ${k.evidence?.filePath || ''}`)
       .join(' | ');
     for (const frag of LEAK_FRAGMENTS) expect(displayText.includes(frag)).toBe(false);
+  });
+});
+
+describe('Encoded-data wording — pattern, not confirmed exfiltration', () => {
+  it('base64 encoded-data SAST finding uses pattern wording + destination clarification', () => {
+    const raw = {
+      extension_id: 'enc12345678901234abcdefghijklmno',
+      sast_results: { sast_findings: { 'sw.js': [
+        { check_id: 'src.extension_shield.config.c2.exfiltration.base64_encoded_data',
+          start: { line: 58 }, path: 'sw.js',
+          extra: { severity: 'WARNING', message: 'Base64 encoding with network transmission', lines: 'btoa(x)' } },
+      ] } },
+    } as unknown as RawScanResult;
+    const enc = extractFindingsByLayer(raw).security.find((f) => f.title === 'Encoded data pattern detected');
+    expect(enc).toBeDefined();
+    expect(enc!.title === 'Sends encoded data').toBe(false);
+    expect(/no confirmed external destination shown/i.test(enc!.summary)).toBe(true);
   });
 });

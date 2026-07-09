@@ -30,9 +30,12 @@ rules:
       extraction.status == "ok" AND
       signals contains type="SENSITIVE_API" AND
       declared_data_categories is empty
-    verdict: "BLOCK"
+    # Disclosure/compliance gap, not proof of malicious behavior: a sensitive API
+    # with no declared data category is a review requirement, not a hard block.
+    # An independent BLOCK rule (e.g. R10 malware) still yields a BLOCK verdict.
+    verdict: "NEEDS_REVIEW"
     confidence: 0.85
-    recommended_action: "Block — Limited Use policy requires explicit PII declaration"
+    recommended_action: "Review — Limited Use policy requires explicit PII/data-category declaration"
     citations: ["CWS_LIMITED_USE::SECTION_2"]
     evidence_refs: []
 
