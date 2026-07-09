@@ -487,7 +487,7 @@ def build_unified_consumer_summary(
                 "Maintenance": "Update and maintenance status",
                 "PermissionsBaseline": "Permission risk level",
                 "PermissionCombos": "Risky permission combinations",
-                "NetworkExfil": "Data sent to external servers",
+                "NetworkExfil": "External data transfer capability",
                 "CaptureSignals": "Screen or input capture check",
                 "ToSViolations": "Policy compliance",
                 "Consistency": "Behavior consistency check",
@@ -563,7 +563,7 @@ def build_unified_consumer_summary(
             # Add hard gates in plain English (avoid raw gate IDs like "SENSITIVE_EXFIL")
             _gate_plain_names = {
                 "CRITICAL_SAST": "Dangerous code patterns detected",
-                "SENSITIVE_EXFIL": "May send sensitive data to external servers",
+                "SENSITIVE_EXFIL": "Requests permissions that could send data externally",
                 "PURPOSE_MISMATCH": "Behavior doesn't match its stated purpose",
                 "VT_MALWARE": "Flagged by antivirus engines",
                 "TOS_VIOLATION": "Chrome Web Store policy violation detected",

@@ -14,7 +14,7 @@ layer_details_generation: |
     | SAST, static analysis | "security scan" |
     | Obfuscation, minification, high entropy | "hidden or hard-to-read code" |
     | eval(), new Function(), dynamic execution | "runs code it creates" |
-    | Exfiltration, data leakage | "sends data to external servers" |
+    | Exfiltration, data leakage | "could send data to external servers" |
     | webRequest, webRequestBlocking | "can see/modify your web traffic" |
     | <all_urls>, *://*/* | "runs on all websites" |
     | cookies permission | "can read your cookies" |
@@ -28,7 +28,7 @@ layer_details_generation: |
     | XSS, CSRF, injection | "security vulnerabilities" |
     | API, endpoint | "external server connection" |
     | CRITICAL_SAST | "dangerous code patterns" |
-    | SENSITIVE_EXFIL | "may leak sensitive data" |
+    | SENSITIVE_EXFIL | "could send sensitive data externally (capability, not confirmed)" |
     | PURPOSE_MISMATCH | "doesn't match what it claims to do" |
     | VT_MALWARE | "flagged by antivirus" |
     | TOS_VIOLATION | "breaks store rules" |
@@ -57,7 +57,7 @@ layer_details_generation: |
     ✅ GOOD: "Can read your cookies, see your web traffic, and view your open tabs."
     
     ❌ BAD: "SENSITIVE_EXFIL gate triggered due to network requests to external domains"
-    ✅ GOOD: "May send your browsing data to external servers."
+    ✅ GOOD: "Requests permissions that could send your browsing data to external servers."
     
     ❌ BAD: "The manifest contains externally_connectable with broad host patterns"
     ✅ GOOD: "Can communicate with other extensions and websites."
