@@ -106,6 +106,37 @@ function getDisplayDescription(scanResults) {
   return null;
 }
 
+export const LayerCards = ({ layerCards, onOpenLayer }) => (
+  <section className="report-layers" id="layers" aria-label="Security, privacy, and governance breakdown">
+    {layerCards.map(({ key, label, Icon, score, band, count, explain }) => (
+      <button
+        type="button"
+        key={key}
+        className={`layer-card band-${String(band).toLowerCase()}`}
+        onClick={() => onOpenLayer(key)}
+        aria-label={`${label} details: ${count > 0 ? `${count} ${count === 1 ? "issue" : "issues"}` : "no issues"}`}
+      >
+        <div className="layer-card-head">
+          <span className="layer-card-name"><Icon size={16} aria-hidden="true" /> {label}</span>
+          <span className="layer-card-score">
+            {score ?? "—"}<span className="layer-card-score-max">/100</span>
+          </span>
+        </div>
+        {count > 0 ? (
+          <span className="layer-card-issues">{count} {count === 1 ? "issue" : "issues"}</span>
+        ) : (
+          <span className="layer-card-issues layer-card-issues--none">No issues</span>
+        )}
+        <div className="layer-card-bar" aria-hidden="true">
+          <span className="layer-card-bar-fill" style={{ width: `${Math.max(0, Math.min(100, score ?? 0))}%` }} />
+        </div>
+        <p className="layer-card-explain">{explain}</p>
+        <span className="layer-card-link">View details <ChevronRight size={14} aria-hidden="true" /></span>
+      </button>
+    ))}
+  </section>
+);
+
 /**
  * ScanResultsPageV2 - Redesigned results dashboard
  * Uses ReportViewModel from normalizeScanResultSafe() - NO fake data
@@ -879,33 +910,7 @@ const ScanResultsPageV2 = () => {
 
           <div className="report-main">
             {/* Layer cards: Security / Privacy / Governance */}
-            <section className="report-layers" id="layers" aria-label="Security, privacy, and governance breakdown">
-              {layerCards.map(({ key, label, Icon, score, band, count, explain }) => (
-                <button
-                  type="button"
-                  key={key}
-                  className={`layer-card band-${String(band).toLowerCase()}`}
-                  onClick={() => openLayerModal(key)}
-                >
-                  <div className="layer-card-head">
-                    <span className="layer-card-name"><Icon size={16} aria-hidden="true" /> {label}</span>
-                    <span className="layer-card-score">
-                      {score ?? "—"}<span className="layer-card-score-max">/100</span>
-                    </span>
-                  </div>
-                  {count > 0 ? (
-                    <span className="layer-card-issues">{count} {count === 1 ? "issue" : "issues"}</span>
-                  ) : (
-                    <span className="layer-card-issues layer-card-issues--none">No issues</span>
-                  )}
-                  <div className="layer-card-bar">
-                    <span className="layer-card-bar-fill" style={{ width: `${Math.max(0, Math.min(100, score ?? 0))}%` }} />
-                  </div>
-                  <p className="layer-card-explain">{explain}</p>
-                  <span className="layer-card-link">View details <ChevronRight size={14} aria-hidden="true" /></span>
-                </button>
-              ))}
-            </section>
+            <LayerCards layerCards={layerCards} onOpenLayer={openLayerModal} />
 
             {/* Key Findings */}
             <section className="report-findings" id="key-findings">

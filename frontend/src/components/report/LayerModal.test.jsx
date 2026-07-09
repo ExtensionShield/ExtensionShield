@@ -9,8 +9,17 @@
  *
  * Pure logic only — no rendering required.
  */
-import { describe, it, expect } from 'vitest';
-import { factorEvidenceCaption, humanizeFactor, isNotAnalyzed, triageFactors } from './layerFactors';
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import LayerModal from './LayerModal';
+import {
+  buildLayerModalModel,
+  factorEvidenceCaption,
+  humanizeFactor,
+  isNotAnalyzed,
+  triageFactors,
+} from './layerFactors';
 
 describe('LayerModal status mapping', () => {
   it('Data Sharing with no network coverage is "Not analyzed", not "Clear"', () => {
@@ -149,5 +158,171 @@ describe('factorEvidenceCaption', () => {
   it('is attached to humanized factors', () => {
     const h = humanizeFactor({ name: 'Maintenance', severity: 0.8, details: { days_since_update: 400 } });
     expect(h.evidence).toBe('Last updated 400 days ago');
+  });
+});
+
+describe('buildLayerModalModel', () => {
+  it('builds open, cleared, and not-analyzed sections from real layer factors/findings', () => {
+    const model = buildLayerModalModel({
+      factors: [
+        { name: 'Manifest', severity: 0.6, details: { description: 'missing CSP in manifest' } },
+        { name: 'SAST', severity: 0.1 },
+        { name: 'NetworkExfil', severity: 0, details: { network_analysis_enabled: false } },
+      ],
+      keyFindings: [
+        {
+          title: 'Extension Config missing CSP',
+          severity: 'medium',
+          layer: 'security',
+          summary: 'missing CSP in manifest',
+          evidence: { available: true, kind: 'manifest', manifestField: 'content_security_policy', label: 'missing CSP in manifest' },
+        },
+      ],
+    });
+
+    expect(model.issues.map((row) => row.title)).toContain('Extension Config missing CSP');
+    expect(model.cleared.map((row) => row.label)).toContain('Code Safety');
+    expect(model.notAnalyzed.map((row) => row.title)).toContain('Data Sharing');
+  });
+
+  it('renders relative evidence details without local absolute paths', () => {
+    const model = buildLayerModalModel({
+      keyFindings: [{
+        title: 'Static analysis finding',
+        severity: 'high',
+        layer: 'security',
+        evidence: {
+          available: true,
+          kind: 'sast',
+          filePath: '/Users/stanzin/ExtensionShield/extensions_storage/extracted_a/js/background.js',
+          lineStart: 9,
+          snippet: 'chrome.tabs.query({})',
+          label: '/Users/stanzin/ExtensionShield/extensions_storage/extracted_a/js/background.js:9',
+        },
+      }],
+    });
+
+    const text = JSON.stringify(model);
+    expect(text).toContain('js/background.js:9');
+    expect(text).not.toMatch(/\/Users|\/home|extensions_storage|extracted_/);
+  });
+});
+
+describe('LayerModal rendering', () => {
+  const renderModal = (props = {}) => render(
+    <LayerModal
+      open
+      onClose={vi.fn()}
+      layer="security"
+      score={90}
+      band="WARN"
+      factors={[
+        { name: 'Manifest', severity: 0.6, details: { description: 'missing CSP in manifest', manifest_field: 'content_security_policy' } },
+        { name: 'SAST', severity: 0.1 },
+        { name: 'VirusTotal', severity: 0.1 },
+        { name: 'NetworkExfil', severity: 0, details: { network_analysis_enabled: false, reason: 'Rate limited' } },
+      ]}
+      keyFindings={[
+        {
+          title: 'Extension Config missing CSP',
+          severity: 'medium',
+          layer: 'security',
+          summary: 'missing CSP in manifest',
+          evidence: { available: true, kind: 'manifest', manifestField: 'content_security_policy', label: 'missing CSP in manifest' },
+        },
+      ]}
+      layerReasons={['Security layer reason from scoring']}
+      {...props}
+    />
+  );
+
+  it('opens a Security modal with open, cleared, and not-analyzed tabs', () => {
+    renderModal();
+
+    expect(screen.getByText('Security')).toBeInTheDocument();
+    expect(screen.getByText('90')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Open Issues/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Cleared/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Not Analyzed/i })).toBeInTheDocument();
+    expect(screen.getByText('Extension Config missing CSP')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Cleared/i }));
+    expect(screen.getByText('Code Safety')).toBeInTheDocument();
+    expect(screen.getByText('Malware Scan')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Not Analyzed/i }));
+    expect(screen.getByText('Data Sharing')).toBeInTheDocument();
+  });
+
+  it('opens Privacy and Governance modals with the same section structure', () => {
+    renderModal({
+      layer: 'privacy',
+      score: 58,
+      factors: [
+        { name: 'PermissionsBaseline', severity: 0.8, details: { permission: 'tabs' } },
+        { name: 'NetworkExfil', severity: 0, details: { network_analysis_enabled: false } },
+      ],
+      keyFindings: [],
+    });
+    expect(screen.getByText('Privacy')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Open Issues/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Cleared/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Not Analyzed/i })).toBeInTheDocument();
+
+    renderModal({
+      layer: 'governance',
+      score: 100,
+      band: 'GOOD',
+      factors: [
+        { name: 'ToSViolations', severity: 0.1 },
+        { name: 'DisclosureAlignment', severity: 0.1 },
+      ],
+      keyFindings: [],
+    });
+    expect(screen.getByText('Governance')).toBeInTheDocument();
+    expect(screen.getAllByRole('tab', { name: /Open Issues/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('tab', { name: /Cleared/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('tab', { name: /Not Analyzed/i }).length).toBeGreaterThan(0);
+  });
+
+  it('renders expandable evidence detail when data exists', () => {
+    renderModal();
+
+    const issue = screen.getByText('Extension Config missing CSP').closest('.lm-check');
+    expect(within(issue).getByText('Evidence')).toBeInTheDocument();
+    fireEvent.click(within(issue).getByRole('button', { name: /Toggle evidence/i }));
+    expect(within(issue).getByText('Manifest')).toBeInTheDocument();
+    expect(within(issue).getByText('content_security_policy')).toBeInTheDocument();
+  });
+
+  it('shows a safe empty state when an issue has no structured evidence', () => {
+    renderModal({
+      factors: [{ name: 'Obfuscation', severity: 0.7 }],
+      keyFindings: [],
+    });
+
+    expect(screen.getByText('Hidden Code')).toBeInTheDocument();
+    expect(screen.getByText('No structured evidence is available for this item.')).toBeInTheDocument();
+  });
+
+  it('does not render local absolute paths in modal text', () => {
+    renderModal({
+      factors: [],
+      keyFindings: [{
+        title: 'Code path finding',
+        severity: 'high',
+        layer: 'security',
+        evidence: {
+          available: true,
+          kind: 'sast',
+          filePath: '/Users/stanzin/ExtensionShield/extensions_storage/extracted_a/background.js',
+          lineStart: 12,
+          label: '/Users/stanzin/ExtensionShield/extensions_storage/extracted_a/background.js:12',
+        },
+      }],
+    });
+
+    expect(document.body.textContent).toContain('background.js:12');
+    expect(document.body.textContent).not.toMatch(/\/Users|\/home|extensions_storage|extracted_/);
   });
 });

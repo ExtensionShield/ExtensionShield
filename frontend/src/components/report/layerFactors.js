@@ -59,6 +59,247 @@ export function factorEvidenceCaption(factor) {
   return '';
 }
 
+function pushEvidenceRow(rows, key, value, kind = 'text') {
+  const safeValue = scrubLocalPaths(value);
+  if (!safeValue) return;
+  rows.push({ key, value: safeValue, kind });
+}
+
+function fileLineValue(file, lineRaw, lineEndRaw) {
+  if (typeof file !== 'string' || !file.trim()) return '';
+  const rel = toRelativeEvidencePath(file);
+  const line = Number(lineRaw);
+  const lineEnd = Number(lineEndRaw);
+  if (!Number.isFinite(line) || line <= 0) return rel;
+  return Number.isFinite(lineEnd) && lineEnd > line ? `${rel}:${line}-${lineEnd}` : `${rel}:${line}`;
+}
+
+function severityRank(statusType, severity) {
+  if (statusType !== 'issues') return 0;
+  if (severity >= 0.7) return 3;
+  if (severity >= 0.4) return 2;
+  return 1;
+}
+
+function normalizeTitle(title) {
+  return String(title || '').trim().toLowerCase();
+}
+
+function findingLevel(finding) {
+  const severity = finding?.severity;
+  if (typeof severity === 'number') {
+    if (severity >= 0.66) return 'high';
+    if (severity >= 0.4) return 'medium';
+    if (severity > 0) return 'low';
+    return 'info';
+  }
+  const s = String(severity || '').toLowerCase();
+  if (s === 'critical' || s === 'high') return 'high';
+  if (s === 'moderate' || s === 'medium') return 'medium';
+  if (s === 'low') return 'low';
+  return 'info';
+}
+
+function statusForFinding(finding) {
+  const level = findingLevel(finding);
+  if (level === 'high') return { status: 'High severity', tone: 'bad', severity: 0.8 };
+  if (level === 'medium') return { status: 'Issue', tone: 'warn', severity: 0.5 };
+  if (level === 'low') return { status: 'Low', tone: 'neutral', severity: 0.2 };
+  return { status: 'Info', tone: 'neutral', severity: 0 };
+}
+
+export function factorEvidenceDetails(factor) {
+  const details = (factor && typeof factor.details === 'object' && factor.details) || {};
+  const rows = [];
+
+  const permission = details.permission ?? details.permission_name ?? details.host_permission;
+  pushEvidenceRow(rows, permission === details.host_permission ? 'Host permission' : 'Permission', permission);
+
+  const hostPermission = details.hostPermission ?? details.host_permissions ?? details.host;
+  if (hostPermission !== permission) pushEvidenceRow(rows, 'Host access', hostPermission);
+
+  const manifestField = details.manifest_field ?? details.manifestField ?? details.field;
+  pushEvidenceRow(rows, 'Manifest', manifestField);
+
+  const ruleId = details.rule_id ?? details.ruleId;
+  const rulepack = details.rulepack ?? details.rule_pack;
+  if (rulepack || ruleId) {
+    pushEvidenceRow(rows, 'Rule', rulepack ? `${rulepack}${ruleId ? `::${ruleId}` : ''}` : ruleId);
+  }
+
+  const file = details.file ?? details.path ?? details.file_path;
+  const fileValue = fileLineValue(file, details.line ?? details.line_number, details.line_end ?? details.end_line);
+  pushEvidenceRow(rows, 'File', fileValue);
+
+  const snippet = details.snippet ?? details.code_snippet ?? details.sample_match;
+  pushEvidenceRow(rows, 'Snippet', snippet, 'snippet');
+
+  const malicious = details.malicious ?? details.total_malicious;
+  const suspicious = details.suspicious ?? details.total_suspicious;
+  const hash = details.hash ?? details.sha256;
+  if (malicious != null || suspicious != null || hash) {
+    const parts = [];
+    if (malicious != null) parts.push(`${Number(malicious) || 0} malicious`);
+    if (suspicious != null) parts.push(`${Number(suspicious) || 0} suspicious`);
+    if (hash) parts.push(String(hash).slice(0, 16));
+    pushEvidenceRow(rows, 'VirusTotal', parts.join(' · '));
+  }
+
+  const analyzer = details.analyzer ?? details.coverage_analyzer;
+  const coverageReason = details.coverage_reason ?? details.reason;
+  if (analyzer || details.network_analysis_enabled === false) {
+    pushEvidenceRow(
+      rows,
+      'Coverage',
+      `${analyzer || 'Analyzer'}${coverageReason ? ` - ${coverageReason}` : details.network_analysis_enabled === false ? ' - network analysis was not available' : ''}`
+    );
+  } else if (coverageReason && rows.length === 0) {
+    pushEvidenceRow(rows, 'Reason', coverageReason);
+  }
+
+  return rows;
+}
+
+export function findingEvidenceDetails(finding) {
+  const evidence = finding?.evidence || {};
+  const rows = [];
+
+  const fileValue = fileLineValue(
+    evidence.filePath,
+    evidence.lineStart ?? evidence.line,
+    evidence.lineEnd
+  );
+  pushEvidenceRow(rows, 'File', fileValue);
+  pushEvidenceRow(rows, 'Snippet', evidence.snippet, 'snippet');
+  pushEvidenceRow(rows, 'Permission', evidence.permission);
+  pushEvidenceRow(rows, 'Host access', evidence.hostPermission);
+  pushEvidenceRow(rows, 'Manifest', evidence.manifestField);
+
+  if (evidence.rulepack || evidence.ruleId) {
+    pushEvidenceRow(rows, 'Rule', evidence.rulepack ? `${evidence.rulepack}${evidence.ruleId ? `::${evidence.ruleId}` : ''}` : evidence.ruleId);
+  }
+  pushEvidenceRow(rows, 'Reason', evidence.finalReason ?? evidence.reason ?? evidence.explanation);
+  pushEvidenceRow(rows, 'Action', evidence.actionRequired);
+
+  if (evidence.malicious != null || evidence.suspicious != null || evidence.hash || evidence.coverageState) {
+    const parts = [];
+    if (evidence.malicious != null) parts.push(`${Number(evidence.malicious) || 0} malicious`);
+    if (evidence.suspicious != null) parts.push(`${Number(evidence.suspicious) || 0} suspicious`);
+    if (evidence.coverageState) parts.push(evidence.coverageState);
+    if (evidence.hash) parts.push(String(evidence.hash).slice(0, 16));
+    pushEvidenceRow(rows, 'VirusTotal', parts.join(' · '));
+  }
+
+  if (evidence.analyzer || evidence.kind === 'coverage') {
+    pushEvidenceRow(rows, 'Coverage', `${evidence.analyzer || 'Analyzer'}${evidence.reason ? ` - ${evidence.reason}` : ''}`);
+  }
+
+  return rows;
+}
+
+function factorIssueRow(item, index) {
+  return {
+    id: `factor-${normalizeTitle(item.label) || index}`,
+    title: item.label,
+    category: item.category,
+    source: item.category,
+    status: item.status,
+    statusType: item.statusType,
+    tone: item.tone,
+    severity: item.severity,
+    evidence: item.evidence,
+    evidenceRows: factorEvidenceDetails(item.raw),
+    description: item.desc,
+    sortRank: severityRank(item.statusType, item.severity),
+  };
+}
+
+function findingIssueRow(finding, index) {
+  const status = statusForFinding(finding);
+  const evidence = finding?.evidence || {};
+  const evidenceCaption = scrubLocalPaths(evidence.label || finding?.summary || '');
+  return {
+    id: `finding-${normalizeTitle(finding?.title) || index}`,
+    title: finding?.displayTitle || finding?.title || 'Issue',
+    category: finding?.category || finding?.layer || 'issue',
+    source: finding?.category || evidence.kind || finding?.layer || 'Finding',
+    status: status.status,
+    statusType: 'issues',
+    tone: status.tone,
+    severity: status.severity,
+    evidence: evidenceCaption,
+    evidenceRows: findingEvidenceDetails(finding),
+    description: scrubLocalPaths(finding?.summary || ''),
+    sortRank: severityRank('issues', status.severity),
+  };
+}
+
+function gateIssueRow(gate, index) {
+  const reasons = Array.isArray(gate?.reasons) ? gate.reasons : [];
+  const rows = [];
+  pushEvidenceRow(rows, 'Rule', gate?.gate_id);
+  reasons.forEach((reason, idx) => pushEvidenceRow(rows, idx === 0 ? 'Reason' : 'Reason', reason));
+  return {
+    id: `gate-${gate?.gate_id || index}`,
+    title: gate?.gate_id ? String(gate.gate_id).replace(/_/g, ' ') : 'Triggered gate',
+    category: 'gate',
+    source: 'Gate',
+    status: gate?.decision || 'Issue',
+    statusType: 'issues',
+    tone: 'bad',
+    severity: 0.8,
+    evidence: scrubLocalPaths(reasons[0] || ''),
+    evidenceRows: rows,
+    sortRank: 3,
+  };
+}
+
+export function buildLayerModalModel({ factors = [], keyFindings = [], gateResults = [], layerReasons = [] } = {}) {
+  const { all, issues, notAnalyzed, cleared } = triageFactors(factors);
+  const issueRows = [];
+  const seen = new Set();
+
+  (Array.isArray(keyFindings) ? keyFindings : [])
+    .filter((finding) => finding && finding.title)
+    .forEach((finding, index) => {
+      const row = findingIssueRow(finding, index);
+      const key = normalizeTitle(row.title);
+      if (seen.has(key)) return;
+      seen.add(key);
+      issueRows.push(row);
+    });
+
+  issues.forEach((item, index) => {
+    const row = factorIssueRow(item, index);
+    const key = normalizeTitle(row.title);
+    if (seen.has(key)) return;
+    seen.add(key);
+    issueRows.push(row);
+  });
+
+  (Array.isArray(gateResults) ? gateResults : [])
+    .filter((gate) => gate && gate.triggered)
+    .forEach((gate, index) => {
+      const row = gateIssueRow(gate, index);
+      const key = normalizeTitle(row.title);
+      if (seen.has(key)) return;
+      seen.add(key);
+      issueRows.push(row);
+    });
+
+  issueRows.sort((a, b) => (b.sortRank - a.sortRank) || (b.severity - a.severity));
+
+  return {
+    all,
+    issues: issueRows,
+    notAnalyzed: notAnalyzed.map(factorIssueRow),
+    cleared,
+    about: (Array.isArray(layerReasons) ? layerReasons : [])
+      .map((reason, index) => ({ id: `reason-${index}`, text: scrubLocalPaths(reason) }))
+      .filter((reason) => reason.text),
+  };
+}
+
 const FACTOR_HUMAN = {
   SAST:                 { label: 'Code Safety',           category: 'code',   desc: 'Scans source code for known vulnerability patterns' },
   VirusTotal:           { label: 'Malware Scan',          category: 'threat', desc: 'Checks against 70+ antivirus engines for malicious code' },
