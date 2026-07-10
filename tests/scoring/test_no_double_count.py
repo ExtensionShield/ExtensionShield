@@ -14,8 +14,12 @@ docs/adr/0002-scoring-layer-ownership.md):
     (DisclosureAlignment).
   * broad-host access is counted in BOTH Security (Manifest posture) and Privacy
     (PermissionCombos).
-  * purpose-mismatch / exfil / ToS are each represented by BOTH a scoring factor
-    AND a hard gate.
+  * ToS bare prohibited-permission declaration is represented by BOTH a scoring
+    factor (ToSViolations) and a hard gate (TOS_VIOLATION) — the one remaining
+    open duplicate, deferred to PR-3c. (purpose-mismatch and exfil were audited
+    in PR-3b as intentionally layered on DISJOINT evidence — a soft aggregate
+    factor vs. a hard, corroboration-gated gate — and are now locked by the
+    guardrail tests below, not trackers.)
 
 When a future PR consolidates an owner, the corresponding assertion below will
 flip — that is the intended signal to update the tracker (and the ADR).
@@ -34,7 +38,7 @@ from extension_shield.governance.signal_pack import (
     SastSignalPack,
     VirusTotalSignalPack,
 )
-from tests.scoring.utils import make_min_signal_pack
+from tests.scoring.utils import make_min_signal_pack, make_sast_finding
 
 
 MV3_MANIFEST = {"name": "Test Extension", "description": "a tool", "manifest_version": 3}
@@ -196,12 +200,14 @@ def test_broad_host_compound_uses_unchanged():
     assert "no_privacy_policy_with_network" in gov2["DisclosureAlignment"].flags
 
 
+# PR-3b audited purpose-mismatch and exfil as intentionally layered on disjoint
+# evidence (see the guardrail tests below and ADR 0002 §4). The ToS bare
+# prohibited-permission case remains a genuine narrow duplicate and stays a
+# tracker until PR-3c converts it — kept EXACTLY as-is here.
 @pytest.mark.parametrize(
     "factor_name, gate_id",
     [
-        ("Consistency", "PURPOSE_MISMATCH"),  # purpose-mismatch
-        ("NetworkExfil", "SENSITIVE_EXFIL"),  # exfiltration
-        ("ToSViolations", "TOS_VIOLATION"),   # ToS / policy
+        ("ToSViolations", "TOS_VIOLATION"),   # ToS / policy — open duplicate, PR-3c
     ],
 )
 def test_tracker_concept_represented_by_both_factor_and_gate(factor_name, gate_id):
@@ -215,6 +221,152 @@ def test_tracker_concept_represented_by_both_factor_and_gate(factor_name, gate_i
     result = ScoringEngine().calculate_scores(make_min_signal_pack(), manifest=MV3_MANIFEST)
     assert factor_name in _all_factor_names(result)
     assert gate_id in HardGates.GATES
+
+
+# ---------------------------------------------------------------------------
+# PR-3b: factor-vs-gate audited as intentionally layered (disjoint evidence).
+# These are guardrails, not trackers — they must keep passing. They read only
+# existing FactorScore / GateResult outputs; they change no scoring behavior.
+# ---------------------------------------------------------------------------
+
+def _remote_code_sast_pack():
+    """A SAST finding classified as remote-code loading (concrete PURPOSE_MISMATCH
+    BLOCK evidence), on a non-benign, non-offline manifest with no broad-host — so
+    the Consistency factor's indirect aggregate trigger cannot fire."""
+    pack = make_min_signal_pack()
+    pack.sast = SastSignalPack(
+        deduped_findings=[
+            make_sast_finding(
+                # Behavior suffix `dynamic_script_loading` is in gates._PM_REMOTE_CODE
+                # -> classified as remote-code, a standalone-concrete BLOCK reason.
+                check_id="custom.remote.dynamic_script_loading",
+                file_path="src/loader.js",
+                line_number=42,
+                severity="MEDIUM",
+                message="loads a script element from a remote URL",
+                code_snippet="const s=document.createElement('script');s.src=cfg.remote;document.head.appendChild(s)",
+            )
+        ],
+        files_scanned=5,
+        confidence=0.9,
+    )
+    # A plain sensitive perm, no broad host — unrelated to the SAST classification.
+    pack.permissions = PermissionsSignalPack(api_permissions=["storage"], total_permissions=1)
+    return pack
+
+
+def test_purpose_mismatch_gate_and_consistency_factor_use_disjoint_evidence():
+    """PURPOSE_MISMATCH (gate) and Consistency (factor) read DISJOINT evidence, so
+    they are intentionally layered — not a duplicate.
+
+    * The gate BLOCKS on DIRECT SAST-classified behavior (remote-code loading,
+      gates.py:1006-1007), via the concrete rule-suffix taxonomy.
+    * The Consistency factor (engine.py ~651-695) only fires on an INDIRECT
+      aggregate — a benign purpose claim + a high-severity signal, or an
+      "offline" claim + broad-host — and never inspects SAST behavior.
+
+    With a non-benign manifest the same fixture BLOCKS the gate while leaving
+    Consistency at severity 0 with no flag referencing the SAST evidence.
+    """
+    pack = _remote_code_sast_pack()
+    manifest = {
+        "name": "Data Sync Pro",
+        "description": "syncs your data across devices",
+        "manifest_version": 3,
+    }
+
+    # Gate: DIRECT SAST remote-code behavior -> BLOCK/triggered.
+    gate = HardGates().evaluate_purpose_mismatch(manifest, pack.sast, pack.permissions)
+    assert gate.triggered is True
+    assert gate.decision == "BLOCK"
+    assert "dynamic_script_loading" in gate.details.get("remote_code", [])
+
+    # Factor: INDIRECT aggregate did not fire (non-benign name, no "offline"
+    # claim, no broad-host) -> severity 0 and no SAST-derived flag. This proves
+    # Consistency never consumed the gate's SAST evidence.
+    result = ScoringEngine().calculate_scores(pack, manifest=manifest)
+    consistency = _factors_by_name(result.governance_layer)["Consistency"]
+    assert consistency.severity == 0.0
+    assert not any(
+        ("dynamic_script_loading" in f) or ("remote" in f.lower()) or ("sast" in f.lower())
+        for f in consistency.flags
+    )
+
+
+def test_sensitive_exfil_gate_and_network_factor_use_disjoint_evidence():
+    """SENSITIVE_EXFIL (gate) and NetworkExfil (factor) read DISJOINT evidence.
+
+    * The NetworkExfil factor (normalizers.py:849-865) is driven by
+      NetworkSignalPack domain/pattern analysis and returns severity 0.0 whenever
+      ``network.enabled`` is False.
+    * The SENSITIVE_EXFIL gate (gates.py:1113-1233) WARNs from a permission +
+      disclosure combination (sensitive perm + network perm + no privacy policy)
+      that the factor never reads.
+
+    Their only shared input is the ``has_network`` boolean; with network analysis
+    off the gate still WARNs while the factor stays at 0.0.
+    """
+    from extension_shield.scoring.normalizers import normalize_network_exfil
+    from extension_shield.governance.signal_pack import NetworkSignalPack
+
+    perms = PermissionsSignalPack(
+        api_permissions=["cookies", "webRequest"],  # sensitive perm + network perm
+        total_permissions=2,
+    )
+    webstore = WebstoreStatsSignalPack(has_privacy_policy=False)  # 3rd risk factor
+
+    # Gate: permission + disclosure combination (>= 2 risk factors) -> WARN/triggered.
+    gate = HardGates().evaluate_sensitive_exfil(perms, SastSignalPack(), webstore)
+    assert gate.triggered is True
+    assert gate.decision == "WARN"
+    assert gate.details.get("risk_factors", 0) >= 2
+
+    # Factor: network analysis OFF -> severity 0.0 (a disjoint, analysis-driven signal).
+    net = normalize_network_exfil(NetworkSignalPack(enabled=False, confidence=0.0), perms)
+    assert net.severity == 0.0
+    assert net.details.get("network_analysis_enabled") is False
+
+
+def test_sensitive_exfil_gate_is_structurally_warn_only():
+    """Invariant: SENSITIVE_EXFIL can never BLOCK — it is a capability/disclosure
+    WARNING by design (its decision is the literal "WARN", gates.py ~1205).
+
+    Iterate "worst case" inputs (every sensitive permission + broad-host/network +
+    no privacy policy + SAST network-pattern findings) and assert the gate
+    decision is never BLOCK. Locks the WARN-only structure against a future edit
+    that adds a BLOCK path.
+    """
+    all_sensitive = [
+        "cookies", "webRequest", "webRequestBlocking", "history",
+        "browsingData", "clipboardRead", "tabs",
+    ]
+    network_sast = SastSignalPack(
+        deduped_findings=[
+            make_sast_finding(check_id="net.fetch.external_api",
+                              message="fetch() to a third-party api", severity="HIGH"),
+            make_sast_finding(check_id="net.ws.websocket_connection",
+                              message="opens a websocket to send data", severity="HIGH"),
+        ],
+        files_scanned=5,
+        confidence=0.9,
+    )
+    perm_cases = [
+        PermissionsSignalPack(
+            api_permissions=all_sensitive, host_permissions=["<all_urls>"],
+            has_broad_host_access=True, total_permissions=len(all_sensitive),
+        ),
+        PermissionsSignalPack(api_permissions=all_sensitive, total_permissions=len(all_sensitive)),
+    ]
+    sast_cases = [network_sast, SastSignalPack()]
+
+    for perms in perm_cases:
+        for sast in sast_cases:
+            gate = HardGates().evaluate_sensitive_exfil(
+                perms, sast, WebstoreStatsSignalPack(has_privacy_policy=False)
+            )
+            assert gate.decision != "BLOCK", (
+                "SENSITIVE_EXFIL is structurally WARN-only; it must never BLOCK"
+            )
 
 
 # ---------------------------------------------------------------------------

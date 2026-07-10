@@ -106,6 +106,59 @@ tests **before** any recalibration is the OSS-safe order.
   version differs, so a version bump is the migration mechanism; a revert of the
   version constants is the rollback.
 
+### 4. Factor-vs-gate audit outcomes (PR-3b — docs/tests only)
+
+PR-3b is documentation + regression guardrails only. It changes **no** scoring
+formula, weight, gate, threshold, rulepack, or `ScoringEngine.VERSION`. It closes
+two of the three factor-vs-gate items from §2 by proving, at the code level, that
+the factor and the gate consume **disjoint evidence** — a graded soft signal plus
+a hard, corroboration-gated stop — rather than double-penalizing the same input.
+
+- **purpose-mismatch — AUDITED: intentionally layered, not a duplicate.**
+  The `Consistency` factor (`engine.py` `_compute_governance_factors`, ~594-696)
+  fires only on an **indirect aggregate**: a benign purpose claim
+  (theme/color/font/wallpaper/new tab) combined with any security/privacy factor
+  severity `> 0.5`, or an `"offline"` claim plus broad-host. Its only flags are
+  `benign_claim_risky_behavior` and `offline_claim_network_access`; it never
+  inspects SAST behavior. The `PURPOSE_MISMATCH` gate (`gates.py`
+  `evaluate_purpose_mismatch`, 919-1107) BLOCKs only on **direct, SAST-classified
+  behavior** — `remote_code`, `secret_read`+`exfil`, `key_capture`+`exfil`, or a
+  corroborated `standalone_dangerous` behavior — classified by the concrete
+  rule-suffix taxonomy (`_PM_*`, 252-288), never by keywords. The evidence sets
+  are disjoint: a remote-code BLOCK leaves `Consistency` at severity 0 with no
+  SAST-derived flag. Locked by
+  `test_purpose_mismatch_gate_and_consistency_factor_use_disjoint_evidence`.
+
+- **exfiltration — AUDITED: intentionally layered, not a duplicate.**
+  The `NetworkExfil` factor (`normalizers.py` `normalize_network_exfil`,
+  ~825-950) is driven by `NetworkSignalPack` domain/pattern analysis and returns
+  **severity `0.0` whenever `network.enabled` is False** (early return,
+  ~849-865). The `SENSITIVE_EXFIL` gate (`gates.py` `evaluate_sensitive_exfil`,
+  1113-1233) is driven by a **permission count + coarse SAST text-regex +
+  privacy-policy absence** (2+ risk factors → WARN), and is **structurally
+  WARN-only by design**: its `decision` is the literal `"WARN"` (~line 1205) with
+  no `BLOCK` path in the function. The only shared input is the `has_network`
+  boolean; every other input is disjoint. A WARN with network analysis off leaves
+  `NetworkExfil` at severity `0.0`. Locked by
+  `test_sensitive_exfil_gate_and_network_factor_use_disjoint_evidence` and the
+  WARN-only invariant `test_sensitive_exfil_gate_is_structurally_warn_only`.
+
+- **ToS bare prohibited-permission declaration — STILL OPEN, deferred to PR-3c.**
+  `ToSViolations` (`engine.py`) and the `TOS_VIOLATION` gate (`gates.py`) both key
+  a contribution off the **identical** `{"debugger", "proxy", "nativeMessaging"}`
+  set for a *bare declaration* (no corroborating evidence). This is a genuine
+  narrow duplicate and is **not** resolved here — its tracker test (the
+  `("ToSViolations", "TOS_VIOLATION")` case of
+  `test_tracker_concept_represented_by_both_factor_and_gate`) is left
+  **unchanged** so PR-3c converts it deliberately.
+
+- **travel-docs / visa-portal heuristic — OUT OF SCOPE, already tracked.**
+  The travel-docs automation signal is represented in three places (the
+  `ToSViolations` factor heuristic, a `TOS_VIOLATION` gate backstop, and the
+  `PROTECTED_SERVICE_AUTOMATION` rulepack). That triplication and its
+  gate-comment retirement plan are tracked under **ADR 0001** and are **not**
+  touched by PR-3b or PR-3c.
+
 ## Scope of this PR (PR-1)
 
 Hygiene only — **no** score, verdict, weight, threshold, gate, rulepack,
@@ -141,10 +194,18 @@ analyzer, or golden-snapshot change:
    (`PermissionCombos` owns the bare-capability signal). Removed the unconditional
    `Manifest` severity contribution; kept it as manifest context. Compound
    broad-host uses left intentionally separate. Golden snapshots unchanged.
-   - **PR-3b (deferred)** — purpose-mismatch / exfil / ToS factor-vs-gate: these
-     are graduated by design (small soft factor + large corroboration-gated hard
-     gate), **not** naive duplicates. Requires a case-by-case audit and, for any
-     gate-trigger change, a labeled corpus — deferred, not folded into PR-3a.
+   - **PR-3b — DONE (docs/tests only, no version bump)** — factor-vs-gate audit
+     for **purpose-mismatch** and **exfil**: both proven intentionally layered on
+     disjoint evidence (soft aggregate factor vs. hard corroboration-gated gate,
+     see §4), now locked by real guardrail tests in
+     `tests/scoring/test_no_double_count.py`. `SENSITIVE_EXFIL` is documented and
+     tested as structurally WARN-only. No scoring formula changed.
+   - **PR-3c (planned)** — resolve the **ToS bare prohibited-permission**
+     duplicate: `{"debugger", "proxy", "nativeMessaging"}` is scored by both
+     `ToSViolations` and the `TOS_VIOLATION` gate for a bare declaration. Converts
+     the remaining tracker test. If it changes any gate-trigger or scored
+     contribution it bumps `scoring_version` (and `DECISION_VERSION` if precedence
+     or rulepack semantics change), with a golden-snapshot regen.
 3. **PR-4** — optional Security internal rebalance (`weights_version` bump).
 4. **PR-5** — reputation-as-modifier + layer re-weight, gated on a labeled
    benign/malicious/review corpus (`weights_version` + `scoring_version`, golden
