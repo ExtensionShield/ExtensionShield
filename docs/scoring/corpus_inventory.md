@@ -134,3 +134,7 @@ OWASP, "not necessary to be over-precise"):
 - **PR-5 (v2 reputation modifier): BLOCKED** — machinery exists, corpus data does
   not. The extraction utility (this PR) is a prerequisite step toward the data,
   not the data itself.
+
+The sourcing, labeling, anonymization, and before/after sign-off policy that must
+be satisfied before PR-4/PR-5 is defined in
+[ADR 0003](../adr/0003-scoring-calibration-corpus.md).
