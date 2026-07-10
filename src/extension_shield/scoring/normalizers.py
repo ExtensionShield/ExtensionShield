@@ -426,7 +426,8 @@ def normalize_manifest_posture(
     Formula:
         - Missing CSP → +0.3
         - MV2 legacy → +0.2
-        - Broad host permissions → +0.3
+        - Broad host permissions → manifest context only, no severity (scored by
+          Privacy/PermissionCombos; see docs/adr/0002-scoring-layer-ownership.md)
         - Cap severity at 1.0
         - confidence = 1.0 if manifest parsed
     
@@ -452,9 +453,15 @@ def normalize_manifest_posture(
         severity += 0.2
         issues.append("mv2_legacy")
     
-    # Check for broad host permissions
+    # Broad host access is scored solely by Privacy/PermissionCombos
+    # (normalize_permission_combos) as of scoring_version 2.1.2 — see
+    # docs/adr/0002-scoring-layer-ownership.md. Manifest posture keeps it as
+    # manifest context/evidence only; it no longer contributes to the
+    # Security/Manifest severity (previously an unconditional double-count with
+    # PermissionCombos). Compound/conditional broad-host uses elsewhere
+    # (ToSViolations+VT, CaptureSignals+capture, NetworkExfil, DisclosureAlignment)
+    # are distinct AND-conditions and remain unchanged.
     if perms.has_broad_host_access:
-        severity += 0.3
         issues.append("broad_host_access")
     
     # Cap at 1.0

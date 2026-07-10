@@ -101,28 +101,99 @@ def test_privacy_policy_scored_only_by_governance_disclosure():
     assert gov["DisclosureAlignment"].severity > 0
 
 
-def test_tracker_broad_host_counted_in_security_and_privacy():
-    """TRACKING: broad-host access is counted in two layers today.
-
-    PR-3 will choose one scored owner (Privacy/PermissionCombos) and demote the
-    others to evidence/gate-only. When that lands, the Manifest assertion flips.
-    """
-    pack = make_min_signal_pack()
-    pack.permissions = PermissionsSignalPack(
+def _broad_host_perms(**overrides):
+    kwargs = dict(
         api_permissions=["tabs"],
         host_permissions=["<all_urls>"],
         has_broad_host_access=True,
         broad_host_patterns=["<all_urls>"],
         total_permissions=1,
     )
-    result = ScoringEngine().calculate_scores(pack, manifest=MV3_MANIFEST)
-    sec = _factors_by_name(result.security_layer)
-    priv = _factors_by_name(result.privacy_layer)
+    kwargs.update(overrides)
+    return PermissionsSignalPack(**kwargs)
 
-    # Security/Manifest posture counts broad host today (to be demoted later).
-    assert "broad_host_access" in sec["Manifest"].flags
-    # Privacy/PermissionCombos ALSO counts broad host today (the intended owner).
-    assert "broad_host_access" in priv["PermissionCombos"].details.get("triggered_combos", [])
+
+def test_broad_host_scored_only_by_permission_combos():
+    """PR-3a (DONE): bare broad-host access is scored ONLY by
+    Privacy/PermissionCombos (scoring_version 2.1.2, ADR 0002).
+
+    The Security/Manifest posture factor no longer adds severity for bare
+    broad-host access — it may still surface ``broad_host_access`` as manifest
+    context. Permanent regression guard: fails if the Manifest double-count is
+    reintroduced, or if PermissionCombos stops scoring broad-host.
+    """
+    from extension_shield.scoring.normalizers import (
+        normalize_manifest_posture,
+        normalize_permission_combos,
+    )
+
+    broad = _broad_host_perms()
+    narrow = _broad_host_perms(host_permissions=[], has_broad_host_access=False,
+                               broad_host_patterns=[])
+
+    # Manifest posture must NOT score bare broad-host: severity unchanged.
+    sev_broad = normalize_manifest_posture({"manifest_version": 3}, broad).severity
+    sev_narrow = normalize_manifest_posture({"manifest_version": 3}, narrow).severity
+    assert sev_broad == sev_narrow, (
+        "Manifest/Security must not add severity for bare broad-host access "
+        "(owned by Privacy/PermissionCombos)"
+    )
+
+    # ...but Manifest keeps broad_host_access as context/evidence (kept intact).
+    manifest_broad = normalize_manifest_posture({"manifest_version": 3}, broad)
+    assert "broad_host_access" in manifest_broad.flags
+    assert manifest_broad.details.get("has_broad_host_access") is True
+
+    # Privacy/PermissionCombos IS the sole scored owner: broad-host adds severity.
+    combos = normalize_permission_combos(broad)
+    assert combos.severity > 0
+    assert "broad_host_access" in combos.details.get("triggered_combos", [])
+
+
+def test_broad_host_compound_uses_unchanged():
+    """PR-3a leaves the four COMPOUND (AND-conditioned) broad-host uses intact —
+    these are distinct behaviors, not duplicates of the bare-capability signal.
+    """
+    from extension_shield.scoring.normalizers import (
+        normalize_capture_signals,
+        normalize_network_exfil,
+    )
+    from extension_shield.governance.signal_pack import NetworkSignalPack
+
+    # (1) ToSViolations: broad-host + VirusTotal malicious detection (engine).
+    tos_pack = make_min_signal_pack()
+    tos_pack.permissions = _broad_host_perms()
+    tos_pack.virustotal = VirusTotalSignalPack(enabled=True, total_engines=70, malicious_count=3)
+    gov = _factors_by_name(
+        ScoringEngine().calculate_scores(tos_pack, manifest=MV3_MANIFEST).governance_layer
+    )
+    assert "broad_access_with_vt_detection" in gov["ToSViolations"].flags
+
+    # (2) CaptureSignals: capture permission + broad-host (normalizer). The
+    #     compound signal is recorded in details["capture_signals"].
+    capture = normalize_capture_signals(
+        _broad_host_perms(api_permissions=["tabCapture"]),
+        {"name": "Some Tool", "description": "does things"},
+    )
+    assert "capture_with_network" in capture.details.get("capture_signals", [])
+    assert capture.details.get("has_network_access") is True
+
+    # (3) NetworkExfil: broad-host contributes base exfil risk when analysis ran.
+    net = normalize_network_exfil(
+        NetworkSignalPack(enabled=True, confidence=0.9), _broad_host_perms()
+    )
+    assert net.details.get("has_network_permissions") is True
+    assert net.severity > 0
+
+    # (4) DisclosureAlignment: broad-host as governance qualifier when no privacy
+    #     policy and no direct data-collection perms (engine, elif has_network).
+    disc_pack = make_min_signal_pack()
+    disc_pack.webstore_stats = WebstoreStatsSignalPack(has_privacy_policy=False)
+    disc_pack.permissions = _broad_host_perms(high_risk_permissions=[])
+    gov2 = _factors_by_name(
+        ScoringEngine().calculate_scores(disc_pack, manifest=MV3_MANIFEST).governance_layer
+    )
+    assert "no_privacy_policy_with_network" in gov2["DisclosureAlignment"].flags
 
 
 @pytest.mark.parametrize(

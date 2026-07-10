@@ -106,7 +106,12 @@ class ScoringEngine:
     # Bumped 2.1.0 -> 2.1.1: privacy-policy absence is no longer scored by the
     # Security/Webstore factor (it was a double-count); Governance/DisclosureAlignment
     # is now the sole scored owner. See docs/adr/0002-scoring-layer-ownership.md.
-    VERSION = "2.1.1"
+    # Bumped 2.1.1 -> 2.1.2: bare broad-host access is no longer scored by the
+    # Security/Manifest factor (it was an unconditional double-count);
+    # Privacy/PermissionCombos is now the sole scored owner. Compound broad-host
+    # uses (ToSViolations+VT, CaptureSignals, NetworkExfil, DisclosureAlignment)
+    # are unchanged. See docs/adr/0002-scoring-layer-ownership.md.
+    VERSION = "2.1.2"
     
     def __init__(
         self,
