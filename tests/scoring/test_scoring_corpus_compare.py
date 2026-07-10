@@ -59,11 +59,26 @@ def _synthetic_row(**overrides):
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "scoring_corpus"
 STARTER = FIXTURES / "starter_corpus.json"
+SYNTHETIC = FIXTURES / "synthetic_labeled_seed.json"
 
 
 @pytest.fixture()
 def starter():
     return load_corpus(STARTER)
+
+
+def test_synthetic_seed_loads_and_scores_zero_diff_identity():
+    # The harness must load the synthetic seed and, in identity mode (v1 vs v1),
+    # score every entry with no diff. This proves the synthetic packs are
+    # engine-loadable and the harness handles the new file.
+    corpus = load_corpus(SYNTHETIC)
+    rows = compare_corpus(corpus, DEFAULT_BASELINE, DEFAULT_BASELINE)
+    assert len(rows) == len(corpus) and len(rows) >= 6
+    assert has_any_diff(rows) is False
+    for row in rows:
+        assert row["score_delta"] == 0 and row["verdict_flip"] == ""
+        # every synthetic entry produces a real verdict (no crash / empty)
+        assert row["baseline_verdict"] in ("ALLOW", "NEEDS_REVIEW", "BLOCK")
 
 
 # --- identity mode ----------------------------------------------------------

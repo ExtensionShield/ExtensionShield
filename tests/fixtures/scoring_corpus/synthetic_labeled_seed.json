@@ -1,0 +1,1060 @@
+[
+  {
+    "id": "synthetic-benign-001",
+    "name": "Synthetic Benign Extension",
+    "label": "benign",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "vt.malicious_count=0, sast findings=0, entropy overall_risk=low, permissions.total=1 (storage) -> no risk signals",
+    "tags": [
+      "synthetic",
+      "benign"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=ALLOW overall=99",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-benign-001",
+        "extension_id": "synthetic-benign-001",
+        "sast": {
+          "raw_findings": {},
+          "deduped_findings": [],
+          "counts_by_severity": {
+            "CRITICAL": 0,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 1,
+          "files_with_findings": 0,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 0,
+          "suspicious_count": 0,
+          "harmless_count": 0,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [],
+          "malware_families": [],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 3,
+          "obfuscated_count": 0,
+          "suspicious_count": 0,
+          "overall_risk": "low"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": true
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "storage"
+          ],
+          "host_permissions": [],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [],
+          "has_broad_host_access": false,
+          "broad_host_patterns": [],
+          "total_permissions": 1
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "synthetic-benign-002",
+    "name": "Synthetic Minimal Permissions Extension",
+    "label": "benign",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "permissions.total=1 (storage only), has_broad_host_access=false, host=[], vt.malicious_count=0, sast findings=0 -> minimal attack surface",
+    "tags": [
+      "synthetic",
+      "benign"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=ALLOW overall=99",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-benign-002",
+        "extension_id": "synthetic-benign-002",
+        "sast": {
+          "raw_findings": {},
+          "deduped_findings": [],
+          "counts_by_severity": {
+            "CRITICAL": 0,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 1,
+          "files_with_findings": 0,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 0,
+          "suspicious_count": 0,
+          "harmless_count": 0,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [],
+          "malware_families": [],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 3,
+          "obfuscated_count": 0,
+          "suspicious_count": 0,
+          "overall_risk": "low"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": true
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "storage"
+          ],
+          "host_permissions": [],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [],
+          "has_broad_host_access": false,
+          "broad_host_patterns": [],
+          "total_permissions": 1
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "synthetic-malicious-001",
+    "name": "Synthetic VT Malware Extension",
+    "label": "malicious",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "virustotal.malicious_count=8 (>=5 VT_MALWARE block threshold), enabled=true, malware_families set -> confirmed malware detections",
+    "tags": [
+      "synthetic",
+      "malicious"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=BLOCK overall=78",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-malicious-001",
+        "extension_id": "synthetic-malicious-001",
+        "sast": {
+          "raw_findings": {},
+          "deduped_findings": [],
+          "counts_by_severity": {
+            "CRITICAL": 0,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 1,
+          "files_with_findings": 0,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 8,
+          "suspicious_count": 0,
+          "harmless_count": 60,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [
+            {
+              "vendor_name": "SyntheticAV",
+              "result": "Trojan.Synthetic",
+              "category": "malicious"
+            }
+          ],
+          "malware_families": [
+            "synthetic.trojan.gen"
+          ],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 3,
+          "obfuscated_count": 0,
+          "suspicious_count": 0,
+          "overall_risk": "low"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": true
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "storage"
+          ],
+          "host_permissions": [],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [],
+          "has_broad_host_access": false,
+          "broad_host_patterns": [],
+          "total_permissions": 1
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "synthetic-malicious-002",
+    "name": "Synthetic Critical SAST Extension",
+    "label": "malicious",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "sast.counts_by_severity.CRITICAL=1 (remote-code eval finding) >= sast_critical_block_count -> CRITICAL_SAST",
+    "tags": [
+      "synthetic",
+      "malicious"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=BLOCK overall=71",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-malicious-002",
+        "extension_id": "synthetic-malicious-002",
+        "sast": {
+          "raw_findings": {
+            "background.js": 1
+          },
+          "deduped_findings": [
+            {
+              "check_id": "synthetic.remote-code-exec",
+              "file_path": "background.js",
+              "line_number": 1,
+              "severity": "CRITICAL",
+              "message": "Synthetic: eval() of remote-fetched code",
+              "category": "remote_code",
+              "code_snippet": null
+            }
+          ],
+          "counts_by_severity": {
+            "CRITICAL": 1,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 4,
+          "files_with_findings": 1,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 0,
+          "suspicious_count": 0,
+          "harmless_count": 0,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [],
+          "malware_families": [],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 3,
+          "obfuscated_count": 0,
+          "suspicious_count": 0,
+          "overall_risk": "low"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": true
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "storage"
+          ],
+          "host_permissions": [],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [],
+          "has_broad_host_access": false,
+          "broad_host_patterns": [],
+          "total_permissions": 1
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "synthetic-needsreview-001",
+    "name": "Synthetic Sensitive Combo Extension",
+    "label": "needs_review",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "sensitive permission combo: cookies + has_broad_host_access(<all_urls>) + scripting, but vt.malicious_count=0 and 0 SAST findings -> capability worth review, no malicious evidence",
+    "tags": [
+      "synthetic",
+      "needs_review"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=NEEDS_REVIEW overall=84",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-needsreview-001",
+        "extension_id": "synthetic-needsreview-001",
+        "sast": {
+          "raw_findings": {},
+          "deduped_findings": [],
+          "counts_by_severity": {
+            "CRITICAL": 0,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 1,
+          "files_with_findings": 0,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 0,
+          "suspicious_count": 0,
+          "harmless_count": 0,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [],
+          "malware_families": [],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 3,
+          "obfuscated_count": 0,
+          "suspicious_count": 0,
+          "overall_risk": "low"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": true
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "cookies",
+            "scripting",
+            "tabs",
+            "storage"
+          ],
+          "host_permissions": [
+            "<all_urls>"
+          ],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [
+            "cookies"
+          ],
+          "has_broad_host_access": true,
+          "broad_host_patterns": [
+            "<all_urls>"
+          ],
+          "total_permissions": 4
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "synthetic-needsreview-002",
+    "name": "Synthetic No Privacy Policy Extension",
+    "label": "needs_review",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "webstore_stats.has_privacy_policy=false with broad host access -> governance/disclosure gap; no malware/critical-SAST",
+    "tags": [
+      "synthetic",
+      "needs_review"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=NEEDS_REVIEW overall=85",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-needsreview-002",
+        "extension_id": "synthetic-needsreview-002",
+        "sast": {
+          "raw_findings": {},
+          "deduped_findings": [],
+          "counts_by_severity": {
+            "CRITICAL": 0,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 1,
+          "files_with_findings": 0,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 0,
+          "suspicious_count": 0,
+          "harmless_count": 0,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [],
+          "malware_families": [],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 3,
+          "obfuscated_count": 0,
+          "suspicious_count": 0,
+          "overall_risk": "low"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": false
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "tabs",
+            "storage"
+          ],
+          "host_permissions": [
+            "<all_urls>"
+          ],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [],
+          "has_broad_host_access": true,
+          "broad_host_patterns": [
+            "<all_urls>"
+          ],
+          "total_permissions": 2
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "synthetic-lowconf-001",
+    "name": "Synthetic No SAST Coverage Extension",
+    "label": "low_confidence",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "sast.files_scanned=0 (analyzer produced no coverage) -> cannot confirm code safety; other signals thin",
+    "tags": [
+      "synthetic",
+      "low_confidence"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=NEEDS_REVIEW overall=80",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-lowconf-001",
+        "extension_id": "synthetic-lowconf-001",
+        "sast": {
+          "raw_findings": {},
+          "deduped_findings": [],
+          "counts_by_severity": {
+            "CRITICAL": 0,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 0,
+          "files_with_findings": 0,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 0,
+          "suspicious_count": 0,
+          "harmless_count": 0,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [],
+          "malware_families": [],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 0,
+          "obfuscated_count": 0,
+          "suspicious_count": 0,
+          "overall_risk": "low"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": true
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "storage"
+          ],
+          "host_permissions": [],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [],
+          "has_broad_host_access": false,
+          "broad_host_patterns": [],
+          "total_permissions": 1
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "synthetic-lowconf-002",
+    "name": "Synthetic Coverage Gap With Weak Signals Extension",
+    "label": "low_confidence",
+    "expected_verdict": null,
+    "confidence": null,
+    "source_type": "synthetic",
+    "rationale": "sast.files_scanned=0 (no static coverage) while entropy.obfuscated_count=2 (medium) -> flagged obfuscation with no analyzer to confirm behavior",
+    "tags": [
+      "synthetic",
+      "low_confidence"
+    ],
+    "notes": "Fully synthetic, PII-free. observed current engine behavior (non-authoritative): decision=NEEDS_REVIEW overall=80",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "synthetic-lowconf-002",
+        "extension_id": "synthetic-lowconf-002",
+        "sast": {
+          "raw_findings": {},
+          "deduped_findings": [],
+          "counts_by_severity": {
+            "CRITICAL": 0,
+            "ERROR": 0,
+            "WARNING": 0,
+            "INFO": 0
+          },
+          "confidence": 1.0,
+          "files_scanned": 0,
+          "files_with_findings": 0,
+          "scan_error": false
+        },
+        "virustotal": {
+          "malicious_count": 0,
+          "suspicious_count": 0,
+          "harmless_count": 0,
+          "undetected_count": 0,
+          "total_engines": 70,
+          "vendor_hits": [],
+          "malware_families": [],
+          "ratios": {},
+          "files_analyzed": 0,
+          "enabled": true,
+          "timestamp": null
+        },
+        "entropy": {
+          "file_entropy_map": {},
+          "suspected_obfuscation_files": [],
+          "minified_files": [],
+          "high_risk_patterns": {},
+          "thresholds_used": {
+            "normal_max": 5.5,
+            "suspicious_min": 6.5,
+            "high_risk_min": 7.5
+          },
+          "files_analyzed": 4,
+          "obfuscated_count": 2,
+          "suspicious_count": 2,
+          "overall_risk": "medium"
+        },
+        "webstore_stats": {
+          "installs": 1000,
+          "rating_avg": 4.5,
+          "rating_count": null,
+          "last_updated": null,
+          "developer": null,
+          "developer_email": null,
+          "developer_website": null,
+          "developer_profile": {},
+          "category": null,
+          "is_featured": false,
+          "follows_best_practices": false,
+          "has_privacy_policy": true
+        },
+        "webstore_reviews": {
+          "sampled_reviews": [],
+          "complaint_clusters": [],
+          "keyword_hits": {},
+          "time_trend": {},
+          "manipulation_flags": [],
+          "total_reviews_sampled": 0,
+          "negative_review_ratio": 0.0
+        },
+        "permissions": {
+          "api_permissions": [
+            "storage"
+          ],
+          "host_permissions": [],
+          "optional_permissions": [],
+          "permission_analysis": [],
+          "unreasonable_permissions": [],
+          "high_risk_permissions": [],
+          "has_broad_host_access": false,
+          "broad_host_patterns": [],
+          "total_permissions": 1
+        },
+        "chromestats": {
+          "enabled": false,
+          "risk_indicators": [],
+          "total_risk_score": 0,
+          "overall_risk_level": "low",
+          "install_trends": {},
+          "rating_patterns": {},
+          "developer_reputation": {}
+        },
+        "network": {
+          "enabled": false,
+          "domains": [],
+          "has_runtime_url_construction": false,
+          "suspicious_flags": {
+            "http_unencrypted": false,
+            "base64_encoded_urls": false,
+            "high_entropy_payload": false,
+            "dynamic_url_construction": false,
+            "credential_exfil_pattern": false,
+            "data_harvest_pattern": false
+          },
+          "external_request_count": 0,
+          "data_sending_patterns": [],
+          "confidence": 0.0
+        },
+        "evidence": [],
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  }
+]
