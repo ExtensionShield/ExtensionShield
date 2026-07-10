@@ -19,9 +19,13 @@ from extension_shield.scoring.engine import ScoringEngine
 from scripts.scoring.compare_scoring_corpus import CorpusError, validate_entry
 from scripts.scoring.extract_signal_pack import (
     _CORPUS_DIR_GUARD,
+    AnonymizationNotSafe,
+    _assert_anon_safe,
     _coverage_warnings,
     _is_within_corpus_dir,
+    _pii_needle_map,
     _redaction_for,
+    _scrub_manifest_pii,
     anonymize_entry,
     extract_entries,
     extract_entry,
@@ -445,3 +449,134 @@ def test_cli_anonymize_dry_run_is_leak_free(capsys):
     assert isinstance(parsed, list) and parsed[0]["label"] == "unknown"
     for needle in needles:
         assert needle not in out
+
+
+# --- pool counterexample regressions (dry-run gaps A/B/C) ---------------------
+
+from extension_shield.governance.signal_pack import (  # noqa: E402
+    PermissionsSignalPack,
+    SastFindingNormalized,
+    SastSignalPack,
+)
+from tests.scoring.utils import make_min_signal_pack  # noqa: E402
+
+
+def _synthetic_entry(*, manifest, permissions=None, webstore=None, sast=None):
+    """A minimal corpus entry for anonymizer unit tests (synthetic PII only)."""
+    pack = make_min_signal_pack(
+        scan_id="synidaaaaaaaaaaaaaaaaaaaaaaaaaaaa", extension_id="synidaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    )
+    if permissions is not None:
+        pack.permissions = permissions
+    if sast is not None:
+        pack.sast = sast
+    sp = pack.model_dump(mode="json")
+    if webstore:
+        sp["webstore_stats"].update(webstore)
+    return {
+        "id": "golden-synidaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "name": manifest.get("name") or "Synthetic Extension",
+        "label": "unknown", "expected_verdict": None, "tags": ["extracted"],
+        "extraction": {"source_fixture": "x"},
+        "inputs": {"signal_pack": sp, "manifest": manifest, "user_count": 1000, "permissions_analysis": None},
+    }
+
+
+def test_A_structured_manifest_author_dict_is_scrubbed():
+    # manifest.author as a dict {"email","name","website"} — nested PII must go.
+    entry = _synthetic_entry(manifest={
+        "name": "Synthetic Extension",
+        "author": {"email": "fake-dev@evil.example", "name": "Fake Dev", "website": "https://fake-dev.example"},
+        "manifest_version": 3,
+    })
+    anon = anonymize_entry(entry, salt="s", redact_name=True)
+    blob = json.dumps(anon)
+    for pii in ("fake-dev@evil.example", "Fake Dev", "https://fake-dev.example"):
+        assert pii not in blob, f"structured author PII leaked: {pii}"
+    # extract-time guard also accepts it (no residual leak, neutral)
+    _assert_anon_safe(entry, anon, redact_name=True)
+
+
+def test_A_needle_map_collects_nested_author():
+    entry = _synthetic_entry(manifest={"name": "X", "author": {"email": "a@b.example"}})
+    vals = set(_pii_needle_map(entry, redact_name=True).values())
+    assert "a@b.example" in vals
+
+
+def test_B_pii_in_preserved_host_pattern_fails_closed():
+    # A developer domain that is ALSO a host permission (preserved for scoring)
+    # cannot be de-identified without changing scoring -> fail closed.
+    perms = PermissionsSignalPack(
+        api_permissions=["tabs"], host_permissions=["https://evilcorp.example/*"],
+        has_broad_host_access=True, broad_host_patterns=["https://evilcorp.example/*"], total_permissions=1,
+    )
+    entry = _synthetic_entry(
+        manifest={"name": "Synthetic Extension", "host_permissions": ["https://evilcorp.example/*"], "manifest_version": 3},
+        permissions=perms, webstore={"developer_website": "https://evilcorp.example"},
+    )
+    anon = anonymize_entry(entry, salt="s", redact_name=True)
+    with pytest.raises(AnonymizationNotSafe) as ei:
+        _assert_anon_safe(entry, anon, redact_name=True)
+    msg = str(ei.value)
+    assert "survives" in msg
+    assert "evilcorp.example" not in msg  # sanitized: no PII value in the reason
+
+
+def test_C_manifest_name_consistency_keyword_is_neutral():
+    # "new tab" is a Consistency benign_claim (engine.py:678). A CRITICAL SAST
+    # finding makes has_high_security_risk True, so is_benign_claimed drives
+    # Consistency to 0.6 (verified below) — the keyword-preserving redaction must
+    # keep it there. Without a real risk signal this test would be VACUOUS.
+    crit = SastFindingNormalized(
+        check_id="synthetic.remote-code", file_path="bg.js", severity="CRITICAL", message="eval remote"
+    )
+    sast = SastSignalPack(
+        files_scanned=3, files_with_findings=1, deduped_findings=[crit],
+        counts_by_severity={"CRITICAL": 1, "ERROR": 0, "WARNING": 0, "INFO": 0}, raw_findings={"bg.js": 1},
+    )
+    entry = _synthetic_entry(
+        manifest={"name": "New Tab BrandX", "description": "BrandX new tab replacer", "manifest_version": 3},
+        sast=sast,
+    )
+    anon = anonymize_entry(entry, salt="s", redact_name=True)
+
+    def consistency(e):
+        r = ScoringEngine(weights_version="v1").calculate_scores(
+            SignalPack.model_validate(e["inputs"]["signal_pack"]),
+            manifest=e["inputs"]["manifest"], user_count=e["inputs"]["user_count"])
+        cs = next((f.severity for L in (r.governance_layer,) if L for f in L.factors if f.name == "Consistency"), None)
+        return (r.overall_score, r.decision.value, cs)
+
+    orig_c = consistency(entry)
+    assert orig_c[2] and orig_c[2] > 0.0, "test must exercise a non-zero Consistency factor"
+    assert "BrandX" not in json.dumps(anon)                       # brand gone
+    assert "new tab" in anon["inputs"]["manifest"]["name"].lower()  # keyword preserved
+    assert orig_c == consistency(anon)                           # score+verdict+Consistency identical
+    _assert_anon_safe(entry, anon, redact_name=True)             # guard passes (neutral, leak-free)
+
+
+def test_scrub_manifest_pii_handles_str_dict_list():
+    assert _scrub_manifest_pii("") == ""
+    assert _scrub_manifest_pii("BrandZ Screenshot") == "[redacted] screenshot"
+    d = _scrub_manifest_pii({"email": "x@y.example", "name": "Z"})
+    assert "x@y.example" not in json.dumps(d) and "Z" not in json.dumps(d)
+    lst = _scrub_manifest_pii(["a@b.example"])
+    assert "a@b.example" not in json.dumps(lst)
+
+
+def test_B_non_ascii_pii_in_preserved_field_is_caught():
+    # Regression: the leak guard must compare RAW strings (not a json.dumps blob,
+    # which escapes non-ASCII) so a non-ASCII developer domain that is also a
+    # preserved host pattern is still detected and fails closed.
+    perms = PermissionsSignalPack(
+        api_permissions=["tabs"], host_permissions=["https://tëst.example/*"],
+        has_broad_host_access=True, broad_host_patterns=["https://tëst.example/*"], total_permissions=1,
+    )
+    entry = _synthetic_entry(
+        manifest={"name": "Synthetic Extension", "host_permissions": ["https://tëst.example/*"], "manifest_version": 3},
+        permissions=perms, webstore={"developer_website": "https://tëst.example"},
+    )
+    anon = anonymize_entry(entry, salt="s", redact_name=True)
+    with pytest.raises(AnonymizationNotSafe) as ei:
+        _assert_anon_safe(entry, anon, redact_name=True)
+    assert "tëst.example" not in str(ei.value)  # message stays PII-free

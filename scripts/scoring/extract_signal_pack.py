@@ -194,7 +194,11 @@ def extract_entry(
     }
 
     if anonymize:
-        entry = anonymize_entry(entry, salt=salt or "", redact_name=redact_name)
+        # anonymize_entry deep-copies, so ``entry`` stays the plain original for
+        # the fail-closed safety guard (leak in a preserved field OR score drift).
+        anon = anonymize_entry(entry, salt=salt or "", redact_name=redact_name)
+        _assert_anon_safe(entry, anon, redact_name=redact_name)
+        entry = anon
 
     # Validate the FINAL (possibly anonymized) entry against the #274 schema and
     # the SignalPack model before emitting.
@@ -214,18 +218,24 @@ def extract_entries(
     """Extract entries for multiple fixture paths. Returns (entries, all_warnings)."""
     entries: List[Dict[str, Any]] = []
     all_warns: List[str] = []
-    for path in fixture_paths:
+    for i, path in enumerate(fixture_paths):
         fixture = json.loads(Path(path).read_text(encoding="utf-8"))
-        entry, warns = extract_entry(
-            fixture,
-            source_path=path,
-            expected_verdict=expected_verdict,
-            anonymize=anonymize,
-            salt=salt,
-            redact_name=redact_name,
-        )
+        try:
+            entry, warns = extract_entry(
+                fixture,
+                source_path=path,
+                expected_verdict=expected_verdict,
+                anonymize=anonymize,
+                salt=salt,
+                redact_name=redact_name,
+            )
+        except AnonymizationNotSafe as exc:
+            # Fail closed: skip this entry, record a PII-SAFE reason (positional
+            # index + sanitized message only — never the path/id).
+            all_warns.append(f"[entry {i}] not_usable: {exc}")
+            continue
         entries.append(entry)
-        all_warns.extend(f"[{path}] {w}" for w in warns)
+        all_warns.extend(f"[entry {i}] {w}" for w in warns)
     return entries, all_warns
 
 
@@ -260,14 +270,19 @@ _MANIFEST_PII_KEYS = ("name", "description", "author", "homepage_url", "update_u
 _REDACTED = "[redacted]"
 
 # Scored free-text keywords that must survive redaction so anonymization stays
-# score-neutral by construction. Keep in sync with their normalizer sources:
+# score-neutral. This is a best-effort YIELD optimization (fewer entries fail the
+# neutrality self-check below); the enforceable guarantee is _assert_anon_safe,
+# which fails closed on ANY residual score drift. Keep in sync with the scoring
+# sources these mirror:
 #   - abusive/malicious/covert: permission justification, normalizers.py:755
 #     (normalize_permissions_baseline applies a x2.0 weight on a match)
 #   - screenshot/capture/snap/screen grab/screen shot: manifest name/description,
-#     normalizers.py:1008 (normalize_capture_signals: x0.3 if matched as a
-#     disclosed screenshot tool, else x1.5 as covert capture)
-# A justification/name/description can legitimately contain the extension or
-# developer name, so it must be swept for leak-freedom; preserving the scored
+#     normalizers.py:1008 (normalize_capture_signals: x0.3 disclosed / x1.5 covert)
+#   - theme/color/font/wallpaper/new tab/offline: manifest name/description,
+#     engine.py:678,690 (Consistency "benign_claim_risky_behavior" / "offline_
+#     claim_network_access")
+# name/description/justification can legitimately contain the extension or
+# developer name, so they are swept for leak-freedom; preserving the scored
 # keywords a removed token contained means scrubbing PII can never add or drop a
 # multiplier.
 _SCORED_FREETEXT_KEYWORDS = (
@@ -279,6 +294,12 @@ _SCORED_FREETEXT_KEYWORDS = (
     "snap",
     "screen grab",
     "screen shot",
+    "theme",
+    "color",
+    "font",
+    "wallpaper",
+    "new tab",
+    "offline",
 )
 
 
@@ -300,35 +321,12 @@ def _pseudonym(salt: str, real_id: str) -> str:
 def _collect_pii_tokens(entry: Dict[str, Any], *, redact_name: bool) -> List[str]:
     """Collect the exact real-PII strings to purge from free-text/metadata.
 
-    Returns them longest-first so substring replacement is stable. These are
-    identifiers; a keyword-preserving redaction (``_redaction_for``) keeps any
-    scored threat keyword a token contained, so replacing them is score-neutral.
+    Returns them longest-first so substring replacement is stable. Sourced from
+    ``_pii_needle_map`` (which also handles structured/nested PII such as a
+    ``manifest.author`` dict). A keyword-preserving redaction (``_redaction_for``)
+    keeps any scored keyword a token contained, so replacing them is score-neutral.
     """
-    tokens: set = set()
-    sp = (entry.get("inputs") or {}).get("signal_pack") or {}
-    ext_id = sp.get("extension_id") or sp.get("scan_id")
-    if isinstance(ext_id, str) and ext_id:
-        tokens.add(ext_id)
-    ws = sp.get("webstore_stats") or {}
-    for k in ("developer", "developer_email", "developer_website"):
-        v = ws.get(k)
-        if isinstance(v, str) and v:
-            tokens.add(v)
-    prof = ws.get("developer_profile") or {}
-    if isinstance(prof, dict):
-        for k in ("name", "email", "website"):
-            v = prof.get(k)
-            if isinstance(v, str) and v:
-                tokens.add(v)
-    mani = (entry.get("inputs") or {}).get("manifest") or {}
-    for k in ("author", "homepage_url"):
-        v = mani.get(k)
-        if isinstance(v, str) and v:
-            tokens.add(v)
-    if redact_name:
-        for v in (entry.get("name"), mani.get("name")):
-            if isinstance(v, str) and v:
-                tokens.add(v)
+    tokens = set(_pii_needle_map(entry, redact_name=redact_name).values())
     return sorted((t for t in tokens if t), key=len, reverse=True)
 
 
@@ -357,6 +355,128 @@ def _scrub_tokens(obj: Any, tokens: List[str]) -> Any:
     return obj
 
 
+class AnonymizationNotSafe(CorpusError):
+    """Raised when an anonymized entry cannot be safely emitted — a PII needle
+    survived in a preserved scoring field, or anonymization changed the score.
+    The message is sanitized (field/category only, never the PII value)."""
+
+
+def _pii_needle_map(entry: Dict[str, Any], *, redact_name: bool) -> Dict[str, str]:
+    """Map of {category: real-PII-string} for token scrubbing and leak-guarding.
+
+    Handles STRUCTURED PII (e.g. ``manifest.author`` as a dict ``{"email": …}``
+    or a list), not only string fields, so nested emails/names/websites are
+    caught. Values are the real strings; callers never print them.
+    """
+    out: Dict[str, str] = {}
+
+    def put(cat: str, v: Any) -> None:
+        if isinstance(v, str) and v:
+            out[cat] = v
+
+    def put_nested(prefix: str, obj: Any) -> None:
+        if isinstance(obj, str):
+            put(prefix, obj)
+        elif isinstance(obj, dict):
+            for k in ("email", "name", "website", "url", "homepage_url"):
+                put(f"{prefix}.{k}", obj.get(k))
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                put_nested(f"{prefix}[{i}]", item)
+
+    sp = (entry.get("inputs") or {}).get("signal_pack") or {}
+    put("extension_id", sp.get("extension_id") or sp.get("scan_id"))
+    ws = sp.get("webstore_stats") or {}
+    for k in ("developer", "developer_email", "developer_website"):
+        put(k, ws.get(k))
+    prof = ws.get("developer_profile") or {}
+    if isinstance(prof, dict):
+        for k in ("name", "email", "website"):
+            put(f"developer_profile.{k}", prof.get(k))
+    mani = (entry.get("inputs") or {}).get("manifest") or {}
+    put_nested("manifest.author", mani.get("author"))
+    put("manifest.homepage_url", mani.get("homepage_url"))
+    if redact_name:
+        put("extension_name", entry.get("name"))
+        put("manifest.name", mani.get("name"))
+    return out
+
+
+def _scrub_manifest_pii(value: Any) -> Any:
+    """Keyword-preserving redaction that recurses into dict/list manifest values
+    (so a structured ``author`` dict's nested email/name/website are scrubbed)."""
+    if isinstance(value, str):
+        return _redaction_for(value) if value else value
+    if isinstance(value, dict):
+        return {k: _scrub_manifest_pii(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_scrub_manifest_pii(v) for v in value]
+    return value
+
+
+def _find_paths(obj: Any, needle: str, path: str = "$") -> List[str]:
+    """JSON key-paths where ``needle`` occurs (for sanitized leak reporting)."""
+    hits: List[str] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            hits += _find_paths(v, needle, f"{path}.{k}")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            hits += _find_paths(v, needle, f"{path}[{i}]")
+    elif isinstance(obj, str) and needle and needle in obj:
+        hits.append(path)
+    return hits
+
+
+def _assert_anon_safe(
+    original_entry: Dict[str, Any],
+    anon_entry: Dict[str, Any],
+    *,
+    redact_name: bool,
+) -> None:
+    """Fail closed if the anonymized entry is not safe to emit.
+
+    (1) LEAK GUARD: no original PII needle may survive anywhere in the anonymized
+        entry — the residual sweep already removed them from non-scoring fields,
+        so a survivor is inside a PRESERVED scoring field (host pattern / domain /
+        content_scripts match). Refuse rather than rewrite a scored value.
+    (2) NEUTRALITY SELF-CHECK: score the original vs anonymized signal_pack (pure/
+        offline) with each side's own manifest/user_count; refuse on any score or
+        verdict drift. This enforces neutrality for Consistency and any other
+        scored free-text without enumerating every normalizer's keywords.
+    Both messages are sanitized — never the PII value.
+    """
+    # Check string VALUES only (via _find_paths), never a json.dumps() blob:
+    # a blob escapes non-ASCII (ensure_ascii) so a non-ASCII PII value would be
+    # MISSED, and it also matches dict keys / structural text (false refusals).
+    # _find_paths compares raw Python strings at string leaves only.
+    for cat, val in _pii_needle_map(original_entry, redact_name=redact_name).items():
+        if not val:
+            continue
+        paths = _find_paths(anon_entry, val)
+        if paths:
+            raise AnonymizationNotSafe(
+                f"PII ({cat}) survives in a preserved scoring field at "
+                f"{sorted(set(paths))[:3]}; refusing to emit anonymized entry."
+            )
+
+    from extension_shield.scoring.engine import ScoringEngine  # offline, pure
+
+    def _score(e: Dict[str, Any]):
+        inp = e["inputs"]
+        r = ScoringEngine(weights_version="v1").calculate_scores(
+            SignalPack.model_validate(inp["signal_pack"]),
+            manifest=inp.get("manifest"),
+            user_count=inp.get("user_count"),
+        )
+        return (r.overall_score, r.decision.value)
+
+    if _score(original_entry) != _score(anon_entry):
+        raise AnonymizationNotSafe(
+            "anonymization changed score/verdict (neutrality drift); refusing to emit."
+        )
+
+
 def anonymize_entry(
     entry: Dict[str, Any],
     *,
@@ -367,6 +487,7 @@ def anonymize_entry(
 
     Scrubs the full entry (targeted fields + residual token sweep) while leaving
     scoring-relevant fields intact. Raises CorpusError if ``salt`` is empty.
+    Does NOT itself fail closed — callers use ``_assert_anon_safe`` for that.
     """
     if not salt:
         raise CorpusError("anonymization requires a non-empty --anonymization-salt")
@@ -399,16 +520,15 @@ def anonymize_entry(
                 ws["developer_profile"] = {}  # non-optional Dict field -> empty, not None
     mani = inputs.get("manifest")
     if isinstance(mani, dict):
-        # manifest.name and .description are scored free-text (the capture-signals
-        # heuristic, normalizers.py:1006-1019, keyword-matches them). Redact via
-        # the keyword-preserving _redaction_for so the brand is removed but any
-        # capture keyword survives -> score-neutral by construction. Only redact
-        # NON-EMPTY values so an already-empty field is not flipped to a truthy
-        # placeholder.
+        # manifest.name/description are scored free-text (capture-signals,
+        # normalizers.py:1006-1019, and Consistency, engine.py:678,690). Redact via
+        # the keyword-preserving, dict/list-aware _scrub_manifest_pii so the brand
+        # is removed but scored keywords survive, and a STRUCTURED field (e.g.
+        # author = {"email": …}) has its nested PII scrubbed too.
         for k in _MANIFEST_PII_KEYS:
             v = mani.get(k)
-            if isinstance(v, str) and v:
-                mani[k] = _redaction_for(v)
+            if v is not None and v != "":
+                mani[k] = _scrub_manifest_pii(v)
     if redact_name:
         entry["name"] = f"Real Extension {pseudo[len('anon-'):][:8]}"
     if isinstance(entry.get("tags"), list) and "anonymized" not in entry["tags"]:
