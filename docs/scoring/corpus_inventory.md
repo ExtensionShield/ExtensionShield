@@ -109,7 +109,22 @@ matching a historical score.
 - **Never** treat `governance_verdict`/`overall_risk` as ground truth — they are
   engine outputs, not human labels.
 - Real extension IDs/names carry accuracy/reputation risk: **anonymize or
-  evidence-gate** them before committing labeled real-extension corpus data.
+  evidence-gate** them before committing labeled real-extension corpus data. The
+  extractor's `--anonymize` (with `--anonymization-salt`, `--redact-name`) scrubs
+  identifiers/PII across the **entire** entry — id, `extraction.source_fixture`,
+  `signal_pack.scan_id`/`extension_id`, `webstore_stats.developer*`, and manifest
+  name/author/homepage — not just the header. Score/verdict are unchanged **by
+  construction**: scoring-relevant value fields (host permissions, network
+  domains, `content_scripts` matches) are preserved verbatim, and scored
+  free-text (permission justifications, manifest name/description) is redacted
+  with a **keyword-preserving** scheme so the permission-abuse and
+  capture-signal keywords the normalizers key on survive. Consequences: preserved
+  host patterns may **retain brand hints** (domains are not generalized here), and
+  a redacted name may retain a generic capture keyword (e.g. `"[redacted]
+  screenshot"`) — acceptable, not PII. Hashing an already-public id is weak
+  privacy; its value is breaking the direct name→label association. Full
+  leak-freedom requires `--redact-name`. The real labeled corpus count remains 0;
+  PR-4/PR-5 remain blocked (this ships the tool, not the data).
 - **Do not commit** CRX binaries, `extensions_storage/`, `local_rescan_reports/`,
   `EXTENSIONSHIELD_ENGINE_STATE.md`, or any private/user data. This utility ships
   the tool only — it does not commit extracted real-extension entries.
