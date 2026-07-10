@@ -12,6 +12,23 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, computed_field
 
 
+def _current_scoring_version() -> str:
+    """Single source of truth for a ``ScoringResult``'s default ``scoring_version``.
+
+    The canonical version lives on ``ScoringEngine.VERSION``. It is imported
+    lazily (inside the function body, not at module scope) because ``engine.py``
+    imports this module at load time — a module-level ``from ...engine import
+    ScoringEngine`` here would create a circular import. ``explain.py`` also
+    imports this module, so we deliberately do not reuse its helper either.
+    Resolving at instantiation time is safe: the engine module is always fully
+    loaded before any ``ScoringResult`` is built. This keeps the default from
+    drifting behind the engine version (it used to be a hardcoded ``"2.0.0"``).
+    """
+    from extension_shield.scoring.engine import ScoringEngine
+
+    return ScoringEngine.VERSION
+
+
 class RiskLevel(str, Enum):
     """Risk level classification based on score thresholds."""
     
@@ -325,8 +342,8 @@ class ScoringResult(BaseModel):
         description="Timestamp when this result was created"
     )
     scoring_version: str = Field(
-        default="2.0.0",
-        description="Version of the scoring engine used"
+        default_factory=_current_scoring_version,
+        description="Version of the scoring engine used (defaults to ScoringEngine.VERSION)"
     )
     # Explicit gate/override breakdown for QA and enterprise audits (overall_score = final_overall)
     base_overall: Optional[int] = Field(
