@@ -59,7 +59,10 @@ def _all_factor_names(result):
 
 
 # ---------------------------------------------------------------------------
-# Duplicate-risk trackers (current state; flip when a single owner is chosen)
+# Single-owner guardrails (PERMANENT). Privacy-policy, broad-host, and ToS
+# bare prohibited-permission ownership are resolved: each is scored by exactly
+# one owner. These are not trackers awaiting a decision — they are regression
+# guards that fail if a future PR reintroduces a double-count.
 # ---------------------------------------------------------------------------
 
 def test_privacy_policy_scored_only_by_governance_disclosure():

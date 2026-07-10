@@ -133,7 +133,7 @@ class ExplanationPayload:
             "gates_checked": ["VT_MALWARE", ...],
             "results": [...]
         },
-        "scoring_version": "v2",
+        "scoring_version": "2.1.3",  # semver, resolves from ScoringEngine.VERSION
         "weights_version": "v1"
     }
     """
