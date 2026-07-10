@@ -161,4 +161,6 @@ The sourcing, labeling, anonymization, and before/after sign-off policy that mus
 be satisfied before PR-4/PR-5 is defined in
 [ADR 0003](../adr/0003-scoring-calibration-corpus.md). The first source selection
 and acquisition plan (ADR 0003 step 2) is recorded in
-[corpus_sourcing_plan.md](corpus_sourcing_plan.md).
+[corpus_sourcing_plan.md](corpus_sourcing_plan.md). The method for turning the
+local pool into human, evidence-gated labels (with a blank review worksheet) is in
+[local_pool_labelability_review.md](local_pool_labelability_review.md).
