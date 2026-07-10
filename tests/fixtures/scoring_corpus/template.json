@@ -1,0 +1,23 @@
+[
+  {
+    "id": "REPLACE-unique-id",
+    "name": "human-readable-name",
+    "label": "unknown",
+    "expected_verdict": null,
+    "confidence": null,
+    "rationale": "Why this case is labeled as it is. Cite evidence. Leave label 'unknown' and expected_verdict null until a real human review backs a claim.",
+    "tags": ["example"],
+    "known_signals": [],
+    "notes": "This is a TEMPLATE entry, not a scored case. JSON has no comments; field docs live in docs/scoring/corpus.md. Do NOT invent labels.",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "REPLACE-unique-id",
+        "extension_id": "REPLACE-32-char-extension-id----",
+        "created_at": "2024-01-01T00:00:00+00:00"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  }
+]

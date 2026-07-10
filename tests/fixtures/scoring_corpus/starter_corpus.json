@@ -1,0 +1,51 @@
+[
+  {
+    "id": "syn-001",
+    "name": "minimal-empty-pack",
+    "label": "unknown",
+    "expected_verdict": null,
+    "confidence": null,
+    "rationale": "Synthetic offline fixture with no findings and all analyzers at defaults. Exists only to exercise the harness; it is NOT a real-world labeled case. The engine caps overall at the insufficient-data coverage cap for an empty pack.",
+    "tags": ["synthetic", "coverage-cap", "template"],
+    "known_signals": [],
+    "notes": "Replace synthetic entries with real SignalPack inputs and human labels to build a calibration corpus. See docs/scoring/corpus.md.",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "syn-001",
+        "extension_id": "synminimalaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2024-01-01T00:00:00+00:00"
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  },
+  {
+    "id": "syn-002",
+    "name": "broad-host-permissions",
+    "label": "unknown",
+    "expected_verdict": null,
+    "confidence": null,
+    "rationale": "Synthetic offline fixture declaring broad host access (<all_urls>). Exists to demonstrate layer/factor deltas (broad host lowers the privacy layer). NOT a real-world labeled case; no maliciousness is asserted from capability alone.",
+    "tags": ["synthetic", "broad-host", "privacy"],
+    "known_signals": ["has_broad_host_access"],
+    "notes": "Capability (declared permission) is not abuse. This entry is illustrative input only.",
+    "inputs": {
+      "signal_pack": {
+        "scan_id": "syn-002",
+        "extension_id": "synbroadhostaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2024-01-01T00:00:00+00:00",
+        "permissions": {
+          "api_permissions": ["tabs"],
+          "host_permissions": ["<all_urls>"],
+          "has_broad_host_access": true,
+          "broad_host_patterns": ["<all_urls>"],
+          "total_permissions": 2
+        }
+      },
+      "manifest": null,
+      "user_count": null,
+      "permissions_analysis": null
+    }
+  }
+]

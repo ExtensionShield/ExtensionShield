@@ -271,6 +271,9 @@ railway.toml
 playwright-report/
 test-results/
 
+# Generated scoring corpus diff reports (never committed)
+scoring_reports/
+
 # Local-only cloud/Supabase tooling
 supabase/
 scripts/cloud_only/
