@@ -24,8 +24,23 @@ to explain and tune:
      The `SENSITIVE_EXFIL` gate and the governance rulepacks still read the raw
      `has_privacy_policy` field independently — that is a separate hard-gate /
      policy concern (factor-vs-gate), unchanged here and tracked for PR-3.
-   - **broad-host access** contributes to `Manifest` posture, `PermissionCombos`,
-     `NetworkExfil`, the governance factors, and the `SENSITIVE_EXFIL` gate.
+   - **broad-host access** — bare-capability double-count **RESOLVED in PR-3a
+     (scoring_version 2.1.2).** Was scored unconditionally by both `Manifest`
+     posture (Security) *and* `PermissionCombos` (Privacy). `normalize_manifest_posture`
+     no longer adds severity for bare broad-host; `PermissionCombos` is now the
+     sole scored owner. Manifest retains `broad_host_access` as manifest context.
+     The **compound** broad-host uses are intentionally distinct AND-conditions and
+     remain unchanged: `ToSViolations` (broad-host **+ VT malicious**), `CaptureSignals`
+     (broad-host **+ capture perm**), `NetworkExfil` (exfil risk **when analysis
+     ran**), `DisclosureAlignment` (broad-host **+ no privacy policy**). Gates
+     (`PURPOSE_MISMATCH`, `SENSITIVE_EXFIL`) read the raw `has_broad_host_access`
+     field independently of any factor and are unchanged.
+     *Second-order note:* removing the Manifest severity means a benign-named
+     extension (e.g. "New Tab") with broad-host + missing CSP and no other
+     high-severity signal no longer crosses the Governance/`Consistency`
+     `has_high_security_risk` (> 0.5) boundary, so its `benign_claim_risky_behavior`
+     flag no longer fires via the Manifest path. Expected and acceptable — broad-host
+     is still scored once (PermissionCombos); no test-corpus verdict changed.
    - **purpose-mismatch**, **exfil**, and **ToS/policy** are each represented by
      both a scoring factor (`Consistency` / `NetworkExfil` / `ToSViolations`) and
      a hard gate (`PURPOSE_MISMATCH` / `SENSITIVE_EXFIL` / `TOS_VIOLATION`).
@@ -122,8 +137,14 @@ analyzer, or golden-snapshot change:
    (`DisclosureAlignment` owns it). Removed the `Webstore` severity contribution
    for a missing privacy policy; kept it as listing context/evidence. Golden
    snapshots unchanged (they read static fixture values, not live scoring).
-2. **PR-3** — de-duplicate broad-host / purpose-mismatch / exfil / ToS
-   (factor-vs-gate) so the same evidence is not double-penalized.
+2. **PR-3a — DONE (scoring_version 2.1.2)** — broad-host counted once
+   (`PermissionCombos` owns the bare-capability signal). Removed the unconditional
+   `Manifest` severity contribution; kept it as manifest context. Compound
+   broad-host uses left intentionally separate. Golden snapshots unchanged.
+   - **PR-3b (deferred)** — purpose-mismatch / exfil / ToS factor-vs-gate: these
+     are graduated by design (small soft factor + large corroboration-gated hard
+     gate), **not** naive duplicates. Requires a case-by-case audit and, for any
+     gate-trigger change, a labeled corpus — deferred, not folded into PR-3a.
 3. **PR-4** — optional Security internal rebalance (`weights_version` bump).
 4. **PR-5** — reputation-as-modifier + layer re-weight, gated on a labeled
    benign/malicious/review corpus (`weights_version` + `scoring_version`, golden
