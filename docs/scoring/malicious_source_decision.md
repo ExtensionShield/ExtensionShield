@@ -115,7 +115,10 @@ real count off 0.
 
 **Decided (source-of-record + deferral).** Next: a separate decision on whether
 CRX scanning of the verified chrome-mal-ids disclosure subset is brought into
-scope. Until then the malicious class stays at 0 by design.
+scope. That scoping decision is recorded in
+[ADR 0004](../adr/0004-controlled-malicious-ingestion.md) (**DEFER** — no
+acquisition/scanning authorized; legal + security sign-off are hard gates). Until
+then the malicious class stays at 0 by design.
 
 Sources verified 2026-07-10:
 [chrome-mal-ids](https://github.com/The-Privacy-Commons-Institute/chrome-mal-ids)
