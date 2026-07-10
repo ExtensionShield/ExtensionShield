@@ -58,6 +58,9 @@ licensed, scan-free, signal-convertible source of malicious examples exists. The
 honest path to malicious ground truth is to scan CRX from a verified public
 disclosure list — which requires **bringing CRX scanning into scope**, a separate
 decision outside corpus tooling. Until then, PR-4 cannot reach a balanced corpus.
+This deferred malicious-class decision is now executed in
+[`malicious_source_decision.md`](malicious_source_decision.md) (source-of-record:
+chrome-mal-ids, CC BY 4.0, ids/disclosures only — signals still require scanning).
 
 ## First-batch acquisition & labeling plan
 

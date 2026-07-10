@@ -163,4 +163,7 @@ be satisfied before PR-4/PR-5 is defined in
 and acquisition plan (ADR 0003 step 2) is recorded in
 [corpus_sourcing_plan.md](corpus_sourcing_plan.md). The method for turning the
 local pool into human, evidence-gated labels (with a blank review worksheet) is in
-[local_pool_labelability_review.md](local_pool_labelability_review.md).
+[local_pool_labelability_review.md](local_pool_labelability_review.md). The
+malicious-class source decision (deferred — chrome-mal-ids as label source-of-record,
+signals pending a separate scanning-in-scope decision) is in
+[malicious_source_decision.md](malicious_source_decision.md).
