@@ -111,7 +111,14 @@ class ScoringEngine:
     # Privacy/PermissionCombos is now the sole scored owner. Compound broad-host
     # uses (ToSViolations+VT, CaptureSignals, NetworkExfil, DisclosureAlignment)
     # are unchanged. See docs/adr/0002-scoring-layer-ownership.md.
-    VERSION = "2.1.2"
+    # Bumped 2.1.2 -> 2.1.3: bare ToS prohibited-permission declaration
+    # (debugger/proxy/nativeMessaging) is no longer scored by the
+    # Governance/ToSViolations factor (it was a double-count with the
+    # TOS_VIOLATION gate, which is unchanged and remains the sole WARN/BLOCK
+    # authority for this signal); the factor still emits prohibited_perm:{perm}
+    # as evidence/context. Compound ToS use (broad-host + VT malicious) and the
+    # travel-docs/visa heuristic are unchanged. See docs/adr/0002-scoring-layer-ownership.md.
+    VERSION = "2.1.3"
     
     def __init__(
         self,
@@ -596,11 +603,14 @@ class ScoringEngine:
         tos_severity = 0.0
         tos_flags: List[str] = []
         
-        # Check for prohibited permissions (from gate logic)
+        # Check for prohibited permissions (from gate logic). Bare declaration is
+        # evidence/context only here — the TOS_VIOLATION gate (gates.py) is the
+        # sole scored owner of this WARN/BLOCK signal, so this factor must not
+        # double-penalize the same raw permission set. See ADR 0002 (PR-3c,
+        # scoring_version 2.1.3): flags are kept for evidence, severity is not.
         prohibited = {"debugger", "proxy", "nativeMessaging"}
         found_prohibited = prohibited.intersection(set(signal_pack.permissions.api_permissions))
         if found_prohibited:
-            tos_severity += 0.5 * len(found_prohibited)
             tos_flags.extend([f"prohibited_perm:{p}" for p in found_prohibited])
         
         # Check for concerning permission combinations
