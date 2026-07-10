@@ -56,28 +56,49 @@ def _all_factor_names(result):
 # Duplicate-risk trackers (current state; flip when a single owner is chosen)
 # ---------------------------------------------------------------------------
 
-def test_tracker_privacy_policy_scored_in_security_and_governance():
-    """TRACKING: privacy-policy absence is scored in two layers today.
+def test_privacy_policy_scored_only_by_governance_disclosure():
+    """PR-2 (DONE): Governance/DisclosureAlignment is the SOLE scored owner of
+    privacy-policy absence (scoring_version 2.1.1, ADR 0002).
 
-    PR-2/PR-3 will make Governance/DisclosureAlignment the single scored owner
-    and drop the Security/Webstore contribution. When that lands, the Webstore
-    assertion flips — update this tracker and the ADR then.
+    The Security/Webstore factor no longer adds severity for a missing privacy
+    policy — it may still surface ``no_privacy_policy`` as listing context. This
+    is a permanent regression guard: it fails if the Webstore double-count is
+    reintroduced, or if DisclosureAlignment stops scoring it.
     """
-    pack = make_min_signal_pack()
-    pack.webstore_stats = WebstoreStatsSignalPack(
-        has_privacy_policy=False, rating_avg=4.5, installs=100_000, last_updated="June 1, 2026"
+    from extension_shield.scoring.normalizers import normalize_webstore_trust
+
+    def _webstore(has_pp):
+        # Identical listing (clean rating/installs) apart from privacy policy, so
+        # any severity delta can only come from privacy-policy scoring.
+        return WebstoreStatsSignalPack(
+            has_privacy_policy=has_pp, rating_avg=4.5, installs=100_000,
+            last_updated="June 1, 2026",
+        )
+
+    sev_with_pp = normalize_webstore_trust(_webstore(True)).severity
+    sev_without_pp = normalize_webstore_trust(_webstore(False)).severity
+
+    # Webstore must NOT score privacy-policy absence: severity is unchanged.
+    assert sev_without_pp == sev_with_pp, (
+        "Webstore/Security must not add severity for a missing privacy policy "
+        "(owned by Governance/DisclosureAlignment)"
     )
+
+    # ...but it may still carry the flag as listing context/evidence (kept intact).
+    webstore_no_pp = normalize_webstore_trust(_webstore(False))
+    assert "no_privacy_policy" in webstore_no_pp.flags
+    assert webstore_no_pp.details.get("has_privacy_policy") is False
+
+    # Governance/DisclosureAlignment IS the sole scored owner (with data collection).
+    pack = make_min_signal_pack()
+    pack.webstore_stats = _webstore(False)
     pack.permissions = PermissionsSignalPack(
         api_permissions=["cookies"], high_risk_permissions=["cookies"], total_permissions=1
     )
     result = ScoringEngine().calculate_scores(pack, manifest=MV3_MANIFEST)
-    sec = _factors_by_name(result.security_layer)
     gov = _factors_by_name(result.governance_layer)
-
-    # Security/Webstore scores privacy-policy absence today (to be removed later).
-    assert "no_privacy_policy" in sec["Webstore"].flags
-    # Governance/DisclosureAlignment ALSO scores it today (the intended owner).
     assert any("no_privacy_policy" in flag for flag in gov["DisclosureAlignment"].flags)
+    assert gov["DisclosureAlignment"].severity > 0
 
 
 def test_tracker_broad_host_counted_in_security_and_privacy():

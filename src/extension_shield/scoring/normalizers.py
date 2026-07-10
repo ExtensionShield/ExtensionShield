@@ -536,14 +536,17 @@ def normalize_webstore_trust(stats: WebstoreStatsSignalPack) -> FactorScore:
           tools have small user bases. Low user count alone should never
           significantly impact the score.
         - Rating quality matters more than popularity.
-        - Missing privacy policy is a concrete compliance gap.
+        - Missing privacy policy is a disclosure/compliance concern that is scored
+          by Governance/DisclosureAlignment; Webstore surfaces it as listing
+          context only (see docs/adr/0002-scoring-layer-ownership.md).
         - Severity from user count is capped low and affects CONFIDENCE
           (less community vetting) rather than implying the extension is dangerous.
 
     Formula:
         - Low rating (<3.0) → higher severity (objective quality signal)
         - Very low users (<50) → minor severity bump (less vetting, not inherently risky)
-        - Missing privacy policy → +0.15
+        - Missing privacy policy → listing context only, no severity (owned by
+          Governance/DisclosureAlignment)
         - confidence = lower when less community data available
 
     Args:
@@ -583,9 +586,12 @@ def normalize_webstore_trust(stats: WebstoreStatsSignalPack) -> FactorScore:
         severity += 0.05  # Unknown user count
         issues.append("unknown_users")
 
-    # Privacy policy check — concrete compliance gap
+    # Privacy-policy absence is a GOVERNANCE / disclosure concern and is scored
+    # solely by Governance/DisclosureAlignment (engine._compute_governance_factors)
+    # as of scoring_version 2.1.1 — see docs/adr/0002-scoring-layer-ownership.md.
+    # Webstore keeps it as listing context/evidence only; it no longer contributes
+    # to the Security/Webstore severity (previously a double-count).
     if not stats.has_privacy_policy:
-        severity += 0.15
         issues.append("no_privacy_policy")
 
     # Cap at 1.0
