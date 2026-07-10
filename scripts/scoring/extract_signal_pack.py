@@ -32,6 +32,9 @@ Design contract
 from __future__ import annotations
 
 import argparse
+import copy
+import hashlib
+import hmac
 import json
 import sys
 from pathlib import Path
@@ -129,11 +132,15 @@ def extract_entry(
     *,
     source_path: str = "",
     expected_verdict: Optional[str] = None,
+    anonymize: bool = False,
+    salt: Optional[str] = None,
+    redact_name: bool = False,
 ) -> Tuple[Dict[str, Any], List[str]]:
     """Build one corpus entry from a golden fixture. Returns (entry, warnings).
 
     Raises CorpusError if the fixture lacks an extension_id or the produced entry
-    fails schema/SignalPack validation.
+    fails schema/SignalPack validation. When ``anonymize`` is set, the returned
+    entry is fully anonymized (a non-empty ``salt`` is required).
     """
     ext_id = fixture.get("extension_id")
     if not ext_id or not isinstance(ext_id, str):
@@ -186,7 +193,11 @@ def extract_entry(
         },
     }
 
-    # Validate against the #274 schema and the SignalPack model before emitting.
+    if anonymize:
+        entry = anonymize_entry(entry, salt=salt or "", redact_name=redact_name)
+
+    # Validate the FINAL (possibly anonymized) entry against the #274 schema and
+    # the SignalPack model before emitting.
     validate_entry(entry)
     SignalPack.model_validate(entry["inputs"]["signal_pack"])
     return entry, warns
@@ -196,16 +207,216 @@ def extract_entries(
     fixture_paths: List[str],
     *,
     expected_verdict: Optional[str] = None,
+    anonymize: bool = False,
+    salt: Optional[str] = None,
+    redact_name: bool = False,
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
     """Extract entries for multiple fixture paths. Returns (entries, all_warnings)."""
     entries: List[Dict[str, Any]] = []
     all_warns: List[str] = []
     for path in fixture_paths:
         fixture = json.loads(Path(path).read_text(encoding="utf-8"))
-        entry, warns = extract_entry(fixture, source_path=path, expected_verdict=expected_verdict)
+        entry, warns = extract_entry(
+            fixture,
+            source_path=path,
+            expected_verdict=expected_verdict,
+            anonymize=anonymize,
+            salt=salt,
+            redact_name=redact_name,
+        )
         entries.append(entry)
         all_warns.extend(f"[{path}] {w}" for w in warns)
     return entries, all_warns
+
+
+# --- anonymization ----------------------------------------------------------
+#
+# Anonymization scrubs identifiers/PII across the ENTIRE entry (not just the
+# header) via a TARGETED field allowlist plus a residual exact-token sweep. It
+# deliberately PRESERVES scoring-relevant fields (host permissions, network
+# domains, content_scripts matches, SAST findings) so the score/verdict are
+# unchanged — proven by a neutrality test. Domains are NOT generalized here
+# (deferred), so preserved host patterns may retain brand hints; that is the
+# accepted trade-off for trivially-provable scoring neutrality. Hashing an
+# already-public extension id is weak privacy; its value is breaking the direct
+# name -> label association in a committed corpus.
+
+# Scoring-relevant LEAF fields whose string values (host patterns / domains) may
+# contain brand substrings that ARE scoring inputs; the residual token sweep must
+# NOT touch these, so scoring neutrality holds. Everything else (developer
+# metadata, chromestats/virustotal/entropy corners, evidence, notes) IS swept so
+# brand names/ids/emails cannot hide there. manifest.name is handled separately by
+# the targeted scrub (it is read by the capture-signals heuristic).
+_SCORING_SUBTREE_KEYS = frozenset(
+    {
+        "host_permissions",
+        "broad_host_patterns",
+        "content_scripts",
+        "domains",
+    }
+)
+# Manifest metadata fields that carry identifiers/PII (scrubbed where present).
+_MANIFEST_PII_KEYS = ("name", "description", "author", "homepage_url", "update_url")
+_REDACTED = "[redacted]"
+
+# Scored free-text keywords that must survive redaction so anonymization stays
+# score-neutral by construction. Keep in sync with their normalizer sources:
+#   - abusive/malicious/covert: permission justification, normalizers.py:755
+#     (normalize_permissions_baseline applies a x2.0 weight on a match)
+#   - screenshot/capture/snap/screen grab/screen shot: manifest name/description,
+#     normalizers.py:1008 (normalize_capture_signals: x0.3 if matched as a
+#     disclosed screenshot tool, else x1.5 as covert capture)
+# A justification/name/description can legitimately contain the extension or
+# developer name, so it must be swept for leak-freedom; preserving the scored
+# keywords a removed token contained means scrubbing PII can never add or drop a
+# multiplier.
+_SCORED_FREETEXT_KEYWORDS = (
+    "abusive",
+    "malicious",
+    "covert",
+    "screenshot",
+    "capture",
+    "snap",
+    "screen grab",
+    "screen shot",
+)
+
+
+def _redaction_for(token: str) -> str:
+    """Placeholder for a scrubbed PII token, preserving any scored free-text
+    keyword the token contained (so free-text scoring signals are unchanged)."""
+    lowered = token.lower()
+    kept = [k for k in _SCORED_FREETEXT_KEYWORDS if k in lowered]
+    return _REDACTED + ((" " + " ".join(kept)) if kept else "")
+
+
+def _pseudonym(salt: str, real_id: str) -> str:
+    """Deterministic, salted pseudonym for a real id. Stable per salt; different
+    salt -> different pseudonym; never contains the original id."""
+    digest = hmac.new(salt.encode("utf-8"), (real_id or "").encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"anon-{digest[:16]}"
+
+
+def _collect_pii_tokens(entry: Dict[str, Any], *, redact_name: bool) -> List[str]:
+    """Collect the exact real-PII strings to purge from free-text/metadata.
+
+    Returns them longest-first so substring replacement is stable. These are
+    identifiers; a keyword-preserving redaction (``_redaction_for``) keeps any
+    scored threat keyword a token contained, so replacing them is score-neutral.
+    """
+    tokens: set = set()
+    sp = (entry.get("inputs") or {}).get("signal_pack") or {}
+    ext_id = sp.get("extension_id") or sp.get("scan_id")
+    if isinstance(ext_id, str) and ext_id:
+        tokens.add(ext_id)
+    ws = sp.get("webstore_stats") or {}
+    for k in ("developer", "developer_email", "developer_website"):
+        v = ws.get(k)
+        if isinstance(v, str) and v:
+            tokens.add(v)
+    prof = ws.get("developer_profile") or {}
+    if isinstance(prof, dict):
+        for k in ("name", "email", "website"):
+            v = prof.get(k)
+            if isinstance(v, str) and v:
+                tokens.add(v)
+    mani = (entry.get("inputs") or {}).get("manifest") or {}
+    for k in ("author", "homepage_url"):
+        v = mani.get(k)
+        if isinstance(v, str) and v:
+            tokens.add(v)
+    if redact_name:
+        for v in (entry.get("name"), mani.get("name")):
+            if isinstance(v, str) and v:
+                tokens.add(v)
+    return sorted((t for t in tokens if t), key=len, reverse=True)
+
+
+def _scrub_tokens(obj: Any, tokens: List[str]) -> Any:
+    """Recursively replace exact PII token substrings in string leaves.
+
+    Scoring-VALUE fields (host patterns / domains) are skipped so they are never
+    altered. Scored free-text (e.g. permission ``justification``) IS swept — it
+    can name the extension/developer — but via a keyword-preserving redaction, so
+    the permissions-baseline threat-keyword multiplier is unchanged. Result:
+    scoring neutrality holds by construction, not only on the sample fixtures.
+    """
+    if isinstance(obj, dict):
+        return {
+            k: (v if k in _SCORING_SUBTREE_KEYS else _scrub_tokens(v, tokens))
+            for k, v in obj.items()
+        }
+    if isinstance(obj, list):
+        return [_scrub_tokens(v, tokens) for v in obj]
+    if isinstance(obj, str):
+        s = obj
+        for t in tokens:
+            if t and t in s:
+                s = s.replace(t, _redaction_for(t))
+        return s
+    return obj
+
+
+def anonymize_entry(
+    entry: Dict[str, Any],
+    *,
+    salt: str,
+    redact_name: bool = False,
+) -> Dict[str, Any]:
+    """Return a deep-copied, anonymized copy of a corpus entry.
+
+    Scrubs the full entry (targeted fields + residual token sweep) while leaving
+    scoring-relevant fields intact. Raises CorpusError if ``salt`` is empty.
+    """
+    if not salt:
+        raise CorpusError("anonymization requires a non-empty --anonymization-salt")
+    entry = copy.deepcopy(entry)
+
+    inputs = entry.get("inputs") or {}
+    sp = inputs.get("signal_pack") or {}
+    real_id = sp.get("extension_id") or sp.get("scan_id") or ""
+    if not real_id and isinstance(entry.get("id"), str):
+        real_id = entry["id"].split("golden-", 1)[-1]
+    pseudo = _pseudonym(salt, real_id)
+
+    tokens = _collect_pii_tokens(entry, redact_name=redact_name)
+
+    # --- targeted scrub (explicit identifier/PII fields) ---
+    entry["id"] = pseudo
+    if isinstance(entry.get("extraction"), dict):
+        entry["extraction"]["source_fixture"] = f"anonymized:{pseudo}"
+    if isinstance(sp, dict):
+        if "scan_id" in sp:
+            sp["scan_id"] = pseudo
+        if "extension_id" in sp:
+            sp["extension_id"] = pseudo
+        ws = sp.get("webstore_stats")
+        if isinstance(ws, dict):
+            for k in ("developer", "developer_email", "developer_website"):
+                if k in ws:
+                    ws[k] = ""  # empty (not None): some scoring paths call str ops
+            if "developer_profile" in ws:
+                ws["developer_profile"] = {}  # non-optional Dict field -> empty, not None
+    mani = inputs.get("manifest")
+    if isinstance(mani, dict):
+        # manifest.name and .description are scored free-text (the capture-signals
+        # heuristic, normalizers.py:1006-1019, keyword-matches them). Redact via
+        # the keyword-preserving _redaction_for so the brand is removed but any
+        # capture keyword survives -> score-neutral by construction. Only redact
+        # NON-EMPTY values so an already-empty field is not flipped to a truthy
+        # placeholder.
+        for k in _MANIFEST_PII_KEYS:
+            v = mani.get(k)
+            if isinstance(v, str) and v:
+                mani[k] = _redaction_for(v)
+    if redact_name:
+        entry["name"] = f"Real Extension {pseudo[len('anon-'):][:8]}"
+    if isinstance(entry.get("tags"), list) and "anonymized" not in entry["tags"]:
+        entry["tags"] = list(entry["tags"]) + ["anonymized"]
+
+    # --- residual exact-token sweep over non-scoring subtrees (defense in depth) ---
+    entry = _scrub_tokens(entry, tokens)
+    return entry
 
 
 _CORPUS_DIR_GUARD = "tests/fixtures/scoring_corpus"
@@ -256,12 +467,40 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=("ALLOW", "NEEDS_REVIEW", "BLOCK"),
         help="Optional human-provided expected_verdict for all entries (default: null).",
     )
+    parser.add_argument(
+        "--anonymize",
+        action="store_true",
+        help=(
+            "Scrub identifiers/PII across the entire entry (ids, developer metadata, "
+            "manifest name/author/homepage, source path). Requires --anonymization-salt. "
+            "Preserves scoring-relevant fields (host permissions, etc.) so the score is "
+            "unchanged; those may retain brand hints. Off by default."
+        ),
+    )
+    parser.add_argument(
+        "--anonymization-salt",
+        default=None,
+        help="Salt for deterministic pseudonymous ids. Required with --anonymize.",
+    )
+    parser.add_argument(
+        "--redact-name",
+        action="store_true",
+        help="Also replace the extension name with a generic placeholder (with --anonymize).",
+    )
     return parser
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = _build_parser().parse_args(argv)
-    entries, warns = extract_entries(args.fixtures, expected_verdict=args.expected_verdict)
+    if args.anonymize and not args.anonymization_salt:
+        raise SystemExit("--anonymize requires --anonymization-salt <value>.")
+    entries, warns = extract_entries(
+        args.fixtures,
+        expected_verdict=args.expected_verdict,
+        anonymize=args.anonymize,
+        salt=args.anonymization_salt,
+        redact_name=args.redact_name,
+    )
     for w in warns:
         print(f"WARN {w}", file=sys.stderr)
     payload = json.dumps(entries, indent=2)
