@@ -117,11 +117,18 @@ matching a historical score.
   construction**: scoring-relevant value fields (host permissions, network
   domains, `content_scripts` matches) are preserved verbatim, and scored
   free-text (permission justifications, manifest name/description) is redacted
-  with a **keyword-preserving** scheme so the permission-abuse and
-  capture-signal keywords the normalizers key on survive. Consequences: preserved
-  host patterns may **retain brand hints** (domains are not generalized here), and
-  a redacted name may retain a generic capture keyword (e.g. `"[redacted]
-  screenshot"`) — acceptable, not PII. Hashing an already-public id is weak
+  with a **keyword-preserving** scheme so the permission-abuse, capture-signal,
+  and consistency keywords the normalizers key on survive. It also handles
+  **structured** manifest PII (e.g. `author` as a `{"email": …}` dict). Because a
+  real identifier can coincide with a *preserved* scoring field (an id/domain that
+  is itself a `host_permission`), or a redaction could still shift some score, the
+  extractor **fails closed** in anonymized mode: after anonymizing it refuses to
+  emit an entry if any PII needle survives in a preserved field **or** the score/
+  verdict changed (an offline self-check), surfacing it as `not_usable` with a
+  PII-free reason rather than emitting a leaky/drifted entry. Consequences:
+  preserved host patterns may **retain brand hints** (domains are not generalized
+  here), and a redacted name may retain a generic capture keyword (e.g.
+  `"[redacted] screenshot"`) — acceptable, not PII. Hashing an already-public id is weak
   privacy; its value is breaking the direct name→label association. Full
   leak-freedom requires `--redact-name`. The real labeled corpus count remains 0;
   PR-4/PR-5 remain blocked (this ships the tool, not the data).
