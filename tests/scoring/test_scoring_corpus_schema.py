@@ -27,6 +27,7 @@ from scripts.scoring.compare_scoring_corpus import (
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "scoring_corpus"
 STARTER = FIXTURES / "starter_corpus.json"
 TEMPLATE = FIXTURES / "template.json"
+SYNTHETIC = FIXTURES / "synthetic_labeled_seed.json"
 
 
 def test_starter_corpus_loads_and_validates():
@@ -134,3 +135,59 @@ def test_duplicate_ids_are_rejected():
     ]
     with pytest.raises(CorpusError):
         validate_corpus(dup)
+
+
+# ---------------------------------------------------------------------------
+# Synthetic labeled seed (fully synthetic, PII-free calibration scaffolding).
+# These are NOT real labeled cases; the real evidence-backed count stays 0.
+# ---------------------------------------------------------------------------
+
+import json  # noqa: E402  (local to the synthetic-seed section)
+import re  # noqa: E402
+
+# Allowed non-'unknown' labels for the synthetic seed.
+_SEED_LABELS = {"benign", "malicious", "needs_review", "low_confidence"}
+
+
+def test_synthetic_seed_loads_and_validates():
+    corpus = load_corpus(SYNTHETIC)  # runs validate_corpus internally
+    assert isinstance(corpus, list) and len(corpus) >= 6
+    for entry in corpus:
+        validate_entry(entry)
+        SignalPack.model_validate(entry["inputs"]["signal_pack"])
+
+
+def test_synthetic_seed_labels_are_from_allowed_set():
+    for entry in load_corpus(SYNTHETIC):
+        assert entry["label"] in _SEED_LABELS, entry["id"]
+        assert entry["label"] in VALID_LABELS
+        # These are intended ground-truth labels; expected_verdict stays advisory/null.
+        assert entry.get("expected_verdict") is None
+
+
+def test_synthetic_seed_covers_each_class():
+    labels = {e["label"] for e in load_corpus(SYNTHETIC)}
+    assert _SEED_LABELS.issubset(labels), f"seed missing classes: {_SEED_LABELS - labels}"
+
+
+def test_synthetic_seed_has_no_real_identifiers():
+    # PII/identifier leak guard: no real CWS extension id (32 chars a-p), no email,
+    # no http(s) URL, and any real-TLD domain must be an example.* domain.
+    blob = json.dumps(load_corpus(SYNTHETIC))
+    assert not re.search(r"[a-p]{32}", blob), "looks like a real 32-char CWS extension id"
+    assert not re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", blob), "email present"
+    assert not re.search(r"https?://", blob), "http(s) URL present"
+    # Only match tokens ending in a real TLD (avoids false positives on file
+    # extensions like background.js and dotted identifiers like a.b_c). Any such
+    # domain must be an example.* domain.
+    real_tlds = r"(?:com|net|org|io|co|dev|app|edu|gov|info|xyz|me|us|ai)"
+    for host in re.findall(rf"\b[a-z0-9-]+\.{real_tlds}\b", blob):
+        assert host.startswith("example."), f"non-example domain present: {host}"
+
+
+def test_synthetic_seed_ids_are_synthetic_prefixed():
+    for entry in load_corpus(SYNTHETIC):
+        assert entry["id"].startswith("synthetic-"), entry["id"]
+        # the real-id also must not leak into the in-pack identifiers
+        sp = entry["inputs"]["signal_pack"]
+        assert sp["scan_id"].startswith("synthetic-")

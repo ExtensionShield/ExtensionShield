@@ -11,24 +11,43 @@ command you can re-run — do not restate numbers without verifying them.
 | --- | --- | --- |
 | `tests/fixtures/scoring_corpus/starter_corpus.json` | 2 entries | `unknown` ×2 (synthetic) |
 | `tests/fixtures/scoring_corpus/template.json` | 1 entry | `unknown` (template) |
+| `tests/fixtures/scoring_corpus/synthetic_labeled_seed.json` | 8 entries | `benign` ×2, `malicious` ×2, `needs_review` ×2, `low_confidence` ×2 (all **synthetic**) |
 | **Real, evidence-backed labeled cases** | **0** | — |
 
 Verify:
 
 ```
-python3 -c "import json,collections; d=json.load(open('tests/fixtures/scoring_corpus/starter_corpus.json')); print(len(d), collections.Counter(e['label'] for e in d))"
-# -> 2 Counter({'unknown': 2})
-git grep -nE '"label"[[:space:]]*:[[:space:]]*"[a-z_]+"' -- '*.json' '*.py'
-# -> every match is value 'unknown' (12 hits). No benign/malicious/needs_review/
-#    low_confidence value exists anywhere in tracked files.
+python3 -c "import json,collections; d=json.load(open('tests/fixtures/scoring_corpus/synthetic_labeled_seed.json')); print(len(d), collections.Counter(e['label'] for e in d))"
+# -> 8 Counter({'benign': 2, 'malicious': 2, 'needs_review': 2, 'low_confidence': 2})
 ```
 
-(The schema rejection test in `tests/scoring/test_scoring_corpus_schema.py` uses a
-deliberately invalid label `"definitely-not-a-label"`; its hyphens fall outside
-`[a-z_]+`, so it does not appear in the grep above — it is not a real label.)
+**The synthetic seed does not change the real labeled count — it is still 0.** The
+seed's entries are fully synthetic calibration scaffolding (see below), not real
+extensions. The starter/template entries remain `unknown` and self-identify as
+synthetic.
 
-The starter entries self-identify as synthetic (`tags: ["synthetic", …]`, and
-`rationale` says "NOT a real-world labeled case").
+## Synthetic labeled seed (calibration scaffolding, not real data)
+
+`synthetic_labeled_seed.json` is a small, **fully synthetic, PII-free** set that
+exercises the harness across the four scored classes. Every entry is generated
+from a constructed `SignalPack` (`model_dump(mode="json")`), uses only
+`synthetic-*` ids/names and `example.*` domains, and carries **no** real
+extension id, brand, developer name, email, URL, or CRX data. Each `label` is
+justified by concrete synthetic signal values in the entry's `rationale` (e.g.
+`virustotal.malicious_count=8`, `sast.counts_by_severity.CRITICAL=1`,
+`sast.files_scanned=0`).
+
+`expected_verdict` is `null` for every entry: `label` is the intended
+ground-truth class, not the engine's output. Each entry's `notes` records the
+**observed current engine behavior (non-authoritative)** so future weight work
+can diff against it. Where the observed verdict differs from the label intent
+(e.g. `low_confidence` entries currently score `NEEDS_REVIEW` via the coverage
+cap), that mismatch is intended calibration evidence — not a bug and not asserted
+by any test.
+
+This seed is for **harness coverage and calibration scaffolding only**. It is not
+evidence of real-world model quality, and it does not substitute for a real
+labeled corpus.
 
 ## Golden fixtures are OUTPUTS, not inputs
 
