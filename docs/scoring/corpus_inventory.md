@@ -137,4 +137,6 @@ OWASP, "not necessary to be over-precise"):
 
 The sourcing, labeling, anonymization, and before/after sign-off policy that must
 be satisfied before PR-4/PR-5 is defined in
-[ADR 0003](../adr/0003-scoring-calibration-corpus.md).
+[ADR 0003](../adr/0003-scoring-calibration-corpus.md). The first source selection
+and acquisition plan (ADR 0003 step 2) is recorded in
+[corpus_sourcing_plan.md](corpus_sourcing_plan.md).
