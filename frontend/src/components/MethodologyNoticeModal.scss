@@ -1,0 +1,132 @@
+/* ============================================================================
+   TEMPORARY — Methodology notice modal.
+   Styled with the site design tokens (--color-*, --radius*) so it matches the
+   current theme in both light and dark. To remove: delete this file, the .jsx,
+   the .copy.js, the test, and the mount in App.jsx.
+   ============================================================================ */
+
+@keyframes methodologyNoticeOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes methodologyNoticePanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.methodology-notice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  min-height: 100dvh;
+  box-sizing: border-box;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  animation: methodologyNoticeOverlayIn 0.18s ease-out;
+}
+
+.methodology-notice-panel {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.75rem;
+  background: hsl(var(--color-surface-elevated));
+  color: hsl(var(--color-foreground));
+  border: 1px solid hsl(var(--color-border));
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+  font-family: var(--font-sans);
+  animation: methodologyNoticePanelIn 0.2s ease-out;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.methodology-notice-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: hsl(var(--color-foreground));
+}
+
+.methodology-notice-body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: hsl(var(--color-muted-foreground));
+}
+
+.methodology-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.methodology-notice-button {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0 1.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: hsl(var(--color-primary-foreground));
+  background: hsl(var(--color-primary));
+  border: none;
+  border-radius: var(--radius);
+  transition:
+    background-color 0.15s ease,
+    transform 0.05s ease;
+
+  &:hover {
+    background: hsl(var(--color-primary-hover));
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid hsl(var(--color-primary));
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 520px) {
+  .methodology-notice-panel {
+    padding: 1.375rem;
+  }
+
+  .methodology-notice-title {
+    font-size: 1.125rem;
+  }
+}
