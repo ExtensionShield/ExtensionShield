@@ -466,7 +466,7 @@
     color: rgba(255, 255, 255, 0.5);
     margin-bottom: 1.5rem;
   }
-  
+
   .error-extension-id {
     display: flex;
     align-items: center;
@@ -527,6 +527,169 @@
   .error-actions {
     display: flex;
     gap: 1rem;
+  }
+}
+
+/* ============================================================================
+   Unavailable-extension state — dedicated card (no score, no report).
+   Renders at the natural content position under the breadcrumb; deliberately
+   NOT vertically centered across the viewport. Theme-aware via --theme-* tokens
+   so heading/copy stay readable in both light and dark (the old error styles
+   used white text, which was invisible on the light surface).
+   ============================================================================ */
+.results-v2-unavailable {
+  /* Full results-content width so the card's left edge lines up with the
+     breadcrumb (and matches the normal report hero, which spans grid-column
+     1 / -1). Capped by the .results-v2 max-width; never a narrow centered box. */
+  .uav-card {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+    padding: clamp(40px, 5vw, 56px) clamp(28px, 5vw, 72px);
+    background: var(--theme-bg-card);
+    border: 1px solid var(--theme-border);
+    border-radius: 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 18px 40px rgba(0, 0, 0, 0.05);
+  }
+
+  .uav-illustration {
+    display: block;
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    margin: 4px auto;
+    user-select: none;
+  }
+
+  .uav-heading {
+    margin: 0;
+    color: var(--theme-text-primary);
+    font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+
+  .uav-copy {
+    margin: 0;
+    max-width: 640px;
+    color: var(--theme-text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .uav-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  /* Reuse the shared Button component; scope overrides here so we win over the
+     component's small default size without touching global button styles. */
+  .uav-btn {
+    height: auto;
+    padding: 12px 22px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 12px;
+    line-height: 1.2;
+    box-shadow: none;
+
+    &:focus-visible {
+      outline: 2px solid var(--theme-accent);
+      outline-offset: 2px;
+    }
+  }
+
+  .uav-btn--primary {
+    color: var(--theme-accent);
+    background: transparent;
+    border-color: var(--theme-border-accent);
+
+    &:hover {
+      color: var(--theme-accent);
+      background: var(--theme-accent-subtle);
+      border-color: var(--theme-accent);
+    }
+  }
+
+  .uav-btn--secondary {
+    color: var(--theme-text-secondary);
+    background: transparent;
+    border-color: var(--theme-border);
+
+    &:hover {
+      color: var(--theme-text-primary);
+      background: var(--theme-bg-surface-hover);
+      border-color: var(--theme-border-hover);
+    }
+  }
+
+  .uav-divider {
+    width: 100%;
+    max-width: 760px;
+    height: 0;
+    margin: 8px 0 4px;
+    border: 0;
+    border-top: 1px solid var(--theme-border-subtle);
+  }
+
+  .uav-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 660px;
+    padding: 12px 18px;
+    background: var(--theme-bg-surface-hover);
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: 12px;
+    color: var(--theme-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .uav-note-icon {
+    flex: 0 0 auto;
+    color: var(--theme-text-muted);
+  }
+
+  .uav-extid {
+    margin: 0;
+    color: var(--theme-text-muted);
+    font-size: 0.85rem;
+    word-break: break-word;
+  }
+
+  .uav-extid-value {
+    font-family: var(--font-mono, monospace);
+  }
+
+  /* Tablet */
+  @media (max-width: 768px) {
+    .uav-card {
+      padding: clamp(28px, 6vw, 40px) clamp(20px, 5vw, 40px);
+      border-radius: 20px;
+    }
+    .uav-illustration { max-width: 360px; }
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .uav-card {
+      padding: 24px 20px;
+      gap: 16px;
+    }
+    .uav-illustration { max-width: 300px; }
+    .uav-actions { width: 100%; }
+    .uav-btn { flex: 1 1 100%; width: 100%; }
+    .uav-note { align-items: flex-start; }
   }
 }
 

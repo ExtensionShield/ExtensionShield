@@ -384,3 +384,96 @@ describe('LayerModal rendering', () => {
     expect(screen.queryByText(/Context signal — informs confidence/)).toBeNull();
   });
 });
+
+describe('coverage-driven "Cleared" vs "Not analyzed"', () => {
+  // Every evidence source present — a valid full scan.
+  const ALL_PRESENT = { code: true, malware: true, threatIntel: true, listing: true, manifest: true };
+  // Every evidence source absent — an unavailable extension.
+  const NONE_PRESENT = { code: false, malware: false, threatIntel: false, listing: false, manifest: false };
+
+  it('a factor whose analyzer coverage is absent reads "Not analyzed", not "Clear"', () => {
+    // VirusTotal ran cleanly by severity alone, but malware coverage was absent.
+    const vt = humanizeFactor({ name: 'VirusTotal', severity: 0, confidence: 0.9 }, { ...ALL_PRESENT, malware: false });
+    expect(vt.status).toBe('Not analyzed');
+    expect(vt.statusType).toBe('unknown');
+  });
+
+  it('missing package/manifest coverage makes permission factors "Not analyzed"', () => {
+    const perm = humanizeFactor({ name: 'PermissionsBaseline', severity: 0, confidence: 0.5 }, { ...ALL_PRESENT, manifest: false });
+    expect(perm.statusType).toBe('unknown');
+    const combos = humanizeFactor({ name: 'PermissionCombos', severity: 0, confidence: 0.5 }, { ...ALL_PRESENT, manifest: false });
+    expect(combos.statusType).toBe('unknown');
+  });
+
+  it('missing store listing makes reputation/maintenance factors "Not analyzed"', () => {
+    const store = humanizeFactor({ name: 'Webstore', severity: 0.1, confidence: 0.3 }, { ...ALL_PRESENT, listing: false });
+    expect(store.statusType).toBe('unknown');
+    const age = humanizeFactor({ name: 'Maintenance', severity: 0, confidence: 0.3 }, { ...ALL_PRESENT, listing: false });
+    expect(age.statusType).toBe('unknown');
+  });
+
+  it('a completed analyzer with no finding AND evidence present reads "Clear"', () => {
+    const vt = humanizeFactor({ name: 'VirusTotal', severity: 0, confidence: 0.9, details: { total_engines: 75 } }, ALL_PRESENT);
+    expect(vt.status).toBe('Clear');
+    expect(vt.statusType).toBe('clear');
+    const obf = humanizeFactor({ name: 'Obfuscation', severity: 0, confidence: 0.9 }, ALL_PRESENT);
+    expect(obf.statusType).toBe('clear');
+  });
+
+  it('a completed analyzer WITH a material finding stays an "Issue" (finding wins over coverage)', () => {
+    // Even with all evidence absent, a real severity-bearing finding is an issue.
+    const manifest = humanizeFactor({ name: 'Manifest', severity: 0.5, confidence: 0.5 }, NONE_PRESENT);
+    expect(manifest.statusType).toBe('issues');
+    expect(manifest.status).toBe('Issue');
+  });
+
+  it('the VirusTotal/ChromeStats confidence-0 sentinel fires even without an evidence map', () => {
+    expect(humanizeFactor({ name: 'VirusTotal', severity: 0, confidence: 0 }).statusType).toBe('unknown');
+    expect(humanizeFactor({ name: 'ChromeStats', severity: 0, confidence: 0 }).statusType).toBe('unknown');
+  });
+
+  it('empty / null / default factor values never become "Clear" when evidence is absent', () => {
+    // Zero severity + zero/absent details would fall through to "Clear" under the
+    // old logic; with evidence absent they must read "Not analyzed".
+    ['SAST', 'Obfuscation', 'VirusTotal', 'ChromeStats', 'Webstore', 'Maintenance',
+     'Manifest', 'PermissionsBaseline', 'PermissionCombos', 'CaptureSignals',
+     'ToSViolations', 'Consistency', 'DisclosureAlignment'].forEach((name) => {
+      const f = humanizeFactor({ name, severity: 0, confidence: 0 }, NONE_PRESENT);
+      expect(f.statusType).not.toBe('clear');
+    });
+  });
+
+  it('a valid full scan (all evidence present) leaves clean factors "Clear" — unchanged', () => {
+    const factors = [
+      { name: 'SAST', severity: 0, confidence: 0.8, details: { files_scanned: 8, deduped_findings: 0 } },
+      { name: 'VirusTotal', severity: 0, confidence: 1.0, details: { total_engines: 75 } },
+      { name: 'Webstore', severity: 0.1, confidence: 0.9 },
+    ];
+    const { cleared, notAnalyzed } = triageFactors(factors, ALL_PRESENT);
+    expect(cleared.map((c) => c.label).sort()).toEqual(['Code Safety', 'Malware Scan', 'Store Reputation']);
+    expect(notAnalyzed).toEqual([]);
+  });
+
+  it('buildLayerModalModel threads the evidence map into the cleared/not-analyzed split', () => {
+    const factors = [
+      { name: 'VirusTotal', severity: 0, confidence: 0.9, details: { total_engines: 75 } }, // malware coverage absent -> not analyzed
+      { name: 'Manifest', severity: 0.5, confidence: 0.9 },                                  // real finding -> issue
+    ];
+    const model = buildLayerModalModel({ factors, evidence: { ...ALL_PRESENT, malware: false } });
+    expect(model.notAnalyzed.map((r) => r.title)).toContain('Malware Scan');
+    expect(model.cleared.some((c) => c.label === 'Malware Scan')).toBe(false);
+    expect(model.issues.map((r) => r.title)).toContain('Extension Config');
+  });
+
+  it('without an evidence map, triage is unchanged (backward compatible)', () => {
+    // Same assertion the legacy triage test makes — no evidence arg passed.
+    const factors = [
+      { name: 'SAST', severity: 0.1 },
+      { name: 'Webstore', severity: 0.2 },
+      { name: 'NetworkExfil', severity: 0, details: { network_analysis_enabled: false } },
+    ];
+    const { cleared, notAnalyzed } = triageFactors(factors);
+    expect(cleared.map((i) => i.label).sort()).toEqual(['Code Safety', 'Store Reputation']);
+    expect(notAnalyzed.map((i) => i.label)).toEqual(['Data Sharing']);
+  });
+});

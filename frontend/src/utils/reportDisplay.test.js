@@ -11,6 +11,8 @@ import {
   resolveFindingEvidenceLabel,
   describeDecisionAuthority,
   resolveDecisionAuthorityDisplay,
+  resolveEvidenceAvailability,
+  resolveScanAvailability,
   GOVERNANCE_SCORE_LABEL,
   POLICY_DECISION_LABEL,
 } from './reportDisplay';
@@ -333,5 +335,133 @@ describe('resolveDecisionAuthorityDisplay — full authority element model', () 
   it('returns null when there is no authority', () => {
     expect(resolveDecisionAuthorityDisplay(null)).toBeNull();
     expect(resolveDecisionAuthorityDisplay('')).toBeNull();
+  });
+});
+
+// A definitively unavailable extension: acquisition failed and NOTHING real was
+// captured (no signal_pack, all-null store metadata, empty manifest). Mirrors the
+// served payload for a "This item is not available" extension whose download
+// returned no file.
+const UNAVAILABLE_PAYLOAD = {
+  status: 'failed',
+  error: 'Extension download returned no file.',
+  url: 'https://chromewebstore.google.com/detail/pgpidfocdapogajplhjofamgeboonmmj',
+  metadata: {
+    title: null, user_count: null, rating: null, version: null, last_updated: null,
+  },
+  manifest: {},
+};
+
+// A legitimate partial: the package download failed, but the store listing WAS
+// captured — real evidence exists, so the report stays available (qualified).
+const PARTIAL_LISTING_PAYLOAD = {
+  status: 'failed',
+  error: 'Extension download returned no file.',
+  url: 'https://chromewebstore.google.com/detail/abc',
+  metadata: { user_count: 5000, rating: 4.2, version: '1.2.3' },
+  manifest: {},
+};
+
+// A valid full scan: analyzers ran, listing + manifest present.
+const FULL_SCAN_PAYLOAD = {
+  status: 'completed',
+  metadata: { user_count: 20000, rating: 4.9, version: '2.0.0' },
+  manifest: { name: 'X', version: '2.0.0', manifest_version: 3, permissions: ['storage'] },
+  governance_bundle: {
+    signal_pack: {
+      sast: { files_scanned: 3 },
+      virustotal: { enabled: true, total_engines: 75, malicious_count: 0 },
+      chromestats: {
+        enabled: true, risk_indicators: ['x'], total_risk_score: 5,
+        install_trends: { m: 1 }, rating_patterns: {}, developer_reputation: {},
+      },
+    },
+  },
+};
+
+describe('resolveEvidenceAvailability — coverage-derived evidence presence', () => {
+  it('reports every evidence source ABSENT for an unavailable extension', () => {
+    const ev = resolveEvidenceAvailability(UNAVAILABLE_PAYLOAD);
+    expect(ev).toEqual({
+      code: false, malware: false, threatIntel: false, listing: false, manifest: false,
+    });
+  });
+
+  it('reports the store listing PRESENT for a package-download-only failure', () => {
+    const ev = resolveEvidenceAvailability(PARTIAL_LISTING_PAYLOAD);
+    expect(ev.listing).toBe(true);
+    // The package still could not be analyzed.
+    expect(ev.code).toBe(false);
+    expect(ev.manifest).toBe(false);
+  });
+
+  it('reports every evidence source PRESENT for a valid full scan', () => {
+    const ev = resolveEvidenceAvailability(FULL_SCAN_PAYLOAD);
+    expect(ev).toEqual({
+      code: true, malware: true, threatIntel: true, listing: true, manifest: true,
+    });
+  });
+
+  it('a full scan with ChromeStats absent still reports the other sources present', () => {
+    const noCs = {
+      ...FULL_SCAN_PAYLOAD,
+      governance_bundle: { signal_pack: {
+        sast: { files_scanned: 3 },
+        virustotal: { enabled: true, total_engines: 75, malicious_count: 0 },
+      } },
+    };
+    const ev = resolveEvidenceAvailability(noCs);
+    expect(ev.threatIntel).toBe(false); // ChromeStats did not run
+    expect(ev.code).toBe(true);
+    expect(ev.malware).toBe(true);
+    expect(ev.listing).toBe(true);
+    expect(ev.manifest).toBe(true);
+  });
+
+  it('defaults to "all present" for a null/garbage payload (never mass-marks Not analyzed)', () => {
+    expect(resolveEvidenceAvailability(null)).toEqual({
+      code: true, malware: true, threatIntel: true, listing: true, manifest: true,
+    });
+  });
+});
+
+describe('resolveScanAvailability — unavailable vs partial vs full', () => {
+  it('marks a failed no-evidence extension UNAVAILABLE with the download reason', () => {
+    const a = resolveScanAvailability(UNAVAILABLE_PAYLOAD);
+    expect(a.unavailable).toBe(true);
+    expect(a.available).toBe(false);
+    expect(a.reason).toBe('Extension download returned no file.');
+  });
+
+  it('keeps a failed scan AVAILABLE when real evidence (store listing) exists', () => {
+    const a = resolveScanAvailability(PARTIAL_LISTING_PAYLOAD);
+    expect(a.unavailable).toBe(false);
+    expect(a.available).toBe(true);
+    expect(a.reason).toBeNull();
+  });
+
+  it('keeps a valid full scan AVAILABLE', () => {
+    const a = resolveScanAvailability(FULL_SCAN_PAYLOAD);
+    expect(a.unavailable).toBe(false);
+    expect(a.available).toBe(true);
+  });
+
+  it('a valid historical (completed) scan is AVAILABLE even with no analyzer coverage', () => {
+    // A failed CURRENT scan must not overwrite a good historical one (backend
+    // guard); when the served payload IS the good historical scan (status
+    // completed), it renders normally rather than as "unavailable".
+    const historical = { status: 'completed', metadata: { version: '1.0.0' }, manifest: {} };
+    expect(resolveScanAvailability(historical).unavailable).toBe(false);
+  });
+
+  it('falls back to a generic reason when a failed payload carries no error text', () => {
+    const a = resolveScanAvailability({ status: 'failed', metadata: {}, manifest: {} });
+    expect(a.unavailable).toBe(true);
+    expect(a.reason).toMatch(/could not be retrieved/i);
+  });
+
+  it('never marks a null/garbage payload unavailable', () => {
+    expect(resolveScanAvailability(null).unavailable).toBe(false);
+    expect(resolveScanAvailability(undefined).available).toBe(true);
   });
 });
