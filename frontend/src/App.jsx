@@ -7,6 +7,7 @@ import { ScanProvider } from "./context/ScanContext";
 import routes from "./routes/routes";
 import { topNavItems, userMenuItems, getMobileNavSections } from "./nav/navigation";
 import SignInModal from "./components/SignInModal";
+import MethodologyNoticeModal from "./components/MethodologyNoticeModal";
 import ShieldLogo from "./components/ShieldLogo";
 import Footer from "./components/Footer";
 import AppBackground from "./components/AppBackground";
@@ -586,6 +587,7 @@ function AppContent() {
       <AppBackground />
       <AppHeader />
       <SignInModal />
+      <MethodologyNoticeModal />
       <TelemetryTracker />
 
       <main className="extensionshield-main">
