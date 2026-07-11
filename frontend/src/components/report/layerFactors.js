@@ -327,8 +327,8 @@ function gateIssueRow(gate, index) {
   };
 }
 
-export function buildLayerModalModel({ factors = [], keyFindings = [], gateResults = [], layerReasons = [] } = {}) {
-  const { all, issues, notAnalyzed, cleared } = triageFactors(factors);
+export function buildLayerModalModel({ factors = [], keyFindings = [], gateResults = [], layerReasons = [], evidence } = {}) {
+  const { all, issues, notAnalyzed, cleared } = triageFactors(factors, evidence);
   const issueRows = [];
   const seen = new Set();
 
@@ -517,23 +517,62 @@ export function groupFactorsByDomain(factors = []) {
     .map((domain) => ({ domain, factors: buckets.get(domain.id) }));
 }
 
+// Which shared coverage/evidence source (from resolveEvidenceAvailability) each
+// factor depends on. When that source is unavailable the factor could not have
+// been evaluated, so it reads "Not analyzed", never "Clear". Presentation only;
+// factor OWNERSHIP and scoring are unchanged. NetworkExfil is intentionally
+// absent — it carries its own explicit did-not-run flag (below).
+const FACTOR_EVIDENCE = {
+  SAST: 'code',
+  Obfuscation: 'code',
+  VirusTotal: 'malware',
+  ChromeStats: 'threatIntel',
+  Webstore: 'listing',
+  Maintenance: 'listing',
+  Manifest: 'manifest',
+  PermissionsBaseline: 'manifest',
+  PermissionCombos: 'manifest',
+  CaptureSignals: 'manifest',
+  ToSViolations: 'manifest',
+  Consistency: 'manifest',
+  DisclosureAlignment: 'manifest',
+};
+
 /**
  * A check whose underlying analysis did not run has no coverage and must not be
- * shown as "Clear" (that overstates certainty). The network/exfil analyzer
- * reports this via details.network_analysis_enabled === false.
+ * shown as "Clear" (that overstates certainty).
+ *
+ * Signals, in order:
+ *  1. explicit per-analyzer did-not-run flags the payload already carries
+ *     (network_analysis_enabled, VirusTotal engines, SAST files);
+ *  2. the scoring engine's own no-coverage sentinel — VirusTotal / ChromeStats
+ *     are emitted with confidence 0 when the analyzer produced nothing;
+ *  3. (opt-in) the shared evidence-availability map from
+ *     resolveEvidenceAvailability — the SAME coverage the Analyzer Coverage
+ *     section reports. When provided, a factor whose required evidence source
+ *     was unavailable is "Not analyzed". Omitting it preserves the legacy,
+ *     signal-only behavior so existing callers are unaffected.
  */
-export function isNotAnalyzed(factor) {
-  const details = factor?.details;
-  if (!details || typeof details !== 'object') return false;
+export function isNotAnalyzed(factor, evidence) {
+  if (!factor || typeof factor !== 'object') return false;
+  const details = (factor.details && typeof factor.details === 'object') ? factor.details : {};
   // Network/exfil analyzer explicitly reports it did not run.
   if (details.network_analysis_enabled === false) return true;
   // VirusTotal returned no coverage (hash not in DB / unavailable / rate-limited):
   // zero engines scanned. A real clean scan reports dozens of engines, so a
   // severity-0 VT factor with 0 engines is "did not run", not "clean".
-  if (factor?.name === 'VirusTotal' && Number(details.total_engines) === 0) return true;
+  if (factor.name === 'VirusTotal' && Number(details.total_engines) === 0) return true;
   // SAST analyzed no code (minified/bundled-only, or the download failed):
   // 0 files scanned and nothing deduped means it could not clear code safety.
-  if (factor?.name === 'SAST' && Number(details.files_scanned) === 0 && !details.deduped_findings) return true;
+  if (factor.name === 'SAST' && Number(details.files_scanned) === 0 && !details.deduped_findings) return true;
+  // Engine no-coverage sentinel: the VirusTotal / ChromeStats normalizers emit
+  // confidence 0 when the analyzer had no usable result (e.g. package missing).
+  if ((factor.name === 'VirusTotal' || factor.name === 'ChromeStats') && factor.confidence === 0) return true;
+  // Coverage-derived: required evidence source was unavailable.
+  if (evidence && typeof evidence === 'object') {
+    const need = FACTOR_EVIDENCE[factor.name];
+    if (need && evidence[need] === false) return true;
+  }
   return false;
 }
 
@@ -544,7 +583,7 @@ export function isNotAnalyzed(factor) {
  *  - unknown: the check could not run -> "Not analyzed" (never "Clear").
  *  - clear:   the check ran and found nothing material.
  */
-export function humanizeFactor(factor) {
+export function humanizeFactor(factor, evidence) {
   const info = FACTOR_HUMAN[factor.name] || {
     label: factor.name,
     category: 'other',
@@ -567,7 +606,7 @@ export function humanizeFactor(factor) {
     // modal agrees with the card / Issue Overview / Key Findings, which all
     // exclude it. At >= 0.6 (>180 days) it remains a visible caution.
     statusType = (isAdvisoryTrust && severity < 0.6) ? 'clear' : 'issues';
-  } else if (isNotAnalyzed(factor)) {
+  } else if (isNotAnalyzed(factor, evidence)) {
     statusType = 'unknown';
     tone = 'neutral';
     status = 'Not analyzed';
@@ -594,8 +633,8 @@ export function humanizeFactor(factor) {
  * issues (most severe first) -> not analyzed -> cleared (alphabetical).
  * Keeping this pure makes the "issues first / not-analyzed distinct" ordering testable.
  */
-export function triageFactors(factors = []) {
-  const humanised = (factors || []).map(humanizeFactor);
+export function triageFactors(factors = [], evidence) {
+  const humanised = (factors || []).map((factor) => humanizeFactor(factor, evidence));
   return {
     all: humanised,
     issues: humanised

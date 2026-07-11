@@ -224,6 +224,83 @@ export function resolveAnalyzerCoverage(raw) {
   return rows;
 }
 
+// Analyzer-coverage states that mean the analyzer produced a usable result the
+// report may lean on. Anything else (not_run / failed / limited / no_code_scanned)
+// is a coverage GAP, never evidence of a clean result. Kept in sync with the
+// COVERAGE_STATES the Analyzer Coverage section renders.
+const PRODUCTIVE_COVERAGE_STATES = new Set(['full', 'scanned', 'partial']);
+
+/**
+ * Which underlying evidence each scoring factor actually needs. Presentation
+ * only — used to decide "Cleared" vs "Not analyzed" from the SAME coverage the
+ * Analyzer Coverage section reports (never a new/parallel classifier).
+ */
+export function resolveEvidenceAvailability(raw) {
+  if (!raw || typeof raw !== 'object') {
+    // No payload: assume nothing is missing so callers fall back to their own
+    // per-factor signals rather than mass-marking everything "Not analyzed".
+    return { code: true, malware: true, threatIntel: true, listing: true, manifest: true };
+  }
+
+  const stateByKey = {};
+  resolveAnalyzerCoverage(raw).forEach((row) => { stateByKey[row.key] = row.state; });
+  const productive = (key) => PRODUCTIVE_COVERAGE_STATES.has(stateByKey[key]);
+
+  // Store listing presence uses the EXACT check the Coverage section's listing
+  // row uses (see resolveAnalyzerCoverage), so the two never disagree.
+  const md = (raw.metadata && typeof raw.metadata === 'object') ? raw.metadata : {};
+  const hasListing = md.user_count != null || md.rating != null || md.version != null;
+
+  // A parsed manifest is the minimum evidence for manifest/permission/governance
+  // factors. An empty {} (download/extract failed) carries none.
+  const manifest = (raw.manifest && typeof raw.manifest === 'object') ? raw.manifest : {};
+  const hasManifest = Boolean(
+    manifest.manifest_version != null ||
+    manifest.name != null ||
+    manifest.version != null ||
+    Array.isArray(manifest.permissions) ||
+    Array.isArray(manifest.host_permissions)
+  );
+
+  return {
+    code: productive('sast'),
+    malware: productive('virustotal'),
+    threatIntel: productive('chromestats'),
+    listing: hasListing,
+    manifest: hasManifest,
+  };
+}
+
+/**
+ * Decide whether a scan result represents an extension we could actually
+ * analyze. A definitively UNAVAILABLE extension — acquisition failed AND no real
+ * evidence of any kind was captured — must not render a normal scored report
+ * (the recompute-on-read still emits an insufficient-data score, but that score
+ * describes nothing). A failed scan that DID capture real evidence (e.g. the
+ * store listing) is a legitimate partial report and stays available.
+ *
+ * Derived entirely from existing payload fields + the shared coverage adapter;
+ * never mutates and never invents a verdict. A valid/`completed` scan (even a
+ * historical one being served) is always available.
+ */
+export function resolveScanAvailability(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return { available: true, unavailable: false, reason: null };
+  }
+  const acquisitionFailed = String(raw.status || '').toLowerCase() === 'failed';
+  const ev = resolveEvidenceAvailability(raw);
+  const hasAnyEvidence = ev.code || ev.malware || ev.threatIntel || ev.listing || ev.manifest;
+  const unavailable = acquisitionFailed && !hasAnyEvidence;
+  const rawReason = typeof raw.error === 'string' ? raw.error.trim() : '';
+  return {
+    available: !unavailable,
+    unavailable,
+    reason: unavailable
+      ? (rawReason || 'The extension package and store listing could not be retrieved.')
+      : null,
+  };
+}
+
 /** Compact severity band from a finding's severity (string level or 0..1 number). */
 export function findingSeverityLevel(finding) {
   const s = finding == null ? undefined : (typeof finding === 'object' ? finding.severity : finding);

@@ -1,0 +1,125 @@
+<svg width="670" height="255" viewBox="0 0 670 255" fill="none"
+     xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-labelledby="title desc">
+  <title id="title">Extension unavailable illustration</title>
+  <desc id="desc">A soft browser window with an extension puzzle piece and unavailable badge.</desc>
+
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FBFAF6"/>
+      <stop offset="100%" stop-color="#F5F1E8"/>
+    </linearGradient>
+
+    <linearGradient id="topbar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#EFEBDD"/>
+      <stop offset="100%" stop-color="#E8E2D2"/>
+    </linearGradient>
+
+    <linearGradient id="piece" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D9D8CC"/>
+      <stop offset="100%" stop-color="#C7C5B7"/>
+    </linearGradient>
+
+    <linearGradient id="badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#EAE6D7"/>
+      <stop offset="100%" stop-color="#DCD6C3"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14"
+                    flood-color="#C8C1AF" flood-opacity="0.20"/>
+    </filter>
+
+    <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+
+    <filter id="tinyBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- very soft ambient glow -->
+  <ellipse cx="335" cy="142" rx="220" ry="92"
+           fill="#F4F0E6" opacity="0.55" filter="url(#softBlur)"/>
+
+  <!-- left cloud -->
+  <g opacity="0.72" filter="url(#tinyBlur)">
+    <ellipse cx="190" cy="151" rx="48" ry="23" fill="#F2EFE7"/>
+    <circle cx="170" cy="136" r="24" fill="#F2EFE7"/>
+    <circle cx="197" cy="128" r="31" fill="#F2EFE7"/>
+    <circle cx="227" cy="139" r="24" fill="#F2EFE7"/>
+  </g>
+
+  <!-- right cloud -->
+  <g opacity="0.72" filter="url(#tinyBlur)">
+    <ellipse cx="478" cy="154" rx="54" ry="24" fill="#F2EFE7"/>
+    <circle cx="453" cy="136" r="25" fill="#F2EFE7"/>
+    <circle cx="484" cy="128" r="31" fill="#F2EFE7"/>
+    <circle cx="516" cy="140" r="25" fill="#F2EFE7"/>
+  </g>
+
+  <!-- main browser card -->
+  <g filter="url(#shadow)">
+    <rect x="192" y="58" width="250" height="157" rx="18" fill="url(#panel)"/>
+    <path d="M210 58H424C433.941 58 442 66.0589 442 76V92H192V76C192 66.0589 200.059 58 210 58Z"
+          fill="url(#topbar)"/>
+    <circle cx="211" cy="75" r="5.5" fill="#D6D0B9"/>
+    <circle cx="228" cy="75" r="5.5" fill="#D6D0B9"/>
+    <circle cx="245" cy="75" r="5.5" fill="#D6D0B9"/>
+  </g>
+
+  <!-- puzzle piece -->
+  <g transform="translate(0,1)">
+    <path d="
+      M287 126
+      C287 118 293 112 301 112
+      H312
+      V101
+      C312 91 319 83 329 83
+      C339 83 346 91 346 101
+      V112
+      H357
+      C365 112 371 118 371 126
+      V138
+      H383
+      C393 138 401 145 401 155
+      C401 165 393 172 383 172
+      H371
+      V185
+      C371 193 365 199 357 199
+      H343
+      V186
+      C343 176 336 168 326 168
+      C316 168 309 176 309 186
+      V199
+      H301
+      C293 199 287 193 287 185
+      V172
+      H275
+      C265 172 257 165 257 155
+      C257 145 265 138 275 138
+      H287
+      Z" fill="url(#piece)"/>
+  </g>
+
+  <!-- unavailable badge -->
+  <g filter="url(#shadow)">
+    <circle cx="423" cy="165" r="36" fill="url(#badge)"/>
+    <path d="M410 152L436 178M436 152L410 178"
+          stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- decorative dots and pluses -->
+  <circle cx="131" cy="95" r="6" fill="#A9DABF" opacity="0.85"/>
+  <circle cx="505" cy="180" r="4.5" fill="#A9DABF" opacity="0.85"/>
+
+  <g stroke="#E8E1CF" stroke-width="3" stroke-linecap="round" opacity="0.9">
+    <path d="M465 89V101M459 95H471"/>
+    <path d="M159 174V186M153 180H165"/>
+  </g>
+
+  <g stroke="#A9DABF" stroke-width="3" stroke-linecap="round" opacity="0.9">
+    <path d="M477 178V188M472 183H482"/>
+  </g>
+</svg>

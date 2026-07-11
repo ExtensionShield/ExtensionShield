@@ -95,3 +95,70 @@ class TestGetScanResultsUpgrade:
       assert isinstance(rvm["consumer_insights"], dict)
 
 
+class TestFailedScanDoesNotOverwriteHistory:
+  """A failed CURRENT scan must never replace a good historical `completed` scan.
+
+  Pins the _persist_scan_failure guard that backs the frontend "unavailable"
+  fix: when a rescan of a now-unfetchable extension fails, the last good report
+  is preserved (status stays completed) rather than clobbered by a score-0
+  failed placeholder.
+  """
+
+  def test_failed_rescan_preserves_prior_completed_result(self) -> None:
+    from extension_shield.api import main as api_main
+
+    ext_id = "abcdefghijklmnopabcdefghijklmnop"
+    failed_payload = {
+      "extension_id": ext_id,
+      "status": "failed",
+      "error": "Extension download returned no file.",
+      "security_score": 0,
+    }
+    api_main.scan_results.pop(ext_id, None)
+    api_main.scan_status.pop(ext_id, None)
+
+    with patch("extension_shield.api.main.db") as mock_db:
+      # Prior good result exists in the DB.
+      mock_db.get_scan_result = MagicMock(return_value={"status": "completed", "security_score": 88})
+      mock_db.save_scan_result = MagicMock()
+
+      api_main._persist_scan_failure(ext_id, failed_payload)
+
+      # The failed placeholder is NOT written to the DB...
+      mock_db.save_scan_result.assert_not_called()
+      # ...the served status stays "completed"...
+      assert api_main.scan_status.get(ext_id) == "completed"
+      # ...and the transient failed payload is not left in memory.
+      assert ext_id not in api_main.scan_results
+
+    api_main.scan_results.pop(ext_id, None)
+    api_main.scan_status.pop(ext_id, None)
+
+  def test_failed_scan_persists_when_no_prior_good_result(self) -> None:
+    from extension_shield.api import main as api_main
+
+    ext_id = "ponmlkjihgfedcbaponmlkjihgfedcba"
+    failed_payload = {
+      "extension_id": ext_id,
+      "status": "failed",
+      "error": "Extension download returned no file.",
+      "security_score": 0,
+    }
+    api_main.scan_results.pop(ext_id, None)
+    api_main.scan_status.pop(ext_id, None)
+
+    with patch("extension_shield.api.main.db") as mock_db:
+      # No prior result at all.
+      mock_db.get_scan_result = MagicMock(return_value=None)
+      mock_db.save_scan_result = MagicMock()
+
+      api_main._persist_scan_failure(ext_id, failed_payload)
+
+      # With nothing to preserve, the failure IS recorded.
+      mock_db.save_scan_result.assert_called_once_with(failed_payload)
+      assert api_main.scan_status.get(ext_id) == "failed"
+
+    api_main.scan_results.pop(ext_id, None)
+    api_main.scan_status.pop(ext_id, None)
+
+

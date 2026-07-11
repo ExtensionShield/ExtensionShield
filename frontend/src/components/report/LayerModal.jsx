@@ -226,14 +226,17 @@ const LayerModal = ({
   keyFindings = [],
   gateResults = [],
   layerReasons = [],
+  evidence = null,
 }) => {
   const config = LAYER_CONFIG[layer] || LAYER_CONFIG.security;
   const Icon = config.Icon;
 
   // Severity-first modal model from real normalized factors/findings only.
+  // `evidence` (shared coverage-availability map) drives the "Cleared" vs
+  // "Not analyzed" split from the same coverage the Analyzer Coverage section uses.
   const { all, issues, notAnalyzed, cleared, about } = React.useMemo(
-    () => buildLayerModalModel({ factors, keyFindings, gateResults, layerReasons }),
-    [factors, keyFindings, gateResults, layerReasons]
+    () => buildLayerModalModel({ factors, keyFindings, gateResults, layerReasons, evidence }),
+    [factors, keyFindings, gateResults, layerReasons, evidence]
   );
   const hasChecks = all.length > 0;
   // Reputation/maintenance factors (e.g. Store Reputation, Publisher update age)

@@ -18,6 +18,9 @@ import {
   ExternalLink,
   AlertTriangle,
   ListChecks,
+  Info,
+  Search,
+  RotateCw,
 } from "lucide-react";
 import {
   resolveVerdictDisplay,
@@ -29,6 +32,8 @@ import {
   findingCategory,
   preciseFindingTitle,
   resolveFindingEvidenceLabel,
+  resolveScanAvailability,
+  resolveEvidenceAvailability,
 } from "../../utils/reportDisplay";
 import FileViewerModal from "../../components/FileViewerModal";
 import StatusMessage from "../../components/StatusMessage";
@@ -659,6 +664,79 @@ const ScanResultsPageV2 = () => {
   const formatScanDate = (ts) =>
     ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
+  // Shared coverage-availability map (same coverage the Analyzer Coverage section
+  // reports). Drives the unavailable-state gate below and the "Cleared" vs
+  // "Not analyzed" split in the layer modals — one source of truth, no duplicate heuristic.
+  const availability = resolveScanAvailability(scanResults);
+  const evidenceAvailability = resolveEvidenceAvailability(scanResults);
+
+  // A definitively UNAVAILABLE extension (acquisition failed AND no real evidence
+  // of any kind) has nothing to score: render a dedicated unavailable state, never
+  // a normal scored report with an insufficient-data placeholder score/layer cards.
+  if (availability.unavailable) {
+    // Real current extension id (route/result), never hardcoded.
+    const unavailableExtId = scanResults?.extension_id || currentExtensionId || scanId;
+    return (
+      <>
+        {genericNoindexHead}
+        <div className="results-v2 results-v2-dashboard results-v2-unavailable">
+          <nav className="results-v2-nav">
+            <Link to="/scan" className="nav-back">← Back</Link>
+          </nav>
+          <nav className="report-breadcrumb" aria-label="Breadcrumb">
+            <Link to="/">Home</Link>
+            <ChevronRight size={14} aria-hidden="true" />
+            <Link to="/scan">Scan Results</Link>
+            <ChevronRight size={14} aria-hidden="true" />
+            <span className="report-breadcrumb-current">{meta?.name || scanId || "Report"}</span>
+          </nav>
+
+          <section className="uav-card" aria-labelledby="uav-heading">
+            <img
+              className="uav-illustration"
+              src="/extensionshield_extension_unavailable_illustration.svg"
+              alt=""
+              aria-hidden="true"
+            />
+            <h1 id="uav-heading" className="uav-heading">Extension not available</h1>
+            <p className="uav-copy">
+              This Chrome Web Store item is currently unavailable.<br />
+              It may have been removed, unpublished, or be temporarily inaccessible.
+            </p>
+            <div className="uav-actions">
+              <Button
+                variant="outline"
+                className="uav-btn uav-btn--primary"
+                onClick={() => navigate("/scan")}
+              >
+                <Search size={18} aria-hidden="true" />
+                Scan another extension
+              </Button>
+              <Button
+                variant="outline"
+                className="uav-btn uav-btn--secondary"
+                onClick={() => window.location.reload()}
+              >
+                <RotateCw size={18} aria-hidden="true" />
+                Try again
+              </Button>
+            </div>
+            <hr className="uav-divider" />
+            <div className="uav-note">
+              <Info size={16} aria-hidden="true" className="uav-note-icon" />
+              <span>No current score was generated because the listing and package were unavailable.</span>
+            </div>
+            {unavailableExtId && (
+              <p className="uav-extid">
+                Extension ID: <span className="uav-extid-value">{unavailableExtId}</span>
+              </p>
+            )}
+          </section>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       {resultsSEOHead}
@@ -1075,6 +1153,7 @@ const ScanResultsPageV2 = () => {
           score={scores?.security?.score}
           band={scores?.security?.band || 'NA'}
           factors={factorsByLayer?.security || []}
+          evidence={evidenceAvailability}
           keyFindings={dedupeFindings(allSecurityFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'security') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('security') || r.toLowerCase().includes('sast') || r.toLowerCase().includes('malware')) || []}
@@ -1091,6 +1170,7 @@ const ScanResultsPageV2 = () => {
           score={scores?.privacy?.score}
           band={scores?.privacy?.band || 'NA'}
           factors={factorsByLayer?.privacy || []}
+          evidence={evidenceAvailability}
           keyFindings={dedupeFindings(allPrivacyFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'privacy') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('privacy') || r.toLowerCase().includes('exfil') || r.toLowerCase().includes('tracking')) || []}
@@ -1107,6 +1187,7 @@ const ScanResultsPageV2 = () => {
           score={scores?.governance?.score}
           band={scores?.governance?.band || 'NA'}
           factors={factorsByLayer?.governance || []}
+          evidence={evidenceAvailability}
           keyFindings={dedupeFindings(allGovernanceFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'governance') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('governance') || r.toLowerCase().includes('policy') || r.toLowerCase().includes('tos') || r.toLowerCase().includes('disclosure')) || []}
