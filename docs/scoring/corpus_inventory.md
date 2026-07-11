@@ -166,4 +166,6 @@ local pool into human, evidence-gated labels (with a blank review worksheet) is 
 [local_pool_labelability_review.md](local_pool_labelability_review.md). The
 malicious-class source decision (deferred — chrome-mal-ids as label source-of-record,
 signals pending a separate scanning-in-scope decision) is in
-[malicious_source_decision.md](malicious_source_decision.md).
+[malicious_source_decision.md](malicious_source_decision.md); the scan-ingestion
+scoping decision (**DEFER**, gated on legal + security sign-off) is in
+[ADR 0004](../adr/0004-controlled-malicious-ingestion.md).
