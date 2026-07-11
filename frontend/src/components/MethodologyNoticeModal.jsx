@@ -4,9 +4,10 @@
 // the <MethodologyNoticeModal /> mount + its import in src/App.jsx.
 //
 // Frontend/display only. Uses Radix Dialog primitives for accessible modal
-// behaviour (focus trap, Esc, aria-modal, labelled/described) and the site
-// design tokens (via MethodologyNoticeModal.scss) so it inherits the current
-// theme in light and dark.
+// behaviour (focus trap, aria-modal, labelled/described) and the site design
+// tokens (via MethodologyNoticeModal.scss) so it matches the current site theme.
+// It is an acknowledgement notice: Esc / outside clicks are intentionally
+// disabled so it closes only via the "I understand" button.
 import React, { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -43,12 +44,9 @@ export default function MethodologyNoticeModal() {
     if (!hasDismissed() && !isAutomatedBrowser()) setOpen(true);
   }, []);
 
-  // Persist ONLY on the explicit "I understand" acknowledgement. Esc / outside
-  // click merely close for the current session (the notice returns on the next
-  // load until acknowledged). We intentionally never persist from Radix lifecycle
-  // callbacks: under React.StrictMode the dev-mode double-mount fires close/
-  // interact-outside callbacks, which would mark the notice dismissed before the
-  // user ever saw it.
+  // The notice closes ONLY via the explicit "I understand" button — Esc,
+  // outside/overlay clicks and focus-outside are all prevented below. That same
+  // click is the only thing that persists the dismissal.
   const acknowledge = () => {
     try {
       window.localStorage.setItem(METHODOLOGY_NOTICE_STORAGE_KEY, "1");
@@ -62,7 +60,12 @@ export default function MethodologyNoticeModal() {
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
         <Dialog.Overlay className="methodology-notice-overlay">
-          <Dialog.Content className="methodology-notice-panel">
+          <Dialog.Content
+            className="methodology-notice-panel"
+            onEscapeKeyDown={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
             <Dialog.Title className="methodology-notice-title">
               {METHODOLOGY_NOTICE.title}
             </Dialog.Title>

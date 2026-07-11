@@ -39,6 +39,16 @@ describe("MethodologyNoticeModal", () => {
     expect(localStorage.getItem(METHODOLOGY_NOTICE_STORAGE_KEY)).toBe("1");
   });
 
+  it("stays open on Escape — only 'I understand' closes it", async () => {
+    render(<MethodologyNoticeModal />);
+    const dialog = await screen.findByRole("dialog");
+
+    fireEvent.keyDown(dialog, { key: "Escape", code: "Escape" });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(localStorage.getItem(METHODOLOGY_NOTICE_STORAGE_KEY)).toBeNull();
+  });
+
   it("does not show again when already dismissed", () => {
     localStorage.setItem(METHODOLOGY_NOTICE_STORAGE_KEY, "1");
     render(<MethodologyNoticeModal />);

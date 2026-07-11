@@ -99,7 +99,7 @@
   font-family: var(--font-sans);
   font-size: 0.9rem;
   font-weight: 600;
-  color: hsl(var(--color-primary-foreground));
+  color: #fff; // white text on green, matching the site CTAs (.action-signin)
   background: hsl(var(--color-primary));
   border: none;
   border-radius: var(--radius);
