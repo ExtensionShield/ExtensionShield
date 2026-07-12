@@ -85,17 +85,23 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Copy frontend build from stage 1
 COPY --from=frontend-builder /app/frontend/dist ./static
 
-# Create necessary directories and non-root user
-RUN mkdir -p extensions_storage data && \
+# Create necessary directories and non-root user.
+# appuser needs a real, writable HOME: Semgrep (SAST) writes its settings to
+# ~/.semgrep on startup, and a system user's default /nonexistent home makes
+# `semgrep --version` crash — which silently disables SAST in production.
+RUN mkdir -p extensions_storage data /home/appuser && \
     addgroup --system appgroup && \
-    adduser --system --ingroup appgroup appuser && \
-    chown -R appuser:appgroup /app
+    adduser --system --home /home/appuser --ingroup appgroup appuser && \
+    chown -R appuser:appgroup /app /home/appuser
 
 # Drop root privileges
 USER appuser
 
-# Set default environment variables
-ENV EXTENSION_STORAGE_PATH=/app/extensions_storage \
+# Set default environment variables.
+# HOME is set explicitly (belt-and-suspenders with adduser --home above) so
+# Semgrep and any other tool that relies on $HOME always has a writable dir.
+ENV HOME=/home/appuser \
+    EXTENSION_STORAGE_PATH=/app/extensions_storage \
     DATABASE_PATH=/app/data/extension-shield.db \
     LLM_PROVIDER=openai
 
