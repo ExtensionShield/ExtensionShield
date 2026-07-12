@@ -39,6 +39,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from extension_shield.core.report_generator import ReportGenerator
 from extension_shield.core.extension_metadata import ExtensionMetadata
 from extension_shield.core.chromestats_downloader import ChromeStatsDownloader
+from extension_shield.core import store_liveness
 
 from extension_shield.workflow.graph import build_graph
 from extension_shield.workflow.state import WorkflowState, WorkflowStatus
@@ -2006,6 +2007,23 @@ def _build_scoring_v2_for_payload(payload: Dict[str, Any], extension_id: str) ->
         return {}
 
 
+def _attach_store_status(payload: Dict[str, Any]) -> None:
+    """Attach ADDITIVE Chrome Web Store availability metadata to a served payload.
+
+    Store status is availability only — it never reads or changes scoring_v2,
+    recompute-on-read, coverage, or any corpus/Track A label. Fail-open: any error
+    (or a Supabase table that has not been migrated yet) leaves status "unknown",
+    which the frontend renders as a normal report.
+    """
+    try:
+        ext_id = payload.get("extension_id")
+        if not ext_id:
+            return
+        payload["store_status"] = store_liveness.get_store_status_for_payload(db, ext_id)
+    except Exception as exc:  # never let availability metadata break the report
+        logger.debug("attach store_status failed: %s", exc)
+
+
 def _extract_risk_and_signals(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     Extract risk and signals mapping from scan results payload.
@@ -2916,6 +2934,7 @@ async def get_scan_results(identifier: str, http_request: Request):
             # Add risk and signals mapping
             payload["risk_and_signals"] = _extract_risk_and_signals(payload)
             scan_results[extension_id] = payload
+            _attach_store_status(payload)
             log_scan_results_return_shape("memory", payload)
             if payload.get("error"):
                 payload["error"] = _sanitize_error_for_client(payload["error"])
@@ -2963,6 +2982,7 @@ async def get_scan_results(identifier: str, http_request: Request):
             except Exception as persist_err:
                 logger.debug("[get_scan_results] Failed to persist upgraded payload: %s", persist_err)
         
+        _attach_store_status(payload)
         log_scan_results_return_shape("db", payload)
         if payload.get("error"):
             payload["error"] = _sanitize_error_for_client(payload["error"])
@@ -3001,6 +3021,7 @@ async def get_scan_results(identifier: str, http_request: Request):
                 db.save_scan_result(payload)
             except Exception:
                 pass
+            _attach_store_status(payload)
             log_scan_results_return_shape("file", payload)
             if payload.get("error"):
                 payload["error"] = _sanitize_error_for_client(payload["error"])

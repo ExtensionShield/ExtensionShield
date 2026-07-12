@@ -491,6 +491,55 @@ def serve(host: str, port: int, reload: bool):
     )
 
 
+@cli.group("store-status")
+def store_status():
+    """Curate Chrome Web Store availability metadata (availability only — never
+    affects scoring, recompute-on-read, or any corpus/Track A label).
+
+    Use `set ... unavailable` to mark a storefront-delisted extension (which has no
+    automated signal) so its report shows the "Extension not available" state.
+    """
+
+
+@store_status.command("set")
+@click.argument("extension_id")
+@click.argument("status", type=click.Choice(["available", "unavailable", "unknown"]))
+@click.option("--reason", default=None, help="Optional human note (e.g. 'delisted from store').")
+def store_status_set(extension_id: str, status: str, reason: Optional[str]):
+    """Set a CURATED store status for EXTENSION_ID. Curated status wins over the probe."""
+    from extension_shield.api.database import db
+    from extension_shield.core import store_liveness
+
+    ok = store_liveness.set_curated_status(db, extension_id, status, reason)
+    if ok:
+        console.print(f"[green]✓[/green] {extension_id} → store_status=[cyan]{status}[/cyan] (curated)")
+    else:
+        console.print(f"[red]✗[/red] Failed to set store status for {extension_id}")
+
+
+@store_status.command("get")
+@click.argument("extension_id")
+def store_status_get(extension_id: str):
+    """Show the stored store-status row for EXTENSION_ID."""
+    from extension_shield.api.database import db
+
+    row = db.get_store_status(extension_id)
+    if not row:
+        console.print(f"[yellow]No store status recorded for {extension_id}[/yellow]")
+        return
+    console.print(row)
+
+
+@store_status.command("probe")
+@click.argument("extension_id")
+def store_status_probe(extension_id: str):
+    """Run the live availability probe for EXTENSION_ID (read-only; no DB write)."""
+    from extension_shield.core import store_liveness
+
+    result = store_liveness.probe_store_availability(extension_id)
+    console.print(result)
+
+
 @cli.command()
 def version():
     """Show version information."""

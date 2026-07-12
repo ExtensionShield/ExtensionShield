@@ -301,6 +301,23 @@ export function resolveScanAvailability(raw) {
   };
 }
 
+/**
+ * Chrome Web Store liveness (Part 4): read the additive `store_status` metadata the
+ * API attaches (never a scoring field). An extension the Store now reports
+ * unavailable must render the unavailable state even when a valid historical scan
+ * exists. Availability only — it never reads or changes any score. Only a confirmed
+ * `unavailable` gates the UI; `available` / `unknown` / missing render normally.
+ */
+export function resolveStoreStatus(raw) {
+  const s = raw && typeof raw === 'object' ? raw.store_status : null;
+  const status = (s && typeof s === 'object' && typeof s.status === 'string') ? s.status : 'unknown';
+  return {
+    status,
+    unavailable: status === 'unavailable',
+    reason: (s && typeof s === 'object' && typeof s.reason === 'string') ? s.reason : null,
+  };
+}
+
 /** Compact severity band from a finding's severity (string level or 0..1 number). */
 export function findingSeverityLevel(finding) {
   const s = finding == null ? undefined : (typeof finding === 'object' ? finding.severity : finding);

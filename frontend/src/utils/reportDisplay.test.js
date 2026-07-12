@@ -13,6 +13,7 @@ import {
   resolveDecisionAuthorityDisplay,
   resolveEvidenceAvailability,
   resolveScanAvailability,
+  resolveStoreStatus,
   GOVERNANCE_SCORE_LABEL,
   POLICY_DECISION_LABEL,
 } from './reportDisplay';
@@ -463,5 +464,28 @@ describe('resolveScanAvailability — unavailable vs partial vs full', () => {
   it('never marks a null/garbage payload unavailable', () => {
     expect(resolveScanAvailability(null).unavailable).toBe(false);
     expect(resolveScanAvailability(undefined).available).toBe(true);
+  });
+});
+
+describe('resolveStoreStatus — Chrome Web Store liveness (Part 4)', () => {
+  it('reports unavailable when the store_status metadata says unavailable', () => {
+    const raw = { status: 'completed', store_status: { status: 'unavailable', reason: 'Chrome Web Store item unavailable' } };
+    const s = resolveStoreStatus(raw);
+    expect(s.unavailable).toBe(true);
+    expect(s.status).toBe('unavailable');
+    expect(s.reason).toMatch(/unavailable/i);
+  });
+
+  it('does NOT gate on available / unknown / missing store_status', () => {
+    expect(resolveStoreStatus({ store_status: { status: 'available' } }).unavailable).toBe(false);
+    expect(resolveStoreStatus({ store_status: { status: 'unknown' } }).unavailable).toBe(false);
+    expect(resolveStoreStatus({ status: 'completed' }).unavailable).toBe(false); // no field
+    expect(resolveStoreStatus({}).status).toBe('unknown');
+  });
+
+  it('is defensive against null/garbage payloads', () => {
+    expect(resolveStoreStatus(null).unavailable).toBe(false);
+    expect(resolveStoreStatus(undefined).status).toBe('unknown');
+    expect(resolveStoreStatus({ store_status: 'nope' }).unavailable).toBe(false);
   });
 });
