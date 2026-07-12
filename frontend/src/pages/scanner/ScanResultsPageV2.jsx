@@ -34,6 +34,7 @@ import {
   resolveFindingEvidenceLabel,
   resolveScanAvailability,
   resolveEvidenceAvailability,
+  resolveStoreStatus,
 } from "../../utils/reportDisplay";
 import FileViewerModal from "../../components/FileViewerModal";
 import StatusMessage from "../../components/StatusMessage";
@@ -673,7 +674,16 @@ const ScanResultsPageV2 = () => {
   // A definitively UNAVAILABLE extension (acquisition failed AND no real evidence
   // of any kind) has nothing to score: render a dedicated unavailable state, never
   // a normal scored report with an insufficient-data placeholder score/layer cards.
-  if (availability.unavailable) {
+  //
+  // Part 4 — temporal availability drift: an extension with a valid historical scan
+  // that the Chrome Web Store now reports unavailable (store_status.status ===
+  // 'unavailable') must ALSO render the unavailable state, not a scored report. This
+  // is availability metadata only — the stored historical score is unchanged and
+  // simply not displayed here.
+  const storeUnavailable = resolveStoreStatus(scanResults).unavailable;
+  if (availability.unavailable || storeUnavailable) {
+    // Historical variant: we hold a prior scan, but the live listing can't be verified.
+    const historicalUnavailable = storeUnavailable && !availability.unavailable;
     // Real current extension id (route/result), never hardcoded.
     const unavailableExtId = scanResults?.extension_id || currentExtensionId || scanId;
     return (
@@ -700,8 +710,17 @@ const ScanResultsPageV2 = () => {
             />
             <h1 id="uav-heading" className="uav-heading">Extension not available</h1>
             <p className="uav-copy">
-              This Chrome Web Store item is currently unavailable.<br />
-              It may have been removed, unpublished, or be temporarily inaccessible.
+              {historicalUnavailable ? (
+                <>
+                  This Chrome Web Store item is currently unavailable. ExtensionShield has a
+                  historical scan for this extension, but the current listing can no longer be verified.
+                </>
+              ) : (
+                <>
+                  This Chrome Web Store item is currently unavailable.<br />
+                  It may have been removed, unpublished, or be temporarily inaccessible.
+                </>
+              )}
             </p>
             <div className="uav-actions">
               <Button
@@ -724,7 +743,11 @@ const ScanResultsPageV2 = () => {
             <hr className="uav-divider" />
             <div className="uav-note">
               <Info size={16} aria-hidden="true" className="uav-note-icon" />
-              <span>No current score was generated because the listing and package were unavailable.</span>
+              <span>
+                {historicalUnavailable
+                  ? "No current score was generated or changed by this availability check."
+                  : "No current score was generated because the listing and package were unavailable."}
+              </span>
             </div>
             {unavailableExtId && (
               <p className="uav-extid">

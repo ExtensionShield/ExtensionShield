@@ -290,6 +290,91 @@ class Database:
             """
             )
 
+            # Chrome Web Store liveness — EXTENSION-LEVEL availability metadata.
+            # Keyed by extension_id (one row per extension). This is store status
+            # ONLY: it never influences scoring, recompute-on-read, or any corpus/
+            # Track A label. See core/store_liveness.py for the resolution rules.
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS extension_store_status (
+                    extension_id                  TEXT PRIMARY KEY,
+                    store_status                  TEXT NOT NULL DEFAULT 'unknown',
+                    store_status_reason           TEXT,
+                    store_status_source           TEXT NOT NULL DEFAULT 'auto',
+                    store_status_checked_at       TEXT,
+                    first_detected_unavailable_at TEXT,
+                    last_seen_available_at        TEXT,
+                    updated_at                    TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+            )
+
+    # ------------------------------------------------------------------
+    # Extension store-status (Chrome Web Store liveness) — metadata only.
+    # ------------------------------------------------------------------
+    _STORE_STATUS_COLUMNS = (
+        "extension_id, store_status, store_status_reason, store_status_source, "
+        "store_status_checked_at, first_detected_unavailable_at, last_seen_available_at, updated_at"
+    )
+
+    def get_store_status(self, extension_id: str) -> Optional[Dict[str, Any]]:
+        """Return the durable store-status row for an extension, or None."""
+        if not extension_id:
+            return None
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"SELECT {self._STORE_STATUS_COLUMNS} FROM extension_store_status WHERE extension_id = ?",
+                    (extension_id,),
+                )
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as exc:
+            logger.debug("get_store_status failed for %s: %s", extension_id, exc)
+            return None
+
+    def upsert_store_status(self, extension_id: str, **fields: Any) -> bool:
+        """Insert or replace the store-status row. Caller supplies already-resolved
+        field values (see core/store_liveness.resolve_store_status)."""
+        if not extension_id:
+            return False
+        try:
+            now = datetime.now(timezone.utc).isoformat()
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO extension_store_status (
+                        extension_id, store_status, store_status_reason, store_status_source,
+                        store_status_checked_at, first_detected_unavailable_at,
+                        last_seen_available_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(extension_id) DO UPDATE SET
+                        store_status = excluded.store_status,
+                        store_status_reason = excluded.store_status_reason,
+                        store_status_source = excluded.store_status_source,
+                        store_status_checked_at = excluded.store_status_checked_at,
+                        first_detected_unavailable_at = excluded.first_detected_unavailable_at,
+                        last_seen_available_at = excluded.last_seen_available_at,
+                        updated_at = excluded.updated_at
+                    """,
+                    (
+                        extension_id,
+                        fields.get("store_status", "unknown"),
+                        fields.get("store_status_reason"),
+                        fields.get("store_status_source", "auto"),
+                        fields.get("store_status_checked_at"),
+                        fields.get("first_detected_unavailable_at"),
+                        fields.get("last_seen_available_at"),
+                        now,
+                    ),
+                )
+            return True
+        except Exception as exc:
+            logger.debug("upsert_store_status failed for %s: %s", extension_id, exc)
+            return False
+
     def save_scan_result(self, result: Dict[str, Any]) -> bool:
         """Save or update scan result."""
         try:
@@ -1056,6 +1141,50 @@ class SupabaseDatabase:
         from supabase import create_client  # type: ignore
 
         self.client = create_client(supabase_url, supabase_key)
+
+    # ------------------------------------------------------------------
+    # Extension store-status (Chrome Web Store liveness) — metadata only.
+    # Gracefully degrades to no-op when the `extension_store_status` table has
+    # not yet been migrated into Supabase (feature simply reports "unknown").
+    # ------------------------------------------------------------------
+    STORE_STATUS_TABLE = "extension_store_status"
+
+    def get_store_status(self, extension_id: str) -> Optional[Dict[str, Any]]:
+        if not extension_id:
+            return None
+        try:
+            resp = (
+                self.client.table(self.STORE_STATUS_TABLE)
+                .select("*")
+                .eq("extension_id", extension_id)
+                .limit(1)
+                .execute()
+            )
+            data = getattr(resp, "data", None) or []
+            return data[0] if data else None
+        except Exception as exc:
+            logger.debug("Supabase get_store_status unavailable for %s: %s", extension_id, exc)
+            return None
+
+    def upsert_store_status(self, extension_id: str, **fields: Any) -> bool:
+        if not extension_id:
+            return False
+        try:
+            row = {
+                "extension_id": extension_id,
+                "store_status": fields.get("store_status", "unknown"),
+                "store_status_reason": fields.get("store_status_reason"),
+                "store_status_source": fields.get("store_status_source", "auto"),
+                "store_status_checked_at": fields.get("store_status_checked_at"),
+                "first_detected_unavailable_at": fields.get("first_detected_unavailable_at"),
+                "last_seen_available_at": fields.get("last_seen_available_at"),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            self.client.table(self.STORE_STATUS_TABLE).upsert(row).execute()
+            return True
+        except Exception as exc:
+            logger.debug("Supabase upsert_store_status unavailable for %s: %s", extension_id, exc)
+            return False
 
     def save_scan_result(self, result: Dict[str, Any]) -> bool:
         try:
