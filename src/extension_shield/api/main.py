@@ -421,6 +421,9 @@ _health_start_time = datetime.now(timezone.utc)
 # -----------------------------------------------------------------------------
 DAILY_DEEP_SCAN_LIMIT = 3  # authenticated users
 ANONYMOUS_DAILY_DEEP_SCAN_LIMIT = 1  # anonymous (IP-based) users – after 1 scan, prompt login
+# Seconds an anonymous (IP-based) user must wait between scans. 0 turns it off.
+# Signed-in users are not affected. Change with ANONYMOUS_SCAN_COOLDOWN_SECONDS.
+ANONYMOUS_SCAN_COOLDOWN_SECONDS = int(os.getenv("ANONYMOUS_SCAN_COOLDOWN_SECONDS", "180"))  # 3 min
 
 # -----------------------------------------------------------------------------
 # Scan freshness cutoff
@@ -436,6 +439,8 @@ ANONYMOUS_DAILY_DEEP_SCAN_LIMIT = 1  # anonymous (IP-based) users – after 1 sc
 _DEFAULT_SCAN_FRESHNESS_CUTOFF = "2026-07-08T01:37:14+00:00"  # #257 ship instant (UTC)
 # deep_scan_usage[user_id][YYYY-MM-DD] = used_count
 deep_scan_usage: Dict[str, Dict[str, int]] = {}
+# Last scan time per IP, used for the anonymous cooldown. Kept in memory per worker.
+_last_deep_scan_at: Dict[str, datetime] = {}
 # Lock to prevent race conditions when multiple concurrent requests check/increment the same counter
 import threading as _threading
 _deep_scan_usage_lock = _threading.Lock()
@@ -556,6 +561,23 @@ def _require_admin_or_telemetry_key(request: Request) -> None:
             status_code=403,
             detail="Invalid admin API key"
         )
+
+
+def _anon_scan_cooldown_remaining(rate_limit_key: str) -> int:
+    """Seconds an anonymous (IP-based) user must still wait before another deep scan.
+
+    Returns 0 when the cooldown is disabled, for authenticated users, in dev, or
+    when enough time has elapsed. Authenticated users are exempt.
+    """
+    if ANONYMOUS_SCAN_COOLDOWN_SECONDS <= 0 or not rate_limit_key.startswith("ip:"):
+        return 0
+    if not get_settings().is_prod():
+        return 0
+    last = _last_deep_scan_at.get(rate_limit_key)
+    if not last:
+        return 0
+    elapsed = (datetime.now(timezone.utc) - last).total_seconds()
+    return max(0, int(ANONYMOUS_SCAN_COOLDOWN_SECONDS - elapsed))
 
 
 def _deep_scan_limit_status(rate_limit_key: str) -> Dict[str, Any]:
@@ -2678,6 +2700,19 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
         after_consume = _deep_scan_limit_status(rate_limit_key)
     else:
         if settings.is_prod():
+            # Anonymous per-IP cooldown: a fresh deep scan must be spaced out.
+            cooldown_left = _anon_scan_cooldown_remaining(rate_limit_key)
+            if cooldown_left > 0:
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "error_code": "SCAN_COOLDOWN",
+                        "message": f"Please wait {cooldown_left}s before scanning another extension. Sign in to remove the wait.",
+                        "is_anonymous": True,
+                        "requires_login": True,
+                        "retry_after_seconds": cooldown_left,
+                    },
+                )
             limit_status = _deep_scan_limit_status(rate_limit_key)
             if limit_status["remaining"] <= 0:
                 limit_num = limit_status.get("limit", 1)
@@ -2695,6 +2730,9 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
 
         # Consume one deep scan since we are starting a new analysis run
         after_consume = _consume_deep_scan(rate_limit_key)
+        # Start the anonymous cooldown clock from this scan.
+        if is_anonymous:
+            _last_deep_scan_at[rate_limit_key] = datetime.now(timezone.utc)
 
     # Start background analysis
     scan_user_ids[extension_id] = getattr(getattr(request, "state", None), "user_id", None)
