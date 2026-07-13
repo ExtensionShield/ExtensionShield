@@ -190,12 +190,15 @@ def safe_get(
         if content_length:
             try:
                 size = int(content_length)
+            except (TypeError, ValueError):
+                # Bad Content-Length header: warn and let it through.
+                logger.warning("Invalid Content-Length header: %s", content_length)
+            else:
+                # Check the size here, not inside the try above, so this error
+                # is not caught by the except and lost.
                 if size > max_bytes:
                     response.close()
                     raise ValueError(f"Response too large: {size} bytes (max: {max_bytes})")
-            except ValueError:
-                # Invalid Content-Length, allow but warn
-                logger.warning("Invalid Content-Length header: %s", content_length)
     else:
         # For non-streaming, check content size
         if len(response.content) > max_bytes:

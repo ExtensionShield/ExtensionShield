@@ -76,16 +76,19 @@ class ExtensionDownloader:
             file_path = os.path.join(self.extension_storage_path, filename)
             os.makedirs(self.extension_storage_path, exist_ok=True)
 
-            # Download the file (SSRF protection: only allow clients2.google.com)
-            # Chrome-like headers are required; Google returns HTML/204 without them
+            # Only allow clients2.google.com (SSRF). Chrome-like headers avoid HTML/204.
+            # Extensions can be large (AdBlock is ~75MB), so raise the default 25MB
+            # limit. Change it with MAX_CRX_BYTES.
             ALLOWED_HOSTS = {"clients2.google.com"}
             headers = {"User-Agent": ExtensionDownloader.CHROME_USER_AGENT}
+            max_crx_bytes = int(os.getenv("MAX_CRX_BYTES", str(200 * 1024 * 1024)))  # 200MB
             response = safe_get(
                 download_url,
                 allowed_hosts=ALLOWED_HOSTS,
                 stream=True,
                 timeout=120,
                 headers=headers,
+                max_bytes=max_crx_bytes,
             )
             response.raise_for_status()
 
@@ -106,10 +109,29 @@ class ExtensionDownloader:
                 if not any(t in content_type for t in allowed_types):
                     logger.warning("Unexpected content type: %s", content_type)
 
-            # Save the file
+            # Save the file, and stop if it goes over the limit while streaming
+            # (the Content-Length header is not always present).
+            written = 0
+            oversized = False
             with open(file_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
+                    if not chunk:
+                        continue
+                    written += len(chunk)
+                    if written > max_crx_bytes:
+                        oversized = True
+                        break
                     f.write(chunk)
+
+            if oversized:
+                # Discard the truncated file so it is never treated as a valid CRX.
+                logger.error(
+                    "Download exceeded max size (%s bytes) for %s; discarding.",
+                    max_crx_bytes, extension_id,
+                )
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return None
 
             file_size = os.path.getsize(file_path)
             logger.info("Downloaded %s to %s (%s bytes)", extension_id, file_path, file_size)
