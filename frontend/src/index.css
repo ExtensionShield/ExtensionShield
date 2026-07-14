@@ -611,12 +611,6 @@ html.light {
   border-top: 1px solid var(--color__clay);
 }
 
-.light .stats-bar {
-  background: var(--color__chalk);
-  border: 1px solid var(--color__clay);
-  box-shadow: 0 4px 20px rgba(36, 34, 30, 0.08), 0 0 0 1px rgba(73, 70, 63, 0.12);
-}
-
 .light .search-container {
   background: #ffffff;
   border: 1px solid var(--color__clay);
