@@ -617,58 +617,10 @@
   transition: color 0.15s ease;
 }
 
-/* ── Stats bar ─────────────────────────────────────────────────────────────── */
-.stats-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  padding: 0.875rem 1.25rem;
-  margin-top: 0;
-  background: var(--extensionshield-bg-card);
-  border: 1px solid var(--extensionshield-border);
-  border-radius: 12px;
-  width: fit-content;
-  max-width: min(100%, 52rem);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-}
-
 .stat-value {
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--extensionshield-text-primary);
-
-  &.live {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--extensionshield-accent);
-  }
-}
-
-.stat-value-number {
-  font-variant-numeric: tabular-nums;
-}
-
-@keyframes hp-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.5; transform: scale(1.25); }
-}
-
-.live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--extensionshield-accent);
-  flex-shrink: 0;
-  animation: hp-pulse 1.8s ease-in-out infinite;
 }
 
 .stat-label {
@@ -677,13 +629,6 @@
   color: var(--extensionshield-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--extensionshield-border);
-  flex-shrink: 0;
 }
 
 /* ── Scroll cue ────────────────────────────────────────────────────────────── */
@@ -2781,7 +2726,6 @@
     display: none !important;
   }
 
-  .hero-desktop-content .stats-bar,
   .hero-desktop-content .scroll-cue {
     display: none !important;
   }
@@ -2984,19 +2928,6 @@
   .hp-faq-q {
     font-size: 1rem;
     padding: 1rem 0.25rem;
-  }
-
-  .stats-bar {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    padding: 0.75rem;
-  }
-
-  .stat-divider { display: none; }
-
-  .stat-item {
-    flex: 1 1 40%;
-    min-width: 80px;
   }
 
   .honey-stats { gap: 1.25rem; }

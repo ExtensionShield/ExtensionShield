@@ -413,10 +413,6 @@ const HomePage = () => {
   const navigate = useNavigate();
   const { startScan, setUrl, error: scanError } = useScan();
   const [scanInput, setScanInput] = useState("");
-  const [extensionsScannedCount, setExtensionsScannedCount] = useState(0);
-  const [displayCount, setDisplayCount] = useState(0);
-  const displayCountRef = useRef(0);
-  const rafRef = useRef(null);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const demoTriggerRef = useRef(null);
 
@@ -456,45 +452,6 @@ const HomePage = () => {
     const route = getScanResultsRoute(scan.extension_id, scan.extension_name);
     navigate(route);
   }, [navigate]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadStatistics = async () => {
-      const stats = await databaseService.getStatistics();
-      if (cancelled) return;
-      const totalScans = Number(stats?.total_scans);
-      setExtensionsScannedCount(
-        Number.isFinite(totalScans) ? Math.max(0, Math.floor(totalScans)) : 0
-      );
-    };
-    void loadStatistics();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    const target = Math.max(0, extensionsScannedCount);
-    const start = displayCountRef.current;
-    const diff = target - start;
-    if (diff === 0) return;
-    const durationMs = 1400;
-    const easeOutQuart = (t) => 1 - (1 - t) ** 4;
-    const startTime = performance.now();
-    const tick = (now) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / durationMs, 1);
-      const current = Math.round(start + diff * easeOutQuart(progress));
-      displayCountRef.current = current;
-      setDisplayCount(current);
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        displayCountRef.current = target;
-        setDisplayCount(target);
-      }
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [extensionsScannedCount]);
 
   const handleScan = useCallback(() => {
     const input = scanInput.trim();
@@ -766,30 +723,6 @@ const HomePage = () => {
               {/* Right: real frozen scan result */}
               <div className="hero-right">
                 <ScanPreviewCard />
-              </div>
-            </div>
-
-            {/* Stats — three social-proof facts */}
-            <div className="stats-bar">
-              <div className="stat-item">
-                <span className="stat-value live">
-                  <span className="live-dot" aria-hidden="true" />
-                  OPEN
-                </span>
-                <span className="stat-label">Source core</span>
-              </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-value">3</span>
-                <span className="stat-label">Risk layers</span>
-              </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-value live">
-                  <span className="live-dot" aria-hidden="true" />
-                  <span className="stat-value-number">{displayCount.toLocaleString()}</span>
-                </span>
-                <span className="stat-label">Extensions scanned</span>
               </div>
             </div>
 
