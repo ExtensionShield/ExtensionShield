@@ -1627,7 +1627,12 @@ class SupabaseDatabase:
         When search is provided, results are ranked by relevance: exact title first, then title starts with, then title contains, then ID; then by recency.
         When include_all=True, returns all completed scans regardless of visibility/source (for QA export).
         """
-        select_cols = "extension_id, extension_name, url, slug, scanned_at, created_at, updated_at, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, webstore_analysis, sast_results, permissions_analysis, manifest, summary, icon_base64, icon_media_type"
+        # Note: icon_base64 is intentionally NOT selected — the list view loads icons via
+        # /api/scan/icon/{id}, so pulling the (often ~25KB) base64 blob per row just to drop
+        # it from the response wastes Supabase→app bandwidth. `summary` is still selected
+        # because scoring_v2/report_view_model/governance_bundle are promoted out of it below;
+        # the /api/recent handler strips the raw `summary` from the wire response.
+        select_cols = "extension_id, extension_name, url, slug, scanned_at, created_at, updated_at, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, webstore_analysis, sast_results, permissions_analysis, manifest, summary, icon_media_type"
         try:
             # When searching, fetch more candidates so we can rank by relevance then trim to limit
             limit_fetch = min(200, limit * 15) if (search and search.strip()) else limit

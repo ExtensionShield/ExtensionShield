@@ -217,13 +217,12 @@ const ScannerPage = () => {
         setAllScans([]);
         return;
       }
-      const enrichedScans = await enrichScans(history, { skipFullFetch: false });
-      if (enrichedScans.length > 0) {
-        setAllScans(enrichedScans);
-      } else {
-        const fallbackScans = await enrichScans(history, { skipFullFetch: false });
-        setAllScans(fallbackScans.length > 0 ? fallbackScans : []);
-      }
+      // /api/recent already returns everything the list needs (metadata, scoring_v2,
+      // report_view_model, governance_bundle, risk_and_signals), so skip the per-row
+      // /api/scan/results fetch — that N+1 shipped ~10 extra full-payload requests
+      // (each with a live Chrome Web Store probe) on every load and every poll tick.
+      const enrichedScans = await enrichScans(history, { skipFullFetch: true });
+      setAllScans(enrichedScans);
     } catch (err) {
       setAllScans([]);
       setLoadError(err?.message || "Failed to load recent scans");
