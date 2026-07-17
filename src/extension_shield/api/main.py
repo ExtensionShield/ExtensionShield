@@ -3700,6 +3700,17 @@ async def get_recent_scans(limit: int = 10, search: str = None):
                 # Continue processing other scans even if one fails
                 scan["risk_and_signals"] = {"risk": 0, "signals": {}}
 
+        # Slim the list payload before returning. The scan-list view derives its badges
+        # and findings from the top-level scoring_v2 / report_view_model / governance_bundle
+        # / risk_and_signals (promoted/computed above), so the raw `summary` JSONB blob
+        # (~100KB/row) and the inline base64 icon (~25KB/row) are dead weight on the wire —
+        # the icon is served separately via /api/scan/icon/{id}. Dropping them turns a
+        # multi-MB, 10-row response into a fraction of the size without changing what renders.
+        for scan in recent:
+            if isinstance(scan, dict):
+                scan.pop("summary", None)
+                scan.pop("icon_base64", None)
+
         logger.info(f"[get_recent_scans] Returning {len(recent)} enriched scans")
         return {"recent": recent, "db_backend": db_backend}
     except Exception as e:
