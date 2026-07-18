@@ -984,6 +984,7 @@ body {
 /* User Menu */
 .user-menu-container {
   position: relative;
+  margin-top: 5px; // vertical alignment for the signed-in account menu in the header
 }
 
 .user-menu-trigger {
