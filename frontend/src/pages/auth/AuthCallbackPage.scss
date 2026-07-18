@@ -182,13 +182,3 @@
   }
 }
 
-/* Dark mode: lighter check tone for contrast on dark surfaces */
-@media (prefers-color-scheme: dark) {
-  .auth-callback-success-heading {
-    color: #f7fafc;
-  }
-  .auth-callback-success-status {
-    color: #a0aec0;
-  }
-}
-

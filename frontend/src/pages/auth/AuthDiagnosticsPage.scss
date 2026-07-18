@@ -156,32 +156,5 @@
   }
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .auth-diagnostics-content {
-    background: rgba(26, 32, 44, 0.95);
-    color: #f7fafc;
-  }
-  
-  .diagnostics-header h1 {
-    color: #f7fafc;
-  }
-  
-  .diagnostics-section h2 {
-    color: #e2e8f0;
-  }
-  
-  .diagnostics-item .value {
-    color: #f7fafc;
-  }
-  
-  .diagnostics-item .label {
-    color: #a0aec0;
-  }
-  
-  .diagnostics-footer {
-    border-top-color: #4a5568;
-    color: #a0aec0;
-  }
-}
+// Dark mode removed — this page is light-only.
 
