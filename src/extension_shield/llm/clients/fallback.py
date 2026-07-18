@@ -1,6 +1,7 @@
 """LLM fallback client module for multi-provider support with automatic failover."""
 
 import os
+import re
 import logging
 import threading
 from typing import Dict, Optional, Any, List
@@ -11,6 +12,20 @@ from extension_shield.llm.clients.provider_type import LLMProviderType
 from extension_shield.llm.clients import get_chat_llm_client
 
 logger = logging.getLogger(__name__)
+
+# Patterns that may indicate leaked secrets in error messages
+_SECRET_PATTERNS = [
+    re.compile(r"sk-[A-Za-z0-9\-_]{10,}", re.IGNORECASE),       # OpenAI/Groq keys
+    re.compile(r"Bearer\s+[A-Za-z0-9\-_\.]{10,}", re.IGNORECASE),  # Bearer tokens
+    re.compile(r"key[=:\s]+['\"]?[A-Za-z0-9\-_]{20,}['\"]?", re.IGNORECASE),  # Generic key=value
+]
+
+
+def _sanitize_error_message(msg: str) -> str:
+    """Remove potential secrets (API keys, tokens) from error messages."""
+    for pattern in _SECRET_PATTERNS:
+        msg = pattern.sub("[REDACTED]", msg)
+    return msg
 
 
 class LLMFallbackError(Exception):
@@ -284,8 +299,8 @@ def invoke_with_fallback(
                     # Don't retry non-retryable errors
                     break
 
-                # Store error for final exception
-                errors[f"{provider_name} (attempt {attempt + 1})"] = f"{error_type}: {error_msg[:200]}"
+                # Store sanitized error for final exception (strip potential secrets)
+                errors[f"{provider_name} (attempt {attempt + 1})"] = f"{error_type}: {_sanitize_error_message(error_msg[:200])}"
 
                 # If this was the last retry for this provider, try next provider
                 if attempt < max_retries:
