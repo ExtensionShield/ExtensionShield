@@ -186,6 +186,12 @@ $success-green: #22c55e;
     max-width: min(520px, 96vw);
   }
 
+  /* Scale the caption down so the short step captions stay on one line even on
+     phones (the modal is capped at 520px here). Step 3 is long and still wraps. */
+  .demo-modal-caption {
+    font-size: clamp(10px, 2.7vw, 15px);
+  }
+
   .demo-modal-main {
     position: relative;
     gap: 0.5rem;
