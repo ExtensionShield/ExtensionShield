@@ -185,33 +185,33 @@ function UserMenu() {
 function NavItemDropdown({ item, location }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const menuRef = React.useRef(null);
-  const timeoutRef = React.useRef(null);
   const { isAuthenticated } = useAuth();
-  
-  const isActive = item.matchPaths.some(path => 
+
+  const isActive = item.matchPaths.some(path =>
     location.pathname.startsWith(path)
   );
 
+  // Click-to-open menu: close on an outside pointer-down or the Escape key.
+  // There are deliberately NO hover handlers — the menu behaves identically on
+  // mouse, touch, and keyboard, which also removes the hover-driven open/close
+  // flicker seen when the pointer crossed the trigger/menu edge.
   React.useEffect(() => {
-    const handleClickOutside = (event) => {
+    if (!isOpen) return undefined;
+    const handlePointerDown = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  // Cleanup timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setIsOpen(false);
     };
-  }, []);
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   const renderIcon = (icon) => {
     if (icon === "github") {
@@ -257,30 +257,17 @@ function NavItemDropdown({ item, location }) {
     );
   }
 
-  const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setIsOpen(false);
-    }, 150); // Small delay to allow moving to dropdown
-  };
-
   return (
-    <div 
-      className="nav-dropdown-container" 
+    <div
+      className="nav-dropdown-container"
       ref={menuRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
-      <button 
+      <button
+        type="button"
         className={`nav-item nav-dropdown-trigger ${isActive ? "active" : ""} ${isOpen ? "open" : ""}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         {item.label}
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
@@ -289,10 +276,8 @@ function NavItemDropdown({ item, location }) {
       </button>
 
       {isOpen && (
-        <div 
+        <div
           className={`nav-dropdown-menu ${item.dropdownSections ? "nav-dropdown-menu--sections" : ""}`}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
         >
           {item.dropdownSections ? (
             <>
