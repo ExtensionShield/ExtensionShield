@@ -198,82 +198,9 @@
   --extensionshield-bg-elevated: #2e2b28;
 }
 
-/* Optional: lighter dark variant (same warm hue) – use data-theme="dark-lighter" on <html> if needed */
-[data-theme="dark-lighter"] {
-  --extensionshield-bg-primary: #252320;
-  --extensionshield-bg-secondary: #2e2b28;
-  --theme-bg-primary: #252320;
-  --theme-bg-secondary: #2e2b28;
-  --color-background: 34 12% 13%;
-  --color-surface: 34 10% 16%;
-  --color-surface-elevated: 34 10% 18%;
-  --color-surface-hover: 34 10% 20%;
-  --color-card: 34 10% 16%;
-  --color-input: 34 12% 14%;
-}
-
-/* ============================================================================
-   DARK MODE (default) – card/surface consistency across all routes
-   Same look as Enterprise page: theme backgrounds and borders everywhere.
-   ============================================================================ */
-:root:not(.light) .surface-card,
-:root:not(.light) .bridge-step,
-:root:not(.light) .deception-card,
-:root:not(.light) .pricing-card,
-:root:not(.light) .link-card,
-:root:not(.light) .contribution-card,
-:root:not(.light) .community-card,
-:root:not(.light) .blog-card,
-:root:not(.light) .finding-card,
-:root:not(.light) .case-study-card,
-:root:not(.light) .research-card,
-:root:not(.light) .enterprise-card,
-:root:not(.light) .enterprise-form,
-:root:not(.light) .highlight-tile,
-:root:not(.light) .methodology-info-box,
-:root:not(.light) .glossary-term,
-:root:not(.light) .extension-card,
-:root:not(.light) .idea-card,
-:root:not(.light) .summary-panel,
-:root:not(.light) .results-sidebar-tile,
-:root:not(.light) .login-overlay-content,
-:root:not(.light) .aggregate-card,
-:root:not(.light) .pipeline-card,
-:root:not(.light) .open-source-credit,
-:root:not(.light) .chart-card,
-:root:not(.light) .recommendation-card,
-:root:not(.light) .capability-card,
-:root:not(.light) .report-card,
-:root:not(.light) .glass-card,
-:root:not(.light) .karma-panel,
-:root:not(.light) .api-card {
-  background: var(--extensionshield-bg-card);
-  border: 1px solid var(--extensionshield-border);
-  box-shadow: var(--extensionshield-card-shadow);
-  color: var(--extensionshield-text-primary);
-}
-
-/* Dark: form fields (e.g. Enterprise, contact forms) inherit theme */
-:root:not(.light) .field input,
-:root:not(.light) .field textarea {
-  background: var(--extensionshield-bg-secondary);
-  border: 1px solid var(--extensionshield-border);
-  color: var(--extensionshield-text-primary);
-}
-
-:root:not(.light) .field input::placeholder,
-:root:not(.light) .field textarea::placeholder {
-  color: var(--extensionshield-text-muted);
-}
-
-/* Dark: headings and body text use theme primary for WCAG */
-:root:not(.light) h1,
-:root:not(.light) h2,
-:root:not(.light) .enterprise-header h1,
-:root:not(.light) .enterprise-card h2,
-:root:not(.light) .enterprise-form h2 {
-  color: var(--extensionshield-text-primary);
-}
+/* Dark mode removed — the app is light-only. The former [data-theme="dark-lighter"]
+   variant and all :root:not(.light) card/field/heading rules were dead code:
+   <html> always carries `.light`, so those selectors never matched. */
 
 /* ============================================================================
    LIGHT MODE THEME

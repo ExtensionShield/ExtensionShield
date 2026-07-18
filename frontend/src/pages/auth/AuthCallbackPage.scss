@@ -110,30 +110,9 @@
   outline-offset: 2px;
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .auth-callback-content {
-    background: rgba(26, 32, 44, 0.95);
-    color: #f7fafc;
-  }
-
-  .auth-callback-title {
-    color: #f7fafc;
-  }
-
-  .auth-callback-message {
-    color: #e2e8f0;
-  }
-
-  .auth-callback-submessage {
-    color: #a0aec0;
-  }
-
-  .spinner-ring {
-    border-color: #4a5568;
-    border-top-color: #667eea;
-  }
-}
+// The sign-in card stays light in all cases — the app is light-only, so it must
+// not follow the OS dark preference (that made the "Signing you in…" card render
+// as a dark panel on machines set to dark mode).
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Success-state visuals only. Independent of the processing/error card chrome
@@ -200,16 +179,6 @@
 @media (prefers-reduced-motion: reduce) {
   .auth-callback-success-state {
     animation: none;
-  }
-}
-
-/* Dark mode: lighter check tone for contrast on dark surfaces */
-@media (prefers-color-scheme: dark) {
-  .auth-callback-success-heading {
-    color: #f7fafc;
-  }
-  .auth-callback-success-status {
-    color: #a0aec0;
   }
 }
 

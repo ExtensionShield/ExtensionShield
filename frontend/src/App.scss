@@ -928,8 +928,8 @@ body {
   text-decoration: none;
   background: var(--extensionshield-accent-cta, var(--extensionshield-accent));
   border: 1px solid var(--extensionshield-accent-cta, var(--extensionshield-accent));
-  
-  border-radius: 9999px;
+
+  border-radius: 10px; // match the other CTA/action buttons (was a 9999px pill)
   white-space: nowrap;
   flex-shrink: 0;
   display: inline-flex;
@@ -984,6 +984,7 @@ body {
 /* User Menu */
 .user-menu-container {
   position: relative;
+  margin-top: 5px; // vertical alignment for the signed-in account menu in the header
 }
 
 .user-menu-trigger {
