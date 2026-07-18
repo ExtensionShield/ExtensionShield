@@ -64,6 +64,53 @@ def _escape_postgrest_like_term(term: str) -> str:
     return re.sub(r"([%_\\])", r"\\\1", term)
 
 
+def _annotate_needs_rescan(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Flag user-history rows whose scan_results row is MISSING (orphaned by a DB
+    cutover) or FAILED/partial, so callers render a 'rescan' state and kick off a
+    fresh scan instead of a misleading 'NOT SAFE'/'Partial' report.
+
+    For a real Chrome Web Store id (32 chars a-p) this sets needs_rescan=True +
+    rescan_reason ('not_scanned' | 'failed'), which the UI auto-rescans from the
+    store. Uploaded/private scans (UUID ids) cannot be re-fetched from the store,
+    so they get unavailable=True instead (a neutral state, never a doomed rescan
+    or a stuck spinner). Completed rows are left untouched. Works for both the
+    SQLite LEFT JOIN shape (missing row → NULL columns) and the Supabase shape
+    (missing row → bare {"extension_id": id} stub).
+    """
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        status = r.get("status")
+        has_scan = bool(r.get("extension_name")) or status is not None
+        broken = (not has_scan) or (isinstance(status, str) and status.lower() in ("failed", "error"))
+        if not broken:
+            continue
+        reason = "not_scanned" if not has_scan else "failed"
+        ext = r.get("extension_id") or ""
+        if re.fullmatch(r"[a-p]{32}", ext):
+            r["needs_rescan"] = True
+            r["rescan_reason"] = reason
+        else:
+            r["unavailable"] = True
+            r["rescan_reason"] = reason
+    return rows
+
+
+def _promote_summary_fields(record: Dict[str, Any]) -> None:
+    """Copy the modern report fields up from the stored `summary` JSONB blob to
+    top-level keys, so API consumers get scoring_v2 / report_view_model /
+    governance_bundle / virustotal_analysis without unpacking `summary`.
+
+    Mutates `record` in place; no-op when `summary` is absent or not a dict.
+    """
+    summary = record.get("summary")
+    if not isinstance(summary, dict):
+        return
+    for _field in ("scoring_v2", "report_view_model", "governance_bundle", "virustotal_analysis"):
+        if _field in summary:
+            record[_field] = summary.get(_field)
+
+
 class Database:
     """SQLite database manager (dev fallback when Postgres/Supabase is not used)."""
 
@@ -710,10 +757,24 @@ class Database:
                 
                 cursor.execute(base_query, (user_id, limit))
                 rows = cursor.fetchall()
-                return [dict(row) for row in rows]
+                return _annotate_needs_rescan([dict(row) for row in rows])
         except Exception as e:
             print(f"Error getting user scan history: {e}")
             return []
+
+    def user_has_extension_in_history(self, user_id: str, extension_id: str) -> bool:
+        """True if this user already has this extension in their scan history."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT 1 FROM user_scan_history WHERE user_id = ? AND extension_id = ? LIMIT 1",
+                    (user_id, extension_id),
+                )
+                return cursor.fetchone() is not None
+        except Exception as e:
+            print(f"Error checking user scan history membership: {e}")
+            return False
 
     def get_scan_result(self, identifier: str) -> Optional[Dict[str, Any]]:
         """Get scan result by extension ID or slug. Identifier can be 32-char extension ID, upload UUID, or name slug."""
@@ -902,17 +963,8 @@ class Database:
                     try:
                         row_dict = self._row_to_dict(row)
                         
-                        # Extract modern fields from summary JSON if present (for signal calculation)
-                        summary = row_dict.get("summary", {})
-                        if isinstance(summary, dict):
-                            if "scoring_v2" in summary:
-                                row_dict["scoring_v2"] = summary.get("scoring_v2")
-                            if "report_view_model" in summary:
-                                row_dict["report_view_model"] = summary.get("report_view_model")
-                            if "governance_bundle" in summary:
-                                row_dict["governance_bundle"] = summary.get("governance_bundle")
-                            if "virustotal_analysis" in summary:
-                                row_dict["virustotal_analysis"] = summary.get("virustotal_analysis")
+                        # Promote modern report fields from the summary JSONB (for signal calculation)
+                        _promote_summary_fields(row_dict)
                         
                         result_rows.append(row_dict)
                     except Exception as row_error:
@@ -1502,17 +1554,8 @@ class SupabaseDatabase:
                 r.pop("updated_at", None)
                 r.pop("created_at", None)
                 
-                # Extract modern fields from summary JSONB if present
-                summary = r.get("summary", {})
-                if isinstance(summary, dict):
-                    if "scoring_v2" in summary:
-                        r["scoring_v2"] = summary.get("scoring_v2")
-                    if "report_view_model" in summary:
-                        r["report_view_model"] = summary.get("report_view_model")
-                    if "governance_bundle" in summary:
-                        r["governance_bundle"] = summary.get("governance_bundle")
-                    if "virustotal_analysis" in summary:
-                        r["virustotal_analysis"] = summary.get("virustotal_analysis")
+                # Promote modern report fields from the summary JSONB
+                _promote_summary_fields(r)
                 
                 by_id[r.get("extension_id")] = r
 
@@ -1522,10 +1565,26 @@ class SupabaseDatabase:
                 ext = h.get("extension_id")
                 row = by_id.get(ext, {"extension_id": ext})
                 out.append(row)
-            return out
+            return _annotate_needs_rescan(out)
         except Exception as e:
             print(f"Error getting user scan history (Supabase): {e}")
             return []
+
+    def user_has_extension_in_history(self, user_id: str, extension_id: str) -> bool:
+        """True if this user already has this extension in their scan history."""
+        try:
+            resp = (
+                self.client.table("user_scan_history")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("extension_id", extension_id)
+                .limit(1)
+                .execute()
+            )
+            return bool(getattr(resp, "data", None))
+        except Exception as e:
+            print(f"Error checking user scan history membership (Supabase): {e}")
+            return False
 
     def get_scan_result(self, identifier: str) -> Optional[Dict[str, Any]]:
         """Get scan result by extension ID or slug. Identifier can be 32-char extension ID, upload UUID, or name slug."""
@@ -1560,18 +1619,8 @@ class SupabaseDatabase:
                 result["timestamp"] = ts
             result.pop("scanned_at", None)
             
-            # Extract modern fields from summary JSONB if present
-            # Also check top-level in case they were stored there (backward compatibility)
-            summary = result.get("summary", {})
-            if isinstance(summary, dict):
-                if "scoring_v2" in summary:
-                    result["scoring_v2"] = summary.get("scoring_v2")
-                if "report_view_model" in summary:
-                    result["report_view_model"] = summary.get("report_view_model")
-                if "governance_bundle" in summary:
-                    result["governance_bundle"] = summary.get("governance_bundle")
-                if "virustotal_analysis" in summary:
-                    result["virustotal_analysis"] = summary.get("virustotal_analysis")
+            # Promote modern report fields from the summary JSONB
+            _promote_summary_fields(result)
             
             # If not found in summary, check top-level (for backward compatibility with old scans)
             # Note: Supabase might return these as top-level fields if they were stored that way
@@ -1606,17 +1655,8 @@ class SupabaseDatabase:
                 row.pop("updated_at", None)
                 row.pop("created_at", None)
                 
-                # Extract modern fields from summary JSONB if present
-                summary = row.get("summary", {})
-                if isinstance(summary, dict):
-                    if "scoring_v2" in summary:
-                        row["scoring_v2"] = summary.get("scoring_v2")
-                    if "report_view_model" in summary:
-                        row["report_view_model"] = summary.get("report_view_model")
-                    if "governance_bundle" in summary:
-                        row["governance_bundle"] = summary.get("governance_bundle")
-                    if "virustotal_analysis" in summary:
-                        row["virustotal_analysis"] = summary.get("virustotal_analysis")
+                # Promote modern report fields from the summary JSONB
+                _promote_summary_fields(row)
             return rows
         except Exception as e:
             print(f"Error getting scan history (Supabase): {e}")
@@ -1671,17 +1711,8 @@ class SupabaseDatabase:
                     row.pop("updated_at", None)
                     row.pop("created_at", None)
                     
-                    # Extract modern fields from summary JSONB if present
-                    summary = row.get("summary", {})
-                    if isinstance(summary, dict):
-                        if "scoring_v2" in summary:
-                            row["scoring_v2"] = summary.get("scoring_v2")
-                        if "report_view_model" in summary:
-                            row["report_view_model"] = summary.get("report_view_model")
-                        if "governance_bundle" in summary:
-                            row["governance_bundle"] = summary.get("governance_bundle")
-                        if "virustotal_analysis" in summary:
-                            row["virustotal_analysis"] = summary.get("virustotal_analysis")
+                    # Promote modern report fields from the summary JSONB
+                    _promote_summary_fields(row)
                 except Exception as row_error:
                     print(f"Error processing row in get_recent_scans (Supabase): {row_error}")
                     # Continue processing other rows

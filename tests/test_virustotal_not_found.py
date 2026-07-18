@@ -24,7 +24,7 @@ def test_not_found_is_unknown_not_clean(tmp_path, monkeypatch):
     monkeypatch.setattr(
         analyzer,
         "_check_hash_virustotal_sync",
-        lambda _h: {"found": False, "message": "Hash not found in VirusTotal database"},
+        lambda _h, max_wait=None: {"found": False, "message": "Hash not found in VirusTotal database"},
     )
 
     result = analyzer.analyze(str(tmp_path))
@@ -41,7 +41,7 @@ def test_found_with_zero_detections_is_clean(tmp_path, monkeypatch):
     monkeypatch.setattr(
         analyzer,
         "_check_hash_virustotal_sync",
-        lambda _h: {
+        lambda _h, max_wait=None: {
             "found": True,
             "detection_stats": {
                 "malicious": 0,
@@ -66,7 +66,7 @@ def test_malicious_detection_is_malicious(tmp_path, monkeypatch):
     monkeypatch.setattr(
         analyzer,
         "_check_hash_virustotal_sync",
-        lambda _h: {
+        lambda _h, max_wait=None: {
             "found": True,
             "detection_stats": {
                 "malicious": 8,

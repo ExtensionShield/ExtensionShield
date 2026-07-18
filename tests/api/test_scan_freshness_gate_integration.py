@@ -11,7 +11,7 @@ These exercise the wiring that unit tests of the helpers cannot:
 """
 import copy
 import importlib
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -117,7 +117,7 @@ def test_trigger_rescans_precutoff_cached_row_without_consuming_credit(client):
     _seed_cached(PRE_CUTOFF, ScoringEngine.VERSION)
     consume = MagicMock()
     with patch.object(main, "_fast_live_version_check", return_value=None), \
-         patch.object(main, "run_analysis_workflow", MagicMock()), \
+         patch.object(main, "run_analysis_workflow", AsyncMock()), \
          patch.object(main, "_consume_deep_scan", consume):
         r = client.post("/api/scan/trigger", json={"url": STORE_URL})
     assert r.status_code == 200
@@ -133,7 +133,7 @@ def test_trigger_rescans_none_version_precutoff_row(client):
     # scoring_version=None: model_stale can NOT see this row; only cutoff_stale can.
     _seed_cached(PRE_CUTOFF, None)
     with patch.object(main, "_fast_live_version_check", return_value=None), \
-         patch.object(main, "run_analysis_workflow", MagicMock()), \
+         patch.object(main, "run_analysis_workflow", AsyncMock()), \
          patch.object(main, "_consume_deep_scan", MagicMock()):
         r = client.post("/api/scan/trigger", json={"url": STORE_URL})
     assert r.status_code == 200
@@ -146,7 +146,7 @@ def test_failed_refresh_cooldown_suppresses_repeat_rescan(client):
     _seed_cached(PRE_CUTOFF, ScoringEngine.VERSION)
     main._note_failed_refresh(EXT_ID)
     with patch.object(main, "_fast_live_version_check", return_value=None), \
-         patch.object(main, "run_analysis_workflow", MagicMock()) as rw:
+         patch.object(main, "run_analysis_workflow", AsyncMock()) as rw:
         r = client.post("/api/scan/trigger", json={"url": STORE_URL})
     assert r.status_code == 200
     body = r.json()
@@ -167,7 +167,7 @@ def test_persist_scan_failure_records_cooldown_when_preserving():
 def test_trigger_serves_postcutoff_cached_row_instantly(client):
     _seed_cached(POST_CUTOFF, ScoringEngine.VERSION)
     with patch.object(main, "_fast_live_version_check", return_value=None), \
-         patch.object(main, "run_analysis_workflow", MagicMock()) as rw:
+         patch.object(main, "run_analysis_workflow", AsyncMock()) as rw:
         r = client.post("/api/scan/trigger", json={"url": STORE_URL})
     assert r.status_code == 200
     body = r.json()

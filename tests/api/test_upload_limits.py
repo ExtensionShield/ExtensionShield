@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -35,7 +35,7 @@ def test_upload_rejects_payload_above_configured_limit(tmp_path):
 
     with patch("extension_shield.api.main.get_settings", return_value=_settings(4)), \
          patch("extension_shield.api.main.RESULTS_DIR", tmp_path), \
-         patch("extension_shield.api.main.run_analysis_workflow") as run_analysis:
+         patch("extension_shield.api.main.run_analysis_workflow", new_callable=AsyncMock) as run_analysis:
         response = client.post(
             "/api/scan/upload",
             files={"file": ("extension.zip", b"PK\x03\x04X", "application/zip")},

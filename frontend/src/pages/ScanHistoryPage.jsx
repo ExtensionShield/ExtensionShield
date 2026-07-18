@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import databaseService from "../services/databaseService";
+import realScanService from "../services/realScanService";
 import {
   getSignalColorClass,
   getSignalDisplayLabel,
@@ -129,6 +130,52 @@ const formatTimeAgo = (timestamp) => {
   return scanTime.toLocaleDateString();
 };
 
+// Shown for history rows whose scan is missing (orphaned by a DB reset) or
+// failed — those get a fresh scan kicked off instead of a misleading verdict.
+const RescanPill = () => (
+  <span
+    className="rescan-pill"
+    title="This scan is missing or incomplete and is being re-run"
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "2px 10px",
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 600,
+      color: "#7a5b00",
+      background: "#fff4d6",
+      border: "1px solid #f0d488",
+      whiteSpace: "nowrap",
+    }}
+  >
+    Rescanning…
+  </span>
+);
+
+// Shown for rows that can't be re-fetched from the store (e.g. uploaded/private
+// builds whose scan was lost) — a neutral state instead of a misleading verdict.
+const UnavailablePill = () => (
+  <span
+    className="unavailable-pill"
+    title="This scan isn't available and can't be re-fetched from the Chrome Web Store"
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "2px 10px",
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 600,
+      color: "#555",
+      background: "#ececec",
+      border: "1px solid #ccc",
+      whiteSpace: "nowrap",
+    }}
+  >
+    Unavailable
+  </span>
+);
+
 const ScanHistoryPage = () => {
   const [allScans, setAllScans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +186,7 @@ const ScanHistoryPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [hoveredRow, setHoveredRow] = useState(null);
   const tableWrapperRef = useRef(null);
+  const rescanTriggeredRef = useRef(new Set()); // ext ids we've kicked a rescan for this session
   const navigate = useNavigate();
   const { isAuthenticated, openSignInModal, accessToken } = useAuth();
 
@@ -201,6 +249,46 @@ const ScanHistoryPage = () => {
       isMounted = false;
     };
   }, [accessToken, canLoadHistory, debouncedSearch, isAuthenticated]);
+
+  // Issue 2: kick off bounded rescans for orphaned/failed history rows so they
+  // resolve to real reports instead of a stale/missing verdict. Capped and
+  // de-duped per session; the backend adds its own concurrency + VirusTotal-quota
+  // guards, so this cannot become a rescan storm.
+  useEffect(() => {
+    const MAX_PER_LOAD = 8;
+    const CONCURRENCY = 2;
+    const isStoreId = (id) => /^[a-p]{32}$/.test(id || ""); // only CWS ids are rescannable from a store URL
+    const queue = allScans
+      .filter((s) => s?.needs_rescan && isStoreId(s.extension_id) && !rescanTriggeredRef.current.has(s.extension_id))
+      .slice(0, MAX_PER_LOAD);
+    if (queue.length === 0) return;
+
+    let cancelled = false;
+    const worker = async () => {
+      while (!cancelled && queue.length) {
+        const scan = queue.shift();
+        if (!scan || rescanTriggeredRef.current.has(scan.extension_id)) continue;
+        // Mark right before firing (not the whole batch up front) so ids a
+        // cancelled run never reached stay eligible on the next load.
+        rescanTriggeredRef.current.add(scan.extension_id);
+        try {
+          await realScanService.triggerScan(
+            `https://chromewebstore.google.com/detail/_/${scan.extension_id}`,
+            { historyRefresh: true }
+          );
+        } catch {
+          // Leave it marked: a rate-limit/backpressure failure must not re-fire
+          // on every history reload (e.g. each search keystroke). A fresh session
+          // (component remount) resets the ref and retries.
+        }
+      }
+    };
+    for (let i = 0; i < Math.min(CONCURRENCY, queue.length); i += 1) worker();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allScans]);
 
   useEffect(() => {
     const tableWrapper = tableWrapperRef.current;
@@ -516,19 +604,31 @@ const ScanHistoryPage = () => {
                               )}
                             </td>
                             <td>
-                              <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} />
+                              {scan.needs_rescan ? (
+                                <RescanPill />
+                              ) : scan.unavailable ? (
+                                <UnavailablePill />
+                              ) : (
+                                <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} />
+                              )}
                             </td>
                             <td className="signals-cell">
-                              <div className="signals-container">
-                                <SignalChip type="security" signal={scan.signals?.security_signal} />
-                                <SignalChip type="privacy" signal={scan.signals?.privacy_signal} />
-                                <SignalChip type="governance" signal={scan.signals?.governance_signal} />
-                              </div>
+                              {scan.needs_rescan || scan.unavailable ? (
+                                <span className="no-data">{scan.needs_rescan ? "Pending rescan" : "—"}</span>
+                              ) : (
+                                <div className="signals-container">
+                                  <SignalChip type="security" signal={scan.signals?.security_signal} />
+                                  <SignalChip type="privacy" signal={scan.signals?.privacy_signal} />
+                                  <SignalChip type="governance" signal={scan.signals?.governance_signal} />
+                                </div>
+                              )}
                             </td>
                             <td className="evidence-cell">
                               <div className="evidence-container">
                                 <span className="findings-count">
-                                  {scan.findings_count || 0} finding{scan.findings_count !== 1 ? "s" : ""}
+                                  {scan.needs_rescan || scan.unavailable
+                                    ? "—"
+                                    : `${scan.findings_count || 0} finding${scan.findings_count !== 1 ? "s" : ""}`}
                                 </span>
                                 <button
                                   className="view-report-btn"
