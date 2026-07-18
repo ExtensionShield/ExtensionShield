@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  AlertTriangle, ArrowRight, CheckCircle, ChevronDown,
-  Code2, Download, Eye, Github, Lock, Scale, ShieldCheck, Star,
+  AlertTriangle, ArrowRight, CheckCircle, ChevronDown, ChevronLeft, ChevronRight,
+  Download, Eye, Folder, Github, Lock, Puzzle, Scale, ShieldAlert, ShieldCheck,
+  Star, TrendingUp,
 } from "lucide-react";
 import { useScan } from "../context/ScanContext";
 import databaseService from "../services/databaseService";
@@ -20,29 +21,11 @@ import "./HomePage.scss";
 const GITHUB_REPO = "ExtensionShield/ExtensionShield";
 const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
 
-/* ── Real frozen scan ────────────────────────────────────────────────────────
-   Captured from a live ExtensionShield scan of PayPal Honey
-   (extension id bmnlcjabgnpnenekpadlanbbkooimhnj). scoring_v2: overall 66 /
-   MEDIUM, security 74, privacy 31, governance 100, 9 permissions, 2 findings.
-   ──────────────────────────────────────────────────────────────────────────── */
+/* Real frozen PayPal Honey scan — the risk-analysis step-3 card links to its
+   live report (extension id bmnlcjabgnpnenekpadlanbbkooimhnj). */
 const HONEY_SCAN = {
   extensionId: "bmnlcjabgnpnenekpadlanbbkooimhnj",
   name: "PayPal Honey: Coupons & Cash Back",
-  version: "v19.0.2",
-  risk: "MEDIUM",
-  scores: [
-    { label: "Security",   Icon: ShieldCheck, score: 74,  variant: "warn" },
-    { label: "Privacy",    Icon: Eye,         score: 31,  variant: "bad"  },
-    { label: "Governance", Icon: Scale,       score: 100, variant: "good" },
-  ],
-  findings: [
-    { Icon: AlertTriangle, text: "Broad host permissions — all HTTP sites", variant: "warn" },
-    { Icon: AlertTriangle, text: "Data access & browser control: high",     variant: "warn" },
-    { Icon: CheckCircle,   text: "VirusTotal: no detections",               variant: "ok"   },
-    { Icon: CheckCircle,   text: "Publisher disclosures verified",          variant: "ok"   },
-  ],
-  permissions: 9,
-  reviewCount: 2,
 };
 
 /* ── FAQ: one array drives both the visible section and the FAQPage JSON-LD ─── */
@@ -77,30 +60,49 @@ const FAQ_ITEMS = [
   },
 ];
 
-/* ── The three risk layers ──────────────────────────────────────────────────── */
-const RISK_LAYERS = [
+/* ── The three risk layers (drive the merged risk-analysis section) ──────────
+   Short descriptions label what each layer inspects. Score reflects the frozen
+   PayPal Honey scan (Security 74, Privacy 31, Governance 100); higher = safer.
+   Each layer keeps its topic link so the internal-link graph to the pillar
+   pages is preserved. ─────────────────────────────────────────────────────── */
+const SCAN_LAYERS = [
   {
-    title: "Security",
+    label: "Security",
     Icon: ShieldCheck,
-    direction: "Higher score = safer code",
-    body: "Code-risk signals: risky APIs, obfuscation, and malware-related indicators.",
+    score: 74,
+    desc: "Code safety, permissions, vulnerabilities",
     link: { label: "Browser extension security", to: "/extension-security" },
   },
   {
-    title: "Privacy",
+    label: "Privacy",
     Icon: Eye,
-    direction: "Higher score = less exposure",
-    body: "Permission and data-exposure signals: host access, cookies, clipboard access, and trackers.",
+    score: 31,
+    desc: "Data collection, tracking, data usage",
     link: { label: "Chrome extension permissions", to: "/chrome-extension-permissions" },
   },
   {
-    title: "Governance",
+    label: "Governance",
     Icon: Scale,
-    direction: "Higher score = more transparent publisher",
-    body: "Publisher transparency signals: terms-of-service alignment, disclosure and privacy-policy consistency, and claimed-vs-actual behavior.",
+    score: 100,
+    desc: "Publisher trust, transparency, policy",
     link: { label: "Extension governance", to: "/extension-governance" },
   },
 ];
+
+/* Score → tier (higher is safer): drives meter + number colour. */
+const SCAN_METER_SEGMENTS = 5;
+const scoreTier = (s) => (s >= 67 ? "good" : s >= 34 ? "warn" : "bad");
+
+/* Multi-colour Chrome logo used in the search inputs + how-it-works step. */
+const ChromeLogo = () => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chrome-logo" aria-hidden="true">
+    <path d="M12 12L22 12A10 10 0 0 1 7 3.34L12 12Z" fill="#4285F4" />
+    <path d="M12 12L7 3.34A10 10 0 0 1 7 20.66L12 12Z" fill="#EA4335" />
+    <path d="M12 12L7 20.66A10 10 0 0 1 22 12L12 12Z" fill="#FBBC05" />
+    <circle cx="12" cy="12" r="4" fill="#34A853" />
+    <circle cx="12" cy="12" r="2.5" fill="white" />
+  </svg>
+);
 
 /* ── Hero: real frozen scan icon ─────────────────────────────────────────────── */
 const HoneyHexLogo = () => (
@@ -116,64 +118,145 @@ const HoneyHexLogo = () => (
   </svg>
 );
 
-const ScanPreviewCard = () => (
-  <Link
-    to={getScanResultsRoute(HONEY_SCAN.extensionId)}
-    className="spc-card"
-    aria-label={`Example ExtensionShield scan of ${HONEY_SCAN.name}: medium risk. Security 74, Privacy 31, Governance 100. View the full report.`}
-  >
-    <div className="spc-header">
-      <div className="spc-header-left">
-        <Lock size={11} strokeWidth={2.5} className="spc-lock-icon" />
-        <span className="spc-header-label">Example scan</span>
-      </div>
-      <span className="spc-risk-pill medium">{HONEY_SCAN.risk}</span>
-    </div>
+/* ── Hero: six real frozen scan snapshots ────────────────────────────────────
+   Captured from live ExtensionShield scans (scoring_v2). Icons are static
+   assets in /public/hero-scans/<id>.png; each card links to the real report.
+   The carousel auto-advances (pauses on hover/focus, honours reduced motion).
+   ──────────────────────────────────────────────────────────────────────────── */
+const HERO_SCANS = [
+  { id: "nngceckbapebfimnlniiiahkandclblb", name: "Bitwarden Password Manager",   version: "2026.6.1",      overall: 73, risk: "MEDIUM", pill: "medium", permissions: 18, security: 87, privacy: 31, governance: 100 },
+  { id: "aapbdbdomjkkjkaonfhkkikfgjllcleb", name: "Google Translate",             version: "2.0.17",       overall: 80, risk: "LOW",    pill: "good",   permissions: 5,  security: 85, privacy: 95, governance: 100 },
+  { id: "kdpelmjpfafjppnhbloffcjpeomlnpah", name: "WPS PDF Editor",               version: "1.0.0.58",     overall: 36, risk: "HIGH",   pill: "bad",    permissions: 11, security: 14, privacy: 33, governance: 62  },
+  { id: "aeblfdkhhhdcdjpifhhbdiojplfjncoa", name: "1Password – Password Manager", version: "8.12.26.40",   overall: 56, risk: "MEDIUM", pill: "medium", permissions: 17, security: 84, privacy: 35, governance: 49  },
+  { id: "ddkjiahejlhfcafbddmgiahcphecmpfh", name: "uBlock Origin Lite",           version: "2026.705.2152", overall: 86, risk: "LOW",   pill: "good",   permissions: 9,  security: 82, privacy: 75, governance: 100 },
+  { id: "knheggckgoiihginacbkhaalnibhilkk", name: "Notion Web Clipper",           version: "0.2.13",       overall: 80, risk: "LOW",    pill: "good",   permissions: 8,  security: 98, privacy: 88, governance: 100 },
+];
 
-    <div className="spc-ext-row">
-      <div className="spc-ext-icon"><HoneyHexLogo /></div>
-      <div className="spc-ext-meta">
-        <span className="spc-ext-name">{HONEY_SCAN.name}</span>
-        <span className="spc-ext-sub">Chrome Web Store · {HONEY_SCAN.version}</span>
-      </div>
-    </div>
+const HERO_ROTATE_MS = 4000; // auto-advance interval; pauses on hover/focus
 
-    <div className="spc-scores">
-      {HONEY_SCAN.scores.map((s) => (
-        <div className="spc-score-row" key={s.label}>
-          <s.Icon size={13} className={`spc-score-icon ${s.variant}`} />
-          <span className="spc-score-label">{s.label}</span>
-          <div className="spc-bar">
-            <div className={`spc-bar-fill ${s.variant}`} style={{ width: `${s.score}%` }} />
+const HeroScanCard = ({ scan, active }) => {
+  const rows = [
+    { label: "Security",   Icon: ShieldCheck, score: scan.security },
+    { label: "Privacy",    Icon: Eye,         score: scan.privacy },
+    { label: "Governance", Icon: Scale,       score: scan.governance },
+  ];
+  return (
+    <Link
+      to={getScanResultsRoute(scan.id)}
+      className="spc-card"
+      tabIndex={active ? 0 : -1}
+      aria-hidden={active ? undefined : true}
+      aria-label={`Example scan of ${scan.name}: ${scan.overall} out of 100, ${scan.risk.toLowerCase()} risk. View the full report.`}
+    >
+      <div className="spc-header">
+        <div className="spc-header-left">
+          <Lock size={11} strokeWidth={2.5} className="spc-lock-icon" />
+          <span className="spc-header-label">Example scan</span>
+        </div>
+        <span className={`spc-risk-pill ${scan.pill}`}>{scan.risk}</span>
+      </div>
+
+      <div className="spc-ext-row">
+        <div className="spc-ext-icon">
+          <img
+            src={`/hero-scans/${scan.id}.png`}
+            alt=""
+            width="36"
+            height="36"
+            loading="lazy"
+            onError={(e) => { e.target.onerror = null; e.target.src = EXTENSION_ICON_PLACEHOLDER; }}
+          />
+        </div>
+        <div className="spc-ext-meta">
+          <span className="spc-ext-name">{scan.name}</span>
+          <span className="spc-ext-sub">Chrome Web Store · v{scan.version}</span>
+        </div>
+        <div className={`spc-ext-overall ${scan.pill}`}>
+          <span className="spc-overall-num">{scan.overall}</span>
+          <span className="spc-overall-max">/100</span>
+        </div>
+      </div>
+
+      <div className="spc-scores">
+        {rows.map((s) => {
+          const v = scoreTier(s.score);
+          return (
+            <div className="spc-score-row" key={s.label}>
+              <s.Icon size={13} className={`spc-score-icon ${v}`} />
+              <span className="spc-score-label">{s.label}</span>
+              <div className="spc-bar">
+                <div className={`spc-bar-fill ${v}`} style={{ width: `${s.score}%` }} />
+              </div>
+              <span className={`spc-score-num ${v}`}>{s.score}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="spc-footer">
+        <span>{scan.permissions} permissions</span>
+        <span className="spc-view">View report →</span>
+      </div>
+    </Link>
+  );
+};
+
+const ScanCarousel = () => {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const count = HERO_SCANS.length;
+
+  useEffect(() => {
+    if (reducedMotion || paused) return undefined;
+    const id = setInterval(() => setIndex((i) => (i + 1) % count), HERO_ROTATE_MS);
+    return () => clearInterval(id);
+  }, [reducedMotion, paused, count]);
+
+  const go = useCallback((n) => setIndex(((n % count) + count) % count), [count]);
+
+  return (
+    <div
+      className="hero-carousel"
+      role="group"
+      aria-roledescription="carousel"
+      aria-label="Example extension scans"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
+      <div className="hero-carousel-viewport">
+        {HERO_SCANS.map((scan, i) => (
+          <div className={`hero-carousel-slide${i === index ? " is-active" : ""}`} key={scan.id}>
+            <HeroScanCard scan={scan} active={i === index} />
           </div>
-          <span className={`spc-score-num ${s.variant}`}>{s.score}</span>
+        ))}
+      </div>
+
+      <div className="hero-carousel-controls">
+        <button type="button" className="hero-carousel-arrow" onClick={() => go(index - 1)} aria-label="Previous example scan">
+          <ChevronLeft size={16} strokeWidth={2.5} aria-hidden />
+        </button>
+        <div className="hero-carousel-dots">
+          {HERO_SCANS.map((scan, i) => (
+            <button
+              type="button"
+              key={scan.id}
+              className={`hero-carousel-dot${i === index ? " is-active" : ""}`}
+              onClick={() => go(i)}
+              aria-label={`Show ${scan.name}`}
+              aria-current={i === index ? "true" : undefined}
+            />
+          ))}
         </div>
-      ))}
+        <button type="button" className="hero-carousel-arrow" onClick={() => go(index + 1)} aria-label="Next example scan">
+          <ChevronRight size={16} strokeWidth={2.5} aria-hidden />
+        </button>
+      </div>
     </div>
-
-    <div className="spc-divider" />
-
-    <div className="spc-findings">
-      {HONEY_SCAN.findings.map((f, i) => (
-        <div className={`spc-finding ${f.variant}`} key={i}>
-          <f.Icon size={12} />
-          <span>{f.text}</span>
-        </div>
-      ))}
-    </div>
-
-    <div className="spc-footer">
-      <span>{HONEY_SCAN.permissions} permissions</span>
-      <span className="spc-dot" aria-hidden>·</span>
-      <span className="spc-footer-warn">{HONEY_SCAN.reviewCount} findings need review</span>
-      <span className="spc-view">View report →</span>
-    </div>
-
-    <p className="spc-illustrative" style={{ margin: "8px 0 0", fontSize: "11px", opacity: 0.7 }}>
-      Illustrative example — not a live scan
-    </p>
-  </Link>
-);
+  );
+};
 
 /* ── Section 2: update-gap artifact ──────────────────────────────────────────
    Illustrative comparison of two scans a user ran themselves: v12.0.1 (an
@@ -206,151 +289,88 @@ const useReducedMotion = () => {
 
 const UpdateGapContent = () => (
   <>
-    <div className="hp-ugap-header">
-      <div className="hp-ugap-icon">
-        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="32" height="32" rx="7" fill="#1e293b" />
-          <path
-            d="M10 13h1.5v-1a2.5 2.5 0 0 1 5 0v1H18v2h-1a1 1 0 1 0 0 2h1v2h-7v-2h1a1 1 0 1 0 0-2h-2v-2z"
-            fill="#475569"
-          />
-          <path d="M19 19h1.5v1.5h1.5v1.5H17V20h2v-1z" fill="#475569" />
-        </svg>
-      </div>
-      <div className="hp-ugap-meta">
+    {/* Header — extension identity */}
+    <div className="hp-ugap-head">
+      <span className="hp-ugap-icon" aria-hidden="true"><Puzzle size={22} strokeWidth={2} /></span>
+      <div className="hp-ugap-id">
         <span className="hp-ugap-name">Productivity Plus</span>
-        <span className="hp-ugap-store">Chrome Web Store</span>
+        <span className="hp-ugap-pub">Publisher: origami.dev</span>
       </div>
     </div>
 
-    {/* Version 1 — an earlier scan the user ran */}
-    <div className="hp-ugap-v1">
-      <div className="hp-ugap-row-label hp-ugap-row-label--reviewed">
-        <span className="hp-ugap-dot hp-ugap-dot--green" />
-        <span>v12.0.1 · Earlier scan · low risk</span>
+    <div className="hp-ugap-rule" aria-hidden="true" />
+
+    {/* Version diff — earlier scan vs latest version */}
+    <div className="hp-ugap-versions">
+      <div className="hp-ugap-ver">
+        <span className="hp-ugap-ver-pill good">v12.0.1</span>
+        <span className="hp-ugap-ver-cap good"><span className="hp-ugap-ver-dot" />Earlier scan</span>
       </div>
-      <div className="hp-ugap-chips">
-        <span className="hp-ugap-chip hp-ugap-chip--ok">activeTab</span>
-        <span className="hp-ugap-chip hp-ugap-chip--ok">storage</span>
-        <span className="hp-ugap-chip hp-ugap-chip--ok">cookies</span>
-      </div>
-      <div className="hp-ugap-pub">
-        <span className="hp-ugap-pub-key">Publisher</span>
-        <span className="hp-ugap-pub-val">original.dev</span>
+      <span className="hp-ugap-arrow" aria-hidden="true">
+        <svg width="58" height="12" viewBox="0 0 58 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="0" y1="6" x2="46" y2="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" />
+          <path d="M45 2l6 4-6 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <div className="hp-ugap-ver">
+        <span className="hp-ugap-ver-pill warn">v12.4.0</span>
+        <span className="hp-ugap-ver-cap warn"><span className="hp-ugap-ver-dot" />Latest version</span>
       </div>
     </div>
 
-    {/* Timeline divider */}
-    <div className="hp-ugap-divider">
-      <div className="hp-ugap-divider-rule hp-ugap-divider-rule--left" />
-      <span className="hp-ugap-divider-label">v12.4.0 released · 3 months later</span>
-      <div className="hp-ugap-divider-rule hp-ugap-divider-rule--right" />
-    </div>
+    <div className="hp-ugap-rule" aria-hidden="true" />
 
-    {/* Version 2 — the current version; re-scan and compare by hand */}
-    <div className="hp-ugap-v2">
-      <div className="hp-ugap-row-label hp-ugap-row-label--needsreview">
-        <span className="hp-ugap-dot hp-ugap-dot--amber" />
-        <span>v12.4.0 · Re-scan now</span>
+    {/* What changed between the two versions */}
+    <div className="hp-ugap-tiles">
+      <div className="hp-ugap-tile good">
+        <span className="hp-ugap-tile-icon"><TrendingUp size={18} strokeWidth={2} aria-hidden /></span>
+        <span className="hp-ugap-tile-text">
+          <span className="hp-ugap-tile-strong">+2</span>
+          <span className="hp-ugap-tile-sub">endpoints</span>
+        </span>
       </div>
-      <div className="hp-ugap-unchanged">
-        <CheckCircle size={11} strokeWidth={2.5} aria-hidden />
-        <span>Declared permissions unchanged</span>
+      <div className="hp-ugap-tile warn">
+        <span className="hp-ugap-tile-icon"><ShieldAlert size={18} strokeWidth={2} aria-hidden /></span>
+        <span className="hp-ugap-tile-text">
+          <span className="hp-ugap-tile-strong">Privacy</span>
+          <span className="hp-ugap-tile-sub">updated</span>
+        </span>
       </div>
-      <div className="hp-ugap-chips">
-        <span className="hp-ugap-chip hp-ugap-chip--ok">activeTab</span>
-        <span className="hp-ugap-chip hp-ugap-chip--ok">storage</span>
-        <span className="hp-ugap-chip hp-ugap-chip--ok">cookies</span>
+      <div className="hp-ugap-tile good">
+        <span className="hp-ugap-tile-icon"><CheckCircle size={18} strokeWidth={2} aria-hidden /></span>
+        <span className="hp-ugap-tile-text">
+          <span className="hp-ugap-tile-strong">Permissions</span>
+          <span className="hp-ugap-tile-sub">unchanged</span>
+        </span>
       </div>
-      <div className="hp-ugap-signals">
-        <span className="hp-ugap-signals-label">Compare these yourself</span>
-        <div className="hp-ugap-signal hp-ugap-signal--n1">
-          <span className="hp-ugap-signal-glyph" aria-hidden>↗</span>
-          <span className="hp-ugap-signal-key">Network endpoints in code</span>
-          <span className="hp-ugap-signal-val">any new destinations?</span>
-        </div>
-        <div className="hp-ugap-signal hp-ugap-signal--n2">
-          <span className="hp-ugap-signal-glyph" aria-hidden>§</span>
-          <span className="hp-ugap-signal-key">Privacy disclosure</span>
-          <span className="hp-ugap-signal-val">still consistent?</span>
-        </div>
-        <div className="hp-ugap-signal hp-ugap-signal--n3">
-          <span className="hp-ugap-signal-glyph" aria-hidden>⌁</span>
-          <span className="hp-ugap-signal-key">Code patterns</span>
-          <span className="hp-ugap-signal-val">obfuscation or risky APIs?</span>
-        </div>
-        <div className="hp-ugap-signal hp-ugap-signal--n4">
-          <span className="hp-ugap-signal-glyph" aria-hidden>!</span>
-          <span className="hp-ugap-signal-key">Composite score</span>
-          <span className="hp-ugap-signal-val">moved up or down?</span>
-        </div>
-      </div>
-    </div>
-
-    <div className="hp-ugap-footer">
-      <AlertTriangle size={11} strokeWidth={2.5} aria-hidden />
-      <span>Re-scan periodically and compare the findings yourself</span>
     </div>
   </>
 );
 
-const UpdateGapArtifact = () => {
-  const ref = useRef(null);
-  const [playKey, setPlayKey] = useState(0);
-  const reducedMotion = useReducedMotion();
+const UpdateGapArtifact = () => (
+  <div
+    className="hp-ugap"
+    role="figure"
+    aria-label="Illustrative version comparison for an extension: an earlier scan of v12.0.1 versus the latest v12.4.0. Between the two versions, 2 new network endpoints appeared and the privacy disclosure was updated, while the declared permissions stayed unchanged."
+  >
+    <UpdateGapContent />
+  </div>
+);
 
-  // Auto-play on first scroll into view
-  useEffect(() => {
-    if (!ref.current || typeof IntersectionObserver === "undefined") return;
-    const node = ref.current;
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setPlayKey((k) => k + 1);
-            io.disconnect();
-          }
-        });
-      },
-      { threshold: 0.35 }
-    );
-    io.observe(node);
-    return () => io.disconnect();
-  }, []);
+/* ── Risk-analysis reveal wrapper ────────────────────────────────────────────
+   Plays a single subtle staggered rise on the two decorative mock cards (search,
+   layers) + connectors the first time the merged section crosses ~30% of the
+   viewport. One-shot; does not replay. Honors prefers-reduced-motion. The Step-3
+   report card is a real <Link> and is never hidden; all step text, the composite
+   score, and links stay visible at all times so the prerendered/no-JS page is
+   never blank and never traps focus on an invisible link.
 
-  const replay = useCallback(() => {
-    if (reducedMotion) return;
-    setPlayKey((k) => k + 1);
-  }, [reducedMotion]);
-
-  return (
-    <div
-      ref={ref}
-      className={`hp-ugap ${reducedMotion ? "is-reduced" : "is-animated"}`}
-      tabIndex={0}
-      role="figure"
-      aria-label="Illustrative comparison of two scans you run yourself: extension version 12.0.1 and 12.4.0. Declared permissions are unchanged between versions. When you re-scan, compare these by hand: network endpoints referenced in the code, whether the privacy disclosure is still consistent, code patterns such as obfuscation or risky APIs, and whether the composite score moved. Re-scan periodically and compare the findings yourself."
-      onMouseEnter={replay}
-      onFocus={replay}
-    >
-      <UpdateGapContent key={playKey} />
-    </div>
-  );
-};
-
-/* ── How-it-works motion wrapper ─────────────────────────────────────────────
-   Plays a single subtle search → scan → findings sequence the first time the
-   section crosses ~40% of the viewport. Does NOT replay on hover, focus, or
-   re-entry. Honors prefers-reduced-motion.
-
-   States (mutually exclusive class on `.hp-flow`):
-     is-pending  — initial hidden state held until IntersectionObserver fires
-     is-animated — keyframes run (one-shot, animation-fill-mode: both)
-     is-reduced  — show final state immediately, no animation
-   Per-card hover affordance (subtle border/shadow lift) lives on
-   `.hp-flow-ui:hover` and is independent of this state machine.
+   States (mutually exclusive class on `.hp-ra-flow`):
+     is-pending  — cards/connectors held hidden until IntersectionObserver fires
+     is-animated — staggered rise runs once (animation-fill-mode: both)
+     is-reduced  — everything visible immediately, no animation
    ─────────────────────────────────────────────────────────────────────────── */
-const HowItWorksFlow = ({ children }) => {
+const RiskAnalysisFlow = ({ children }) => {
   const ref = useRef(null);
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const reducedMotion = useReducedMotion();
@@ -367,7 +387,7 @@ const HowItWorksFlow = ({ children }) => {
           }
         });
       },
-      { threshold: 0.4 }
+      { threshold: 0.3 }
     );
     io.observe(node);
     return () => io.disconnect();
@@ -380,14 +400,8 @@ const HowItWorksFlow = ({ children }) => {
       : "is-pending";
 
   return (
-    <div
-      ref={ref}
-      className={`hp-flow ${stateClass}`}
-      aria-label="Three-step process: search, scan, read results"
-    >
-      <div className="hp-flow-inner">
-        {children}
-      </div>
+    <div ref={ref} className={`hp-ra-flow ${stateClass}`}>
+      {children}
     </div>
   );
 };
@@ -517,7 +531,7 @@ const HomePage = () => {
         {/* Mobile hero: real H1 + working scan input */}
         <div className="hero-mobile-message">
           <p className="hero-tagline">Free · Open-source Chrome extension scanner</p>
-          <h1 className="hero-title">Extensions can read your browsing. Check before you install.</h1>
+          <h1 className="hero-title">Extensions can access your browsing data. Scan one before you install it.</h1>
           <p className="hero-mobile-subhead">
             Paste a Chrome Web Store URL to check permissions, host access, and a risk score before
             you install. No signup.
@@ -525,13 +539,7 @@ const HomePage = () => {
 
           <div className="hero-mobile-search">
             <span className="search-icon-chrome" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chrome-logo">
-                <path d="M12 12L22 12A10 10 0 0 1 7 3.34L12 12Z" fill="#4285F4" />
-                <path d="M12 12L7 3.34A10 10 0 0 1 7 20.66L12 12Z" fill="#EA4335" />
-                <path d="M12 12L7 20.66A10 10 0 0 1 22 12L12 12Z" fill="#FBBC05" />
-                <circle cx="12" cy="12" r="4" fill="#34A853" />
-                <circle cx="12" cy="12" r="2.5" fill="white" />
-              </svg>
+              <ChromeLogo />
             </span>
             <input
               type="text"
@@ -578,42 +586,27 @@ const HomePage = () => {
           {/* ── Section 1 — Hero ──────────────────────────────────────────── */}
           <section className="hero-section" aria-label="Check a Chrome extension before you install it">
             <div className="hero-inner">
+              {/* Faint brand shield watermark behind the scan card (desktop) */}
+              <div className="hero-shield-bg" aria-hidden="true">
+                <img src="/extension-shield-logo.svg" alt="" />
+              </div>
+
               {/* Left: headline + search */}
               <div className="hero-left">
                 <p className="hero-eyebrow">Free · Open-source · Chrome extension scanner</p>
                 <h1 className="hero-title">
-                  Extensions can read your browsing. Check one before you install it.
+                  Extensions can access your browsing data.{" "}
+                  <span className="hero-title-accent">Scan one before you install it.</span>
                 </h1>
                 <p className="hero-subhead">
-                  ExtensionShield flags risky permissions, privacy exposure, and governance
-                  gaps — before an extension reaches your browser.
+                  ExtensionShield checks permissions, privacy exposure, code signals, and
+                  publisher transparency before an extension reaches your browser.
                 </p>
-
-                <button
-                  type="button"
-                  ref={demoTriggerRef}
-                  className="scanner-demo-link"
-                  onClick={() => setDemoModalOpen(true)}
-                >
-                  <span className="scanner-demo-icon" aria-hidden>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" />
-                      <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none" />
-                    </svg>
-                  </span>
-                  Step-by-step guide
-                </button>
 
                 <div className="hero-search">
                   <div className="search-container hero-search-container">
                     <span className="search-icon search-icon-chrome" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chrome-logo">
-                        <path d="M12 12L22 12A10 10 0 0 1 7 3.34L12 12Z" fill="#4285F4" />
-                        <path d="M12 12L7 3.34A10 10 0 0 1 7 20.66L12 12Z" fill="#EA4335" />
-                        <path d="M12 12L7 20.66A10 10 0 0 1 22 12L12 12Z" fill="#FBBC05" />
-                        <circle cx="12" cy="12" r="4" fill="#34A853" />
-                        <circle cx="12" cy="12" r="2.5" fill="white" />
-                      </svg>
+                      <ChromeLogo />
                     </span>
                     <input
                       type="text"
@@ -696,14 +689,22 @@ const HomePage = () => {
                       </svg>
                     </button>
                   </div>
-
-                  <p className="hero-scan-info">
-                    <svg className="hero-scan-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                    Pre-install risk assessment: permissions, host access, network endpoints, and publisher transparency.
-                  </p>
                 </div>
+
+                <button
+                  type="button"
+                  ref={demoTriggerRef}
+                  className="scanner-demo-link"
+                  onClick={() => setDemoModalOpen(true)}
+                >
+                  <span className="scanner-demo-icon" aria-hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none" />
+                    </svg>
+                  </span>
+                  Step-by-step guide
+                </button>
 
                 <div className="hero-cta-row">
                   <a
@@ -720,9 +721,9 @@ const HomePage = () => {
                 {scanError && <p className="scan-error-hint">{scanError}</p>}
               </div>
 
-              {/* Right: real frozen scan result */}
+              {/* Right: auto-rotating carousel of real scan snapshots */}
               <div className="hero-right">
-                <ScanPreviewCard />
+                <ScanCarousel />
               </div>
             </div>
 
@@ -739,153 +740,143 @@ const HomePage = () => {
             </button>
           </section>
 
-          {/* ── Section 2 — How it works ──────────────────────────────────── */}
-          <section className="hp-how landing-separator" id="how-it-works" aria-labelledby="hp-how-title">
-            <div className="hp-how-inner">
-              <div className="hp-section-head">
-                <p className="hp-eyebrow">How it works</p>
-                <h2 id="hp-how-title">Search, scan, read the findings.</h2>
+          {/* ── Section 2 — Risk analysis (How it works + Scoring model, merged) ── */}
+          <section className="hp-ra" id="how-it-works" aria-labelledby="hp-ra-title">
+            <div className="hp-ra-inner">
+              <div className="hp-ra-head">
+                <p className="hp-ra-eyebrow">
+                  <ShieldCheck size={13} strokeWidth={2.5} aria-hidden />
+                  ExtensionShield risk analysis
+                </p>
+                <h2 id="hp-ra-title">Search, scan, understand the risk.</h2>
+                <p className="hp-ra-sub">
+                  ExtensionShield analyzes security, privacy, and governance signals to
+                  generate a clear risk score you can trust.
+                </p>
               </div>
 
-              <HowItWorksFlow>
-                {/* Step 1 — Input state */}
-                <div className="hp-flow-step">
-                  <div className="hp-flow-step-head">
-                    <span className="hp-flow-num" aria-hidden="true">01</span>
-                    <h3>Search or paste</h3>
-                  </div>
-                  <div className="hp-flow-ui hp-flow-ui--input" aria-hidden="true">
-                    <div className="hp-flow-input-bar">
-                      <svg viewBox="0 0 24 24" fill="none" className="hp-flow-chrome" aria-hidden="true">
-                        <path d="M12 12L22 12A10 10 0 0 1 7 3.34L12 12Z" fill="#4285F4" />
-                        <path d="M12 12L7 3.34A10 10 0 0 1 7 20.66L12 12Z" fill="#EA4335" />
-                        <path d="M12 12L7 20.66A10 10 0 0 1 22 12L12 12Z" fill="#FBBC05" />
-                        <circle cx="12" cy="12" r="4" fill="#34A853" />
-                        <circle cx="12" cy="12" r="2.5" fill="white" />
-                      </svg>
-                      <span className="hp-flow-url">PayPal Honey</span>
-                      <span className="hp-flow-go">→</span>
-                    </div>
-                    <p className="hp-flow-hint">Name or Chrome Web Store URL</p>
-                  </div>
-                  <p>Find any extension by name, or paste a Chrome Web Store URL.</p>
-                </div>
-
-                <div className="hp-flow-conn" aria-hidden="true"><span /><span /></div>
-
-                {/* Step 2 — Scan state */}
-                <div className="hp-flow-step">
-                  <div className="hp-flow-step-head">
-                    <span className="hp-flow-num" aria-hidden="true">02</span>
-                    <h3>We scan, typically in well under a minute</h3>
-                  </div>
-                  <div className="hp-flow-ui hp-flow-ui--scan" aria-hidden="true">
-                    <div className="hp-flow-layer-rows">
-                      <div className="hp-flow-lr">
-                        <ShieldCheck size={11} strokeWidth={2} />
-                        <span>Security</span>
-                        <div className="hp-flow-lr-bar"><div className="hp-flow-lr-fill" style={{ width: "74%" }} /></div>
-                        <span>74</span>
-                      </div>
-                      <div className="hp-flow-lr">
-                        <Eye size={11} strokeWidth={2} />
-                        <span>Privacy</span>
-                        <div className="hp-flow-lr-bar"><div className="hp-flow-lr-fill bad" style={{ width: "31%" }} /></div>
-                        <span className="bad">31</span>
-                      </div>
-                      <div className="hp-flow-lr">
-                        <Scale size={11} strokeWidth={2} />
-                        <span>Governance</span>
-                        <div className="hp-flow-lr-bar"><div className="hp-flow-lr-fill good" style={{ width: "100%" }} /></div>
-                        <span className="good">100</span>
+              <RiskAnalysisFlow>
+                <div className="hp-ra-steps">
+                  {/* Step 1 — Search */}
+                  <div className="hp-ra-step">
+                    <div className="hp-ra-step-head">
+                      <span className="hp-ra-num" aria-hidden="true">1</span>
+                      <div className="hp-ra-step-heading">
+                        <h3>Search any extension</h3>
+                        <p>Find by name or paste a Chrome Web Store URL.</p>
                       </div>
                     </div>
-                    <div className="hp-flow-elapsed">Under a minute</div>
+                    <div className="hp-ra-card hp-ra-card--search" aria-hidden="true">
+                      <div className="hp-ra-search-bar">
+                        <span className="hp-ra-search-icon">
+                          <ChromeLogo />
+                        </span>
+                        <span className="hp-ra-search-text">PayPal Honey</span>
+                        <span className="hp-ra-search-go"><ArrowRight size={13} strokeWidth={2.5} /></span>
+                      </div>
+                    </div>
                   </div>
-                  <p>Three independent risk layers: permissions, code patterns, and publisher transparency.</p>
-                </div>
 
-                <div className="hp-flow-conn" aria-hidden="true"><span /><span /></div>
+                  <div className="hp-ra-conn" aria-hidden="true"><span className="hp-ra-conn-line" /></div>
 
-                {/* Step 3 — Report state */}
-                <div className="hp-flow-step">
-                  <div className="hp-flow-step-head">
-                    <span className="hp-flow-num" aria-hidden="true">03</span>
-                    <h3>Read the findings</h3>
+                  {/* Step 2 — Scan (three risk layers) */}
+                  <div className="hp-ra-step">
+                    <div className="hp-ra-step-head">
+                      <span className="hp-ra-num" aria-hidden="true">2</span>
+                      <div className="hp-ra-step-heading">
+                        <h3>We scan in under a minute</h3>
+                        <p>Our engine evaluates 3 independent risk layers.</p>
+                      </div>
+                    </div>
+                    <div className="hp-ra-card hp-ra-card--layers" aria-hidden="true">
+                      {SCAN_LAYERS.map((layer) => {
+                        const tier = scoreTier(layer.score);
+                        const filled = Math.round((layer.score / 100) * SCAN_METER_SEGMENTS);
+                        return (
+                          <div className="hp-ra-layer" key={layer.label}>
+                            <span className={`hp-ra-layer-icon ${tier}`}>
+                              <layer.Icon size={15} strokeWidth={2} />
+                            </span>
+                            <div className="hp-ra-layer-meta">
+                              <span className="hp-ra-layer-name">{layer.label}</span>
+                              <span className="hp-ra-layer-desc">{layer.desc}</span>
+                            </div>
+                            <div className="hp-ra-layer-right">
+                              <div className={`hp-ra-meter ${tier}`}>
+                                {Array.from({ length: SCAN_METER_SEGMENTS }).map((_, i) => (
+                                  <span key={i} className={`hp-ra-meter-seg${i < filled ? " on" : ""}`} />
+                                ))}
+                              </div>
+                              <span className={`hp-ra-layer-score ${tier}`}>{layer.score}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="hp-flow-ui hp-flow-ui--report" aria-hidden="true">
-                    <div className="hp-flow-report-top">
-                      <span className="hp-flow-report-name">PayPal Honey</span>
-                      <span className="hp-flow-report-pill medium">MEDIUM</span>
+
+                  <div className="hp-ra-conn" aria-hidden="true"><span className="hp-ra-conn-line" /></div>
+
+                  {/* Step 3 — Findings (links to the real frozen report) */}
+                  <div className="hp-ra-step">
+                    <div className="hp-ra-step-head">
+                      <span className="hp-ra-num" aria-hidden="true">3</span>
+                      <div className="hp-ra-step-heading">
+                        <h3>Get clear findings</h3>
+                        <p>Understand the risks and what they mean.</p>
+                      </div>
                     </div>
-                    <div className="hp-flow-report-score">
-                      <span>66</span><em>/100</em>
-                    </div>
-                    <div className="hp-flow-report-finds">
-                      <div className="hp-flow-find warn"><AlertTriangle size={10} strokeWidth={2} /> Broad host permissions</div>
-                      <div className="hp-flow-find warn"><AlertTriangle size={10} strokeWidth={2} /> Data access: high</div>
-                      <div className="hp-flow-find ok"><CheckCircle size={10} strokeWidth={2} /> VirusTotal: clear</div>
-                    </div>
+                    <Link
+                      to={getScanResultsRoute(HONEY_SCAN.extensionId)}
+                      className="hp-ra-card hp-ra-card--report"
+                      aria-label={`Example scan of ${HONEY_SCAN.name}: 66 out of 100, medium risk. View the full report.`}
+                    >
+                      <div className="hp-ra-rep-head">
+                        <span className="hp-ra-rep-icon" aria-hidden="true"><HoneyHexLogo /></span>
+                        <div className="hp-ra-rep-id">
+                          <span className="hp-ra-rep-name">PayPal Honey: Coupons &amp; Cash Back</span>
+                          <span className="hp-ra-rep-pub">Honey · Chrome Web Store</span>
+                        </div>
+                        <div className="hp-ra-rep-scorebox">
+                          <span className="hp-ra-rep-score">66<em>/100</em></span>
+                          <span className="hp-ra-risk-pill medium">Medium risk</span>
+                        </div>
+                      </div>
+                      <div className="hp-ra-rep-rule" aria-hidden="true" />
+                      <div className="hp-ra-rep-finds">
+                        <div className="hp-ra-find warn"><AlertTriangle size={13} strokeWidth={2} /><span>Requests broad host permissions</span></div>
+                        <div className="hp-ra-find ok"><CheckCircle size={13} strokeWidth={2} /><span>No critical vulnerabilities detected</span></div>
+                        <div className="hp-ra-find warn"><Eye size={13} strokeWidth={2} /><span>Third-party tracking scripts detected</span></div>
+                      </div>
+                      <div className="hp-ra-rep-rule" aria-hidden="true" />
+                      <div className="hp-ra-rep-foot">
+                        <span className="hp-ra-rep-link">View full report</span>
+                        <ArrowRight size={16} strokeWidth={2} aria-hidden />
+                      </div>
+                    </Link>
                   </div>
-                  <p>Scored report with evidence-linked findings and what they mean for you.</p>
                 </div>
-              </HowItWorksFlow>
+              </RiskAnalysisFlow>
             </div>
-          </section>
 
-          {/* ── Section 3 — Scoring model ─────────────────────────────────── */}
-          <section className="hp-layers landing-separator" id="risk-layers" aria-labelledby="hp-layers-title">
-            <div className="hp-layers-inner">
-              <div className="hp-section-head">
-                <p className="hp-eyebrow">The scoring model</p>
-                <h2 id="hp-layers-title">Three layers because extensions fail in three different ways.</h2>
-              </div>
-
-              <div className="hp-sf">
-                <div className="hp-sf-overall" aria-label="Example composite score: 66 out of 100, medium risk">
-                  <span className="hp-sf-overall-label">Composite score</span>
-                  <div className="hp-sf-overall-track" aria-hidden="true">
-                    <div className="hp-sf-overall-fill" style={{ width: "66%" }} />
-                  </div>
-                  <span className="hp-sf-overall-num warn" aria-hidden="true">66<span className="hp-sf-overall-max">/100</span></span>
-                  <span className="hp-sf-risk-pill medium" aria-hidden="true">MEDIUM</span>
-                </div>
-
-                {/* Signal-flow cue — quiet label clarifying that the composite
-                    above is built from the three layers below. The three
-                    ticks sit above each column to make the merge visible. */}
-                <div className="hp-sf-flow" aria-hidden="true">
-                  <span className="hp-sf-flow-tick" />
-                  <span className="hp-sf-flow-tick" />
-                  <span className="hp-sf-flow-tick" />
-                  <span className="hp-sf-flow-label">
-                    Three independent layers combine into the composite score above
-                  </span>
-                </div>
-
-                <div className="hp-sf-layers" role="list">
-                  {RISK_LAYERS.map((layer) => (
-                    <div className="hp-sf-layer" key={layer.title} role="listitem">
-                      <div className="hp-sf-layer-head">
-                        <span className="hp-sf-layer-icon" aria-hidden="true"><layer.Icon size={16} strokeWidth={1.8} /></span>
-                        <h3 className="hp-sf-layer-name">{layer.title}</h3>
-                      </div>
-                      <p className="hp-sf-layer-body">{layer.body}</p>
-                      <p className="hp-sf-layer-direction">{layer.direction}</p>
-                      <Link to={layer.link.to} className="hp-sf-layer-link">{layer.link.label}</Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="hp-sf-cta">
-                <Link to="/research/methodology" className="hp-sf-cta-primary">
+            {/* Foot: primary CTA + preserved topic links (internal-link graph) */}
+            <div className="hp-ra-foot">
+              <div className="hp-ra-foot-cta">
+                <Link to="/research/methodology" className="hp-ra-cta-primary">
                   See how we score
                   <ArrowRight size={14} strokeWidth={2} aria-hidden />
                 </Link>
-                <span className="hp-sf-cta-sep" aria-hidden="true">·</span>
-                <Link to="/scan" className="hp-sf-cta-secondary">Scan an extension</Link>
+                <span className="hp-ra-cta-sep" aria-hidden="true">·</span>
+                <Link to="/scan" className="hp-ra-cta-secondary">Scan an extension</Link>
               </div>
+              <p className="hp-ra-foot-links">
+                {SCAN_LAYERS.map((layer, i) => (
+                  <React.Fragment key={layer.link.to}>
+                    {i > 0 && <span className="hp-ra-foot-sep" aria-hidden="true">·</span>}
+                    <Link to={layer.link.to} className="hp-ra-foot-link">{layer.link.label}</Link>
+                  </React.Fragment>
+                ))}
+              </p>
             </div>
           </section>
 
@@ -894,16 +885,12 @@ const HomePage = () => {
             <div className="hp-problem-inner">
               <div className="hp-problem-copy">
                 <p className="hp-eyebrow">The update gap</p>
-                <h2 id="hp-problem-title">The extension you trusted can change after install.</h2>
+                <h2 id="hp-problem-title">The extension you trusted<br />can change after install.</h2>
                 <p>
-                  Permissions are only one signal. Extensions auto-update, and a later version can
-                  change code behavior or network destinations — even when declared permissions stay
-                  the same.
+                  Extensions auto-update. A later version can change code behavior, network
+                  destinations, or privacy practices—even when its declared permissions stay the same.
                 </p>
-                <p>
-                  A single scan reflects the version available right now. Re-scan periodically and
-                  compare the findings yourself so you can spot what changed between versions.
-                </p>
+                <p>Re-scan periodically to see what changed.</p>
                 <p className="hp-problem-aside">
                   <Link to="/research/case-studies/honey" className="hp-problem-aside-link">
                     Read the Honey case study
@@ -921,15 +908,13 @@ const HomePage = () => {
             <div className="hp-open-inner">
               <div className="hp-open-copy">
                 <p className="hp-eyebrow">Auditable by design</p>
-                <h2 id="hp-open-title">Our scoring method is public. The code is auditable.</h2>
+                <h2 id="hp-open-title">Our scoring method is public.<br />The code is auditable.</h2>
                 <p>
-                  Security claims without proof are just marketing. Our three risk layers are
-                  implemented in open code on GitHub — anyone can read exactly what signals we look
-                  for and how we weight them. You don't have to trust us. You can read us.
+                  ExtensionShield&apos;s three risk layers are implemented in open code on GitHub.
+                  Anyone can review the exact signals we use and how they&apos;re weighted.
                 </p>
                 <p className="hp-open-honest">
-                  We flag our own limits, too: when an extension's code is packed or obfuscated, we
-                  say so instead of guessing.
+                  When an extension&apos;s code is packed or obfuscated, we flag that clearly.
                 </p>
                 <div className="hp-open-ctas">
                   <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="hp-btn hp-btn-primary">
@@ -946,30 +931,37 @@ const HomePage = () => {
                   <svg viewBox="0 0 24 24" fill="currentColor" className="hp-repo-gh-icon" aria-hidden="true">
                     <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
                   </svg>
-                  <span className="hp-repo-path">github.com / Stanzin7 / ExtensionShield</span>
+                  <span className="hp-repo-path">
+                    github.com
+                    <span className="hp-repo-sep" aria-hidden="true">/</span>
+                    {GITHUB_REPO.split("/")[0]}
+                    <span className="hp-repo-sep" aria-hidden="true">/</span>
+                    {GITHUB_REPO.split("/")[1]}
+                  </span>
                 </div>
-                <div className="hp-repo-tree">
-                  <div className="hp-repo-dir">
-                    <Code2 size={12} strokeWidth={2} aria-hidden="true" />
-                    <span>src/extension_shield/scoring<span className="hp-repo-slash">/</span></span>
-                  </div>
+                <div className="hp-repo-rows">
                   {[
-                    { name: "weights.py", label: "scoring/weights.py", desc: "transparent 34/33/33 weights", href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/weights.py` },
-                    { name: "gates.py",   label: "scoring/gates.py",   desc: "hard BLOCK gates",            href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/gates.py` },
-                    { name: "engine.py",  label: "scoring/engine.py",  desc: "combines the three layers",   href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/engine.py` },
-                    { name: "governance/", label: "governance/",       desc: "ToS, disclosure & consistency signals", href: `${GITHUB_URL}/tree/master/src/extension_shield/governance` },
+                    { label: "scoring/weights.py", desc: "transparent 34/33/33 weights",          href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/weights.py` },
+                    { label: "scoring/gates.py",   desc: "hard BLOCK gates",                       href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/gates.py` },
+                    { label: "scoring/engine.py",  desc: "combines the three layers",              href: `${GITHUB_URL}/blob/master/src/extension_shield/scoring/engine.py` },
+                    { label: "governance/",        desc: "ToS, disclosure & consistency signals", dir: true, href: `${GITHUB_URL}/tree/master/src/extension_shield/governance` },
                   ].map((f) => (
                     <a
-                      className="hp-repo-file"
+                      className="hp-repo-row"
                       key={f.label}
                       href={f.href}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`${f.label} — ${f.desc} (opens on GitHub)`}
                     >
-                      <span className="hp-repo-tree-chr" aria-hidden="true">├─</span>
-                      <span className="hp-repo-ext">{f.label.endsWith("/") ? "dir" : "py"}</span>
+                      <ChevronRight className="hp-repo-caret" size={13} strokeWidth={2.5} aria-hidden />
+                      {f.dir ? (
+                        <span className="hp-repo-badge-icon"><Folder size={13} strokeWidth={2} aria-hidden /></span>
+                      ) : (
+                        <span className="hp-repo-py">PY</span>
+                      )}
                       <span className="hp-repo-fname">{f.label}</span>
+                      <span className="hp-repo-dash" aria-hidden="true">—</span>
                       <span className="hp-repo-fdesc">{f.desc}</span>
                     </a>
                   ))}
