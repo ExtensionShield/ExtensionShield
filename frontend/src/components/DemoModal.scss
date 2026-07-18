@@ -30,18 +30,14 @@ $success-green: #22c55e;
   padding-right: max(1.5rem, env(safe-area-inset-right));
   min-height: 100dvh;
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--extensionshield-bg-primary) 88%, black);
+  /* Always-dark scrim so the white caption + arrows stay high-contrast
+     regardless of the app theme. */
+  background: rgba(15, 18, 26, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   animation: overlay-fade-in 0.3s ease-out;
-}
-
-@supports not (color-mix(in srgb, red, blue)) {
-  .demo-modal-overlay {
-    background: rgba(28, 26, 23, 0.95);
-  }
 }
 
 @keyframes overlay-fade-in {
@@ -102,6 +98,7 @@ $success-green: #22c55e;
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.4);
     background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.92);
     transition: all 0.25s ease;
 
     svg {
@@ -165,7 +162,22 @@ $success-green: #22c55e;
 
 .demo-modal-caption {
   font-size: 16px;
-  color: var(--theme-text-primary);
+  color: #ffffff;
+}
+
+/* "Chrome Store" link — light green so it reads as a link on the dark scrim */
+.demo-modal-store-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  color: #4ade80;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  &:hover { color: #86efac; text-decoration: underline; }
+  &:focus-visible { outline: 2px solid #4ade80; outline-offset: 2px; border-radius: 4px; }
 }
 
 
