@@ -34,6 +34,11 @@ class ScanRequest(BaseModel):
     # recomputed even if the store version is unchanged. Gated server-side
     # (dev mode or a matching admin token); ignored otherwise.
     force: Optional[bool] = False
+    # Set by the Scan History page when auto-refreshing a row whose scan is
+    # missing/failed. Honored only for authenticated users, and only for an
+    # extension already in that user's history, in which case the rescan is a
+    # system refresh (quota-exempt) rather than a brand-new user scan.
+    history_refresh: Optional[bool] = False
 
 
 class ScanStatusResponse(BaseModel):

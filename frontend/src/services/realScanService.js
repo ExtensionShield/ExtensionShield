@@ -108,7 +108,7 @@ class RealScanService {
   // Trigger a scan for an extension URL. Pass { force: true } to bypass the cached
   // fast path and force a fresh deep scan — server-gated: honored only in dev or
   // when the admin rescan token matches RESCAN_ADMIN_TOKEN, ignored otherwise.
-  async triggerScan(url, { force = false } = {}) {
+  async triggerScan(url, { force = false, historyRefresh = false } = {}) {
     const headers = {
       "Content-Type": "application/json",
       ...this.getRequestHeaders(),
@@ -116,10 +116,14 @@ class RealScanService {
     const adminToken = force ? this.getAdminRescanToken() : "";
     if (adminToken) headers["X-Admin-Rescan-Token"] = adminToken;
 
+    const payload = { url };
+    if (force) payload.force = true;
+    if (historyRefresh) payload.history_refresh = true;
+
     const { response, body } = await fetchJson(`${this.baseURL}/api/scan/trigger`, {
       method: "POST",
       headers,
-      body: JSON.stringify(force ? { url, force: true } : { url }),
+      body: JSON.stringify(payload),
     });
 
     if (response.ok) {

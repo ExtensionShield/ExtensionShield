@@ -203,6 +203,7 @@ const ScanResultsPageV2 = () => {
     () => typeof window === "undefined" || window.innerWidth > 768
   );
   const [expandedFinding, setExpandedFinding] = useState(null);
+  const [rescanStarted, setRescanStarted] = useState(false);
   const publisherDetailsRef = useRef(null);
 
   useEffect(() => {
@@ -304,6 +305,19 @@ const ScanResultsPageV2 = () => {
 
   const getFileContent = async (extensionId, filePath) => {
     return await realScanService.getFileContent(extensionId, filePath);
+  };
+
+  // Re-run a failed/partial scan (Issue 2). Uses the canonical store URL so the
+  // backend re-attempts the download+analysis instead of re-serving the partial row.
+  const handleRescanPartial = async () => {
+    const id = viewModel?.meta?.extensionId || scanId;
+    if (!id || !/^[a-p]{32}$/.test(id)) return; // only Chrome Web Store extensions can be re-fetched
+    setRescanStarted(true);
+    try {
+      await realScanService.triggerScan(`https://chromewebstore.google.com/detail/_/${id}`, { historyRefresh: true });
+    } catch {
+      // Best-effort; the banner already tells the user a rescan was started.
+    }
   };
 
   const openEvidenceDrawer = (evidenceIds) => {
@@ -785,7 +799,19 @@ const ScanResultsPageV2 = () => {
           ? "Partial report: We couldn't download the extension package. Scores and limited findings below are based on available data (e.g. store listing)."
           : `Partial report: ${err}. Scores and limited findings below are based on available data (e.g. manifest, webstore).`;
         return (
-          <StatusMessage type="info" message={bannerMessage} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <StatusMessage type="info" message={bannerMessage} />
+            {rescanStarted ? (
+              <StatusMessage
+                type="info"
+                message="Rescan started — this report will update once the fresh scan completes. Check back in a minute."
+              />
+            ) : /^[a-p]{32}$/.test(viewModel?.meta?.extensionId || scanId || "") ? (
+              <Button variant="outline" onClick={handleRescanPartial} style={{ alignSelf: "flex-start" }}>
+                Rescan now
+              </Button>
+            ) : null}
+          </div>
         );
       })()}
 

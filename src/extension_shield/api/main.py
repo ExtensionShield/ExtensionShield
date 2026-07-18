@@ -5,6 +5,7 @@ Provides REST API endpoints for the frontend to trigger extension analysis
 and retrieve results.
 """
 
+import asyncio
 import base64
 import mimetypes
 import os
@@ -1583,6 +1584,11 @@ def _persist_scan_failure(extension_id: str, failed_payload: Dict[str, Any]) -> 
 
     scan_results[extension_id] = failed_payload
     scan_status[extension_id] = "failed"
+    # Throttle re-attempts of a genuinely unfetchable extension. Without a prior
+    # good report a failed row is eligible for a failed_stale rescan on EVERY
+    # trigger (and the history page auto-fires those), so record the attempt to
+    # gate the next rescan behind the failed-refresh cooldown.
+    _note_failed_refresh(extension_id)
     try:
         db.save_scan_result(failed_payload)
         logger.info("[TIMELINE] saved failed scan to database → extension_id=%s", extension_id)
@@ -2521,6 +2527,21 @@ async def vote_community_review_item(body: ReviewQueueVoteRequest, http_request:
     return {"ok": True}
 
 
+# Bound the number of concurrent heavy scans (CRX download + SAST + VirusTotal +
+# LLM) so a burst of user triggers or history rescans cannot exhaust CPU/network
+# or the VirusTotal quota. Tunable via MAX_CONCURRENT_SCANS (default 3).
+_scan_concurrency = asyncio.Semaphore(int(os.getenv("MAX_CONCURRENT_SCANS", "3")))
+
+
+async def _run_analysis_workflow_bounded(url: str, extension_id: str):
+    """Run a scan under the concurrency cap. The extension is marked 'running'
+    immediately (even while queued behind the semaphore) so duplicate triggers
+    dedupe via the scan_status guard in trigger_scan."""
+    scan_status[extension_id] = "running"
+    async with _scan_concurrency:
+        await run_analysis_workflow(url, extension_id)
+
+
 @app.post("/api/scan/trigger")
 @_rate_limit("6/minute")  # Conservative for VirusTotal (3 keys); cached lookups return immediately without running scan
 async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTasks, request: Request):
@@ -2554,6 +2575,19 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
     # the user asked for a brand-new scan. A staleness refresh is system-initiated:
     # it must not spend the user's daily quota or 429 them on what was a cached lookup.
     system_refresh = False
+
+    # Scan-History auto-refresh of a missing/failed row: for an AUTHENTICATED user
+    # re-scanning an extension already in their own history, treat it as a system
+    # refresh (quota-exempt) rather than a brand-new user scan. Gated on history
+    # membership so it cannot be used to bypass the daily deep-scan limit for
+    # arbitrary new extensions.
+    if bool(getattr(scan_request, "history_refresh", False)):
+        _hr_user_id = getattr(getattr(request, "state", None), "user_id", None)
+        try:
+            if _hr_user_id and db.user_has_extension_in_history(_hr_user_id, extension_id):
+                system_refresh = True
+        except Exception:
+            pass
 
     # If we already have results, use a fast version check only (no blocking store refresh)
     # so cached lookups return immediately. Full store refresh runs on GET when needed.
@@ -2600,7 +2634,14 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
         if force_requested and not force_allowed:
             logger.info("[FORCE_RESCAN] force ignored for %s (not permitted in this environment)", extension_id)
 
-        stale = version_changed or model_stale or cutoff_stale
+        # A previously FAILED/partial scan (e.g. rows the fresh-seed cutover left
+        # behind) must be re-attempted rather than re-served — it is treated as a
+        # system refresh so it neither spends the user's quota nor 429s them. The
+        # failed-refresh cooldown below still prevents rescanning a genuinely
+        # unfetchable extension on every single lookup.
+        failed_stale = str(cached_payload.get("status") or "").lower() in ("failed", "error")
+
+        stale = version_changed or model_stale or cutoff_stale or failed_stale
         # Suppress a staleness rescan when we recently tried and failed to refresh
         # this extension (its preserved good report is still pre-cutoff) — serve the
         # cached report instead of rescanning an unfetchable extension on every lookup.
@@ -2736,7 +2777,7 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
 
     # Start background analysis
     scan_user_ids[extension_id] = getattr(getattr(request, "state", None), "user_id", None)
-    background_tasks.add_task(run_analysis_workflow, url, extension_id)
+    background_tasks.add_task(_run_analysis_workflow_bounded, url, extension_id)
 
     return {
         "message": "Scan triggered successfully",
@@ -2846,7 +2887,7 @@ async def upload_and_scan(
     # Start background analysis with local file path (private upload: user_id + source for DB)
     scan_user_ids[extension_id] = getattr(getattr(request, "state", None), "user_id", None)
     scan_source[extension_id] = "upload"
-    background_tasks.add_task(run_analysis_workflow, str(file_path), extension_id)
+    background_tasks.add_task(_run_analysis_workflow_bounded, str(file_path), extension_id)
 
     return {
         "message": "File uploaded and scan triggered successfully",

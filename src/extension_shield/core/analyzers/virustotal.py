@@ -10,6 +10,7 @@ When one key returns 429, that key is marked rate-limited and the next key is us
 """
 
 import os
+import copy
 import hashlib
 import logging
 import json
@@ -91,25 +92,46 @@ class _VTRateLimiter:
             self._daily_date = today
             self._rate_limited = False
 
-    def wait(self) -> bool:
-        """Block until a slot is available. Returns False if this key is rate-limited."""
-        if self._rate_limited:
-            return False
-        with self._lock:
-            self._reset_daily_if_needed()
-            if self._daily_count >= self._max_day:
-                self._rate_limited = True
+    def wait(self, max_wait: Optional[float] = None) -> bool:
+        """Reserve a request slot for this key.
+
+        max_wait semantics:
+          - None  → wait as long as needed (legacy blocking behavior)
+          - 0     → non-blocking: reserve only if a slot is immediately free
+          - >0    → wait up to this many seconds for a slot
+
+        The slot is reserved atomically UNDER the lock, but any waiting
+        (``time.sleep``) happens with the lock RELEASED so concurrent scans do
+        not serialize behind one sleeping thread. Returns False if the key is
+        rate-limited/quota-exhausted or no slot frees within ``max_wait``.
+        """
+        deadline = None if max_wait is None else time.monotonic() + max(max_wait, 0.0)
+        while True:
+            if self._rate_limited:
                 return False
-            now = time.monotonic()
-            self._timestamps = [t for t in self._timestamps if now - t < 60]
-            if len(self._timestamps) >= self._max_min:
-                sleep_for = 60 - (now - self._timestamps[0]) + 0.5
-                time.sleep(max(sleep_for, 1))
+            with self._lock:
+                self._reset_daily_if_needed()
+                if self._rate_limited:
+                    return False
+                if self._daily_count >= self._max_day:
+                    self._rate_limited = True
+                    return False
                 now = time.monotonic()
                 self._timestamps = [t for t in self._timestamps if now - t < 60]
-            self._timestamps.append(time.monotonic())
-            self._daily_count += 1
-        return True
+                if len(self._timestamps) < self._max_min:
+                    # Slot available — reserve it atomically before releasing the lock.
+                    self._timestamps.append(now)
+                    self._daily_count += 1
+                    return True
+                # No slot right now; compute how long until the oldest ages out.
+                sleep_for = 60 - (now - self._timestamps[0]) + 0.5
+            # Lock released before sleeping.
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                sleep_for = min(sleep_for, remaining)
+            time.sleep(max(min(sleep_for, 2.0), 0.05))
 
 
 class _VTKeyPool:
@@ -124,21 +146,38 @@ class _VTKeyPool:
         self._index = 0
         self._lock = threading.Lock()
 
-    def wait_and_get_key(self) -> Tuple[Optional[int], Optional[str]]:
+    def wait_and_get_key(self, max_wait: Optional[float] = None) -> Tuple[Optional[int], Optional[str]]:
         """
-        Round-robin over keys until one has capacity. Blocks if needed.
-        Returns (key_index, api_key) or (None, None) if all keys are rate-limited.
+        Get a key with available capacity.
+
+        Pass 1 is non-blocking across ALL keys (grab any key with an immediately
+        free slot). If none is free and ``max_wait`` allows waiting, Pass 2 waits
+        (bounded by ``max_wait``) on the next key in the rotation. Any waiting
+        happens inside the per-key limiter with its lock released — the pool lock
+        is only held briefly to advance the round-robin cursor.
+
+        Returns (key_index, api_key) or (None, None) if all keys are rate-limited
+        or no slot frees within ``max_wait``.
         """
         if not self._keys:
             return None, None
         with self._lock:
             start = self._index
-            for i in range(len(self._keys)):
-                idx = (start + i) % len(self._keys)
-                if self._limiters[idx].wait():
+        # Pass 1: non-blocking — take any key with immediate capacity.
+        for i in range(len(self._keys)):
+            idx = (start + i) % len(self._keys)
+            if self._limiters[idx].wait(max_wait=0):
+                with self._lock:
                     self._index = (idx + 1) % len(self._keys)
-                    return idx, self._keys[idx]
-        logger.warning("VirusTotal: all keys rate-limited")
+                return idx, self._keys[idx]
+        # Pass 2: bounded (or unbounded, when max_wait is None) wait on one key.
+        if max_wait is None or max_wait > 0:
+            idx = start % len(self._keys)
+            if self._limiters[idx].wait(max_wait=max_wait):
+                with self._lock:
+                    self._index = (idx + 1) % len(self._keys)
+                return idx, self._keys[idx]
+        logger.warning("VirusTotal: all keys rate-limited or wait budget exhausted")
         return None, None
 
     def mark_rate_limited(self, key_index: int) -> None:
@@ -173,6 +212,54 @@ def _get_vt_key_pool() -> Optional[_VTKeyPool]:
         _vt_key_pool = _VTKeyPool(keys, max_per_minute=4, max_per_day=500)
         logger.info("VirusTotal: using %d API key(s) with rotation", len(keys))
         return _vt_key_pool
+
+
+# ---------------------------------------------------------------------------
+# Process-level VirusTotal verdict cache (keyed by file sha256).
+# Concurrent/repeat scans of the same extension — or of a shared library file
+# common to many extensions — reuse a recent verdict instead of re-spending the
+# (small) free-tier quota. Only DEFINITIVE verdicts are cached (a real report or
+# a genuine "not in VT database"); transient/rate-limit/auth results are never
+# cached so a healthy key retries them.
+# ---------------------------------------------------------------------------
+_vt_hash_cache: Dict[str, Tuple[Dict[str, Any], float]] = {}
+_vt_hash_cache_lock = threading.Lock()
+_VT_HASH_CACHE_TTL = float(os.getenv("VT_HASH_CACHE_TTL_SECONDS", str(6 * 3600)))
+_vt_cache_hits = 0  # process-lifetime observability counter
+
+
+def _vt_cache_get(sha256: str) -> Optional[Dict[str, Any]]:
+    if not sha256:
+        return None
+    with _vt_hash_cache_lock:
+        entry = _vt_hash_cache.get(sha256)
+        if not entry:
+            return None
+        verdict, expiry = entry
+        if time.monotonic() >= expiry:
+            _vt_hash_cache.pop(sha256, None)
+            return None
+        global _vt_cache_hits
+        _vt_cache_hits += 1
+        return copy.deepcopy(verdict)  # deep copy so callers cannot mutate the cached entry (incl. nested)
+
+
+def _vt_cache_put(sha256: str, verdict: Optional[Dict[str, Any]]) -> None:
+    if not sha256 or not isinstance(verdict, dict):
+        return
+    # Never cache transient / rate-limit / auth failures — retry those on a healthy key.
+    if verdict.get("status") in ("RATE_LIMITED", "INVALID_KEY"):
+        return
+    if verdict.get("error"):
+        return
+    with _vt_hash_cache_lock:
+        _vt_hash_cache[sha256] = (copy.deepcopy(verdict), time.monotonic() + _VT_HASH_CACHE_TTL)
+
+
+def vt_cache_stats() -> Dict[str, int]:
+    """Observability for tests/ops: cumulative hit count and current cache size."""
+    with _vt_hash_cache_lock:
+        return {"hits": _vt_cache_hits, "size": len(_vt_hash_cache)}
 
 
 class VirusTotalAnalyzer(BaseAnalyzer):
@@ -301,18 +388,23 @@ class VirusTotalAnalyzer(BaseAnalyzer):
         max_files = self.config.get("max_files_to_scan", 10)
         return files_to_scan[:max_files]
 
-    async def _check_hash_virustotal(self, file_hash: str) -> Optional[Dict[str, Any]]:
+    async def _check_hash_virustotal(self, file_hash: str, max_wait: Optional[float] = None) -> Optional[Dict[str, Any]]:
         """
         Check a file hash against VirusTotal (async version).
         Uses key pool with rotation; on 429 the current key is marked and next key is used next time.
+        A recent cached verdict (process-level, keyed by sha256) is returned without spending quota.
         """
         if not self.enabled:
             return None
 
+        cached = _vt_cache_get(file_hash)
+        if cached is not None:
+            return cached
+
         pool = _get_vt_key_pool()
         if not pool:
             return None
-        key_index, api_key = pool.wait_and_get_key()
+        key_index, api_key = pool.wait_and_get_key(max_wait=max_wait)
         if api_key is None:
             return {
                 "found": False,
@@ -360,6 +452,7 @@ class VirusTotalAnalyzer(BaseAnalyzer):
                 else:
                     results["malware_families"] = []
 
+                _vt_cache_put(file_hash, results)
                 return results
 
         except vt.error.APIError as e:
@@ -368,7 +461,9 @@ class VirusTotalAnalyzer(BaseAnalyzer):
 
             if _is_vt_not_found_error(e, error_str):
                 logger.info("[VirusTotal] Hash not present in database for %s", file_hash)
-                return {"found": False, "message": "Hash not found in VirusTotal database"}
+                _not_found = {"found": False, "message": "Hash not found in VirusTotal database"}
+                _vt_cache_put(file_hash, _not_found)
+                return _not_found
 
             logger.warning("[VirusTotal] API error - status_code=%s, error=%s", status_code, error_str)
 
@@ -397,18 +492,23 @@ class VirusTotalAnalyzer(BaseAnalyzer):
             logger.error("[VirusTotal] Unexpected error: %s", e)
             return {"found": False, "error": str(e)}
 
-    def _check_hash_virustotal_sync(self, file_hash: str) -> Optional[Dict[str, Any]]:
+    def _check_hash_virustotal_sync(self, file_hash: str, max_wait: Optional[float] = None) -> Optional[Dict[str, Any]]:
         """
         Synchronous version of VirusTotal hash check.
         Uses key pool with rotation; on 429 the current key is marked and next key is used next time.
+        A recent cached verdict (process-level, keyed by sha256) is returned without spending quota.
         """
         if not self.enabled:
             return None
 
+        cached = _vt_cache_get(file_hash)
+        if cached is not None:
+            return cached
+
         pool = _get_vt_key_pool()
         if not pool:
             return None
-        key_index, api_key = pool.wait_and_get_key()
+        key_index, api_key = pool.wait_and_get_key(max_wait=max_wait)
         if api_key is None:
             return {
                 "found": False,
@@ -456,6 +556,7 @@ class VirusTotalAnalyzer(BaseAnalyzer):
                 else:
                     results["malware_families"] = []
 
+                _vt_cache_put(file_hash, results)
                 return results
 
         except vt.error.APIError as e:
@@ -464,7 +565,9 @@ class VirusTotalAnalyzer(BaseAnalyzer):
 
             if _is_vt_not_found_error(e, error_str):
                 logger.info("[VirusTotal] Hash not present in database for %s", file_hash)
-                return {"found": False, "message": "Hash not found in VirusTotal database"}
+                _not_found = {"found": False, "message": "Hash not found in VirusTotal database"}
+                _vt_cache_put(file_hash, _not_found)
+                return _not_found
 
             logger.warning("[VirusTotal] API error (sync) - status_code=%s, error=%s", status_code, error_str)
 
@@ -538,15 +641,27 @@ class VirusTotalAnalyzer(BaseAnalyzer):
         pool_desc = f"{pool.key_count} key(s), 4 req/min each" if pool else "no keys"
         logger.info("VirusTotal: Scanning %d files (%s)", len(files_to_scan), pool_desc)
 
+        # Total wall-clock budget for VT lookups this scan. Bounds how long the
+        # analyzer will wait behind the rate limiter so a burst of concurrent
+        # scans cannot make one scan hang for minutes. Cached hashes are served
+        # instantly and do NOT consume this budget.
+        vt_budget_seconds = float(os.getenv("VT_SCAN_BUDGET_SECONDS", "45"))
+        scan_deadline = time.monotonic() + vt_budget_seconds
+
         rate_limited_skips = 0
         for file_info in files_to_scan:
-            if pool and pool.is_exhausted:
+            remaining_budget = scan_deadline - time.monotonic()
+            if pool and (pool.is_exhausted or remaining_budget <= 0):
                 rate_limited_skips += 1
                 results["file_results"].append({
                     "file_name": file_info["name"],
                     "file_path": file_info["path"].replace(extension_dir, ""),
                     "skipped": True,
-                    "reason": "VirusTotal rate limit reached — file skipped",
+                    "reason": (
+                        "VirusTotal rate limit reached — file skipped"
+                        if (pool and pool.is_exhausted)
+                        else "VirusTotal time budget reached — file skipped"
+                    ),
                 })
                 continue
 
@@ -554,7 +669,7 @@ class VirusTotalAnalyzer(BaseAnalyzer):
                 file_path = file_info["path"]
                 hashes = self.compute_all_hashes(file_path)
 
-                vt_result = self._check_hash_virustotal_sync(hashes["sha256"])
+                vt_result = self._check_hash_virustotal_sync(hashes["sha256"], max_wait=remaining_budget)
 
                 file_result = {
                     "file_name": file_info["name"],
@@ -584,10 +699,11 @@ class VirusTotalAnalyzer(BaseAnalyzer):
                         families = vt_result.get("malware_families", [])
                         results["summary"]["detected_families"].extend(families)
 
-                # If VT returned a rate-limit status, stop further lookups this scan
+                # If VT returned a rate-limit status, stop further lookups this scan.
                 if vt_result and vt_result.get("status") == "RATE_LIMITED":
                     logger.warning("VirusTotal rate-limited — skipping remaining files")
                     rate_limited_skips += 1
+                    break
 
             except Exception as e:
                 logger.error("Error analyzing file %s: %s", file_info["path"], e)
