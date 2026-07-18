@@ -77,6 +77,7 @@
 
 /* Two-column grid */
 .hero-inner {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(2.5rem, 5vw, 5rem);
@@ -87,8 +88,26 @@
   margin: 0 auto;
 }
 
+/* Faint brand-shield watermark sitting behind the scan card. Very low opacity so
+   it reads as a subtle backdrop and the scan card keeps the focus. */
+.hero-shield-bg {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-18%, -50%);
+  width: clamp(460px, 44vw, 680px);
+  opacity: 0.06;
+  pointer-events: none;
+  user-select: none;
+
+  img { width: 100%; height: auto; display: block; }
+}
+
 /* ── Hero left ─────────────────────────────────────────────────────────────── */
 .hero-left {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -116,6 +135,11 @@
   color: var(--extensionshield-text-primary);
 }
 
+/* Second line of the headline — the call-to-action, in brand green. */
+.hero-title-accent {
+  color: var(--extensionshield-accent);
+}
+
 /* Subhead */
 .hero-subhead {
   font-size: clamp(0.9rem, 1.5vw, 1rem);
@@ -131,7 +155,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0;
-  margin-bottom: 1rem;
+  margin: 0.4rem 0 1rem;
   border: none;
   background: none;
   font: inherit;
@@ -314,24 +338,6 @@
 }
 
 /* Scan info line */
-.hero-scan-info {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-  font-size: 0.8125rem;
-  color: var(--extensionshield-text-muted);
-  line-height: 1.5;
-
-  .hero-scan-check {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-    margin-top: 2px;
-    color: var(--extensionshield-accent);
-  }
-}
-
 /* Error hint */
 .scan-error-hint {
   margin-top: 0.75rem;
@@ -386,6 +392,8 @@
 
 /* ── Hero right: scan preview card ────────────────────────────────────────── */
 .hero-right {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -482,6 +490,32 @@
   flex-direction: column;
   gap: 0.125rem;
   min-width: 0;
+  flex: 1;
+}
+
+/* Overall score, right-aligned in the extension row */
+.spc-ext-overall {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+
+  &.good   .spc-overall-num { color: #059669; }
+  &.medium .spc-overall-num { color: #b45309; }
+  &.bad    .spc-overall-num { color: #dc2626; }
+}
+
+.spc-overall-num {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.spc-overall-max {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--extensionshield-text-muted);
 }
 
 .spc-ext-name {
@@ -555,40 +589,6 @@
   &.bad  { color: #dc2626; }
 }
 
-/* Divider */
-.spc-divider {
-  height: 1px;
-  background: var(--extensionshield-border);
-  margin: 1rem 0 0.875rem;
-}
-
-/* Findings */
-.spc-findings {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.spc-finding {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.78125rem;
-  line-height: 1.4;
-
-  svg { flex-shrink: 0; }
-
-  &.warn {
-    color: #b45309;
-    svg { stroke: #f59e0b; }
-  }
-
-  &.ok {
-    color: var(--extensionshield-text-muted);
-    svg { stroke: #10b981; }
-  }
-}
-
 /* Card footer */
 .spc-footer {
   display: flex;
@@ -601,20 +601,99 @@
   color: var(--extensionshield-text-muted);
 }
 
-.spc-dot {
-  color: var(--extensionshield-border);
-}
-
-.spc-footer-warn {
-  color: #b45309;
-  font-weight: 500;
-}
-
 .spc-view {
   margin-left: auto;
   font-weight: 600;
   color: var(--extensionshield-text-secondary);
   transition: color 0.15s ease;
+}
+
+/* ── Hero scan carousel — crossfade slides + arrows + dots ──────────────────── */
+.hero-carousel {
+  width: 100%;
+  max-width: 390px;
+}
+
+/* All slides stacked in one grid cell so the viewport sizes to the card and
+   we can crossfade between them. */
+.hero-carousel-viewport {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+/* Fade-IN only: the outgoing slide hides instantly (no transition) and the
+   incoming one fades/rises in, so text never blends/ghosts during the change. */
+.hero-carousel-slide {
+  grid-area: 1 / 1;
+  min-width: 0; /* let the slide shrink to the track on narrow screens */
+  opacity: 0;
+  pointer-events: none;
+
+  &.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    animation: hero-slide-in 0.45s ease both;
+  }
+}
+
+@keyframes hero-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.hero-carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.hero-carousel-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--extensionshield-border);
+  background: var(--extensionshield-bg-card);
+  color: var(--extensionshield-text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--extensionshield-accent) 40%, var(--extensionshield-border));
+    color: var(--extensionshield-accent);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  }
+  &:focus-visible { outline: 2px solid var(--extensionshield-accent); outline-offset: 2px; }
+}
+
+.hero-carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hero-carousel-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--extensionshield-border);
+  cursor: pointer;
+  transition: background 0.2s ease, width 0.2s ease;
+
+  &:hover { background: color-mix(in srgb, var(--extensionshield-accent) 55%, var(--extensionshield-border)); }
+  &.is-active { width: 20px; border-radius: 4px; background: var(--extensionshield-accent); }
+  &:focus-visible { outline: 2px solid var(--extensionshield-accent); outline-offset: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel-slide.is-active { animation: none; }
 }
 
 .stat-value {
@@ -678,7 +757,7 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--extensionshield-accent);
-  margin: 0 0 0.6rem;
+  margin: 0 0 1rem;
 }
 
 .hp-section-head {
@@ -903,54 +982,68 @@
   align-items: center;
 }
 
-.hp-problem-copy {
+/* Shared copy styling for The Update Gap + Auditable sections. Each section's
+   box width is set to its own two-line heading (below) so the body text wraps
+   to the same measure as the title instead of running wider. */
+.hp-problem-copy,
+.hp-open-copy {
   min-width: 0;
-  max-width: 46ch;
 
   h2 {
-    font-size: clamp(1.5rem, 3.2vw, 2.125rem);
+    font-size: clamp(1.5rem, 3vw, 2rem);
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.25;
     letter-spacing: -0.02em;
-    margin: 0 0 1.25rem;
+    margin: 0 0 1.5rem;
     color: var(--extensionshield-text-primary);
   }
 
   p {
-    margin: 0 0 1rem;
+    margin: 0 0 1.15rem;
     font-size: 0.9375rem;
-    line-height: 1.7;
+    line-height: 1.75;
     color: var(--extensionshield-text-secondary);
 
     &:last-child { margin-bottom: 0; }
   }
 }
 
+/* Box width ≈ each section's widest heading line, so the body shares its measure */
+.hp-problem-copy { max-width: 24rem; }
+.hp-open-copy   { max-width: 27rem; }
+
 /* Inline Honey case-study link inside the Update Gap copy column */
 .hp-problem-aside {
-  margin-top: 1.25rem !important;
+  margin-top: 2rem !important;
 }
 
+/* Green CTA button */
 .hp-problem-aside-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--extensionshield-accent);
+  gap: 0.4rem;
+  padding: 0.625rem 1.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--extensionshield-accent);
+  border-radius: 8px;
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--extensionshield-accent) 35%, transparent);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 
-  svg {
-    transition: transform 0.15s ease;
-  }
+  svg { transition: transform 0.15s ease; }
 
-  &:hover,
-  &:focus-visible {
-    border-bottom-color: currentColor;
+  &:hover {
+    background: var(--extensionshield-accent-hover);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--extensionshield-accent) 30%, transparent);
 
     svg { transform: translateX(2px); }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--extensionshield-accent);
+    outline-offset: 2px;
   }
 }
 
@@ -959,909 +1052,388 @@
    and replays on hover / keyboard focus. Final-state CSS is the base; the
    `.is-animated` modifier scopes initial-hidden state + keyframe delays so
    reduced-motion users (no `.is-animated`) see only the final state. */
+/* ── Section 4 — The Update Gap card ─────────────────────────────────────────
+   Static version-diff illustration: extension header → v12.0.1 vs v12.4.0 →
+   three status tiles (what changed / stayed the same). No animation. */
 .hp-ugap {
   border: 1px solid var(--extensionshield-border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--extensionshield-bg-card);
-  overflow: hidden;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
-  outline: none;
-  transition: box-shadow 0.2s ease;
-
-  &:focus-visible {
-    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25), 0 2px 16px rgba(0, 0, 0, 0.07);
-  }
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 32px rgba(15, 23, 42, 0.06);
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.4rem);
 }
 
-.hp-ugap-header {
+/* Header — extension identity */
+.hp-ugap-head {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--extensionshield-border);
-  background: var(--extensionshield-bg-secondary);
+  gap: 0.875rem;
 }
 
 .hp-ugap-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 7px;
-  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
+  border-radius: 12px;
+  background: #1e293b;
+  color: #cbd5e1;
 }
 
-.hp-ugap-meta {
+.hp-ugap-id {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  flex: 1;
+  align-items: flex-start;
+  gap: 0.35rem;
   min-width: 0;
 }
 
 .hp-ugap-name {
-  font-size: 0.8125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--extensionshield-text-primary);
-}
-
-.hp-ugap-store {
-  font-size: 0.6875rem;
-  color: var(--extensionshield-text-muted);
-}
-
-.hp-ugap-v1 { padding: 0.75rem 1rem; }
-.hp-ugap-v2 {
-  padding: 0.75rem 1rem;
-  background: rgba(245, 158, 11, 0.022);
-}
-
-.hp-ugap-row-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-  font-family: var(--font-sans);
-  color: var(--extensionshield-text-muted);
-
-  &.hp-ugap-row-label--reviewed { color: #15803d; }
-  &.hp-ugap-row-label--needsreview { color: #b45309; }
-}
-
-.hp-ugap-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  position: relative;
-
-  &.hp-ugap-dot--green {
-    background: #16a34a;
-    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
-  }
-
-  &.hp-ugap-dot--amber {
-    background: #d97706;
-    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
-  }
-}
-
-.hp-ugap-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-bottom: 0.625rem;
-}
-
-.hp-ugap-chip {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  padding: 0.175rem 0.45rem;
-  border-radius: 4px;
-  font-family: var(--font-mono, ui-monospace, monospace);
-
-  &.hp-ugap-chip--ok {
-    background: rgba(22, 163, 74, 0.06);
-    border: 1px solid rgba(22, 163, 74, 0.16);
-    color: #166534;
-  }
 }
 
 .hp-ugap-pub {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.6875rem;
-  font-family: var(--font-mono, ui-monospace, monospace);
-}
-
-.hp-ugap-pub-key {
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--extensionshield-text-muted);
-  font-family: var(--font-sans);
-  margin-right: 0.1rem;
-}
-
-.hp-ugap-pub-val { color: var(--extensionshield-text-secondary); }
-
-/* "Declared permissions unchanged" reassurance row */
-.hp-ugap-unchanged {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.55rem;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: #15803d;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  background: rgba(22, 163, 74, 0.05);
-  border: 1px solid rgba(22, 163, 74, 0.14);
-  font-family: var(--font-sans);
-
-  svg { color: #16a34a; flex-shrink: 0; }
-}
-
-/* Timeline divider */
-.hp-ugap-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: rgba(245, 158, 11, 0.03);
-  border-top: 1px solid rgba(245, 158, 11, 0.12);
-  border-bottom: 1px solid rgba(245, 158, 11, 0.12);
-}
-
-.hp-ugap-divider-rule {
-  flex: 1;
-  height: 1px;
-  background: repeating-linear-gradient(
-    to right,
-    rgba(245, 158, 11, 0.4) 0,
-    rgba(245, 158, 11, 0.4) 4px,
-    transparent 4px,
-    transparent 8px
-  );
-}
-
-.hp-ugap-divider-label {
-  font-size: 0.5875rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: #b45309;
-  white-space: nowrap;
-  font-family: var(--font-sans);
-  text-transform: uppercase;
-}
-
-/* Change-signal evidence rows */
-.hp-ugap-signals {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed rgba(0, 0, 0, 0.07);
+  font-size: 0.75rem;
+  color: var(--extensionshield-text-secondary);
+  background: color-mix(in srgb, var(--extensionshield-accent) 9%, transparent);
+  padding: 0.2rem 0.55rem;
   border-radius: 6px;
 }
 
-.hp-ugap-signals-label {
-  display: block;
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--extensionshield-text-muted);
-  font-family: var(--font-sans);
-  margin-bottom: 0.4rem;
+.hp-ugap-rule {
+  height: 1px;
+  background: var(--extensionshield-border);
 }
 
-.hp-ugap-signal {
-  display: grid;
-  grid-template-columns: 1.1rem auto 1fr;
-  align-items: baseline;
-  gap: 0.4rem;
-  padding: 0.275rem 0.5rem;
-  margin-bottom: 0.225rem;
-  font-size: 0.6875rem;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  border-radius: 4px;
-  background: rgba(217, 119, 6, 0.04);
-  border: 1px solid rgba(217, 119, 6, 0.12);
-
-  &:last-child { margin-bottom: 0; }
-
-  /* The 4th row is the verdict — slight emphasis */
-  &.hp-ugap-signal--n4 {
-    background: rgba(220, 38, 38, 0.05);
-    border-color: rgba(220, 38, 38, 0.18);
-    margin-top: 0.35rem;
-
-    .hp-ugap-signal-glyph { color: #b91c1c; }
-    .hp-ugap-signal-key   { color: #991b1b; }
-    .hp-ugap-signal-val   { color: #991b1b; font-weight: 600; }
-  }
+/* Version diff */
+.hp-ugap-versions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.hp-ugap-signal-glyph {
-  font-weight: 700;
-  color: #b45309;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
+.hp-ugap-ver {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.hp-ugap-ver-pill {
+  width: 100%;
   text-align: center;
-}
-
-.hp-ugap-signal-key {
-  font-size: 0.5625rem;
+  font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  padding: 0.55rem 0.75rem;
+  border-radius: 9px;
+
+  &.good { background: rgba(22, 163, 74, 0.10); color: #16a34a; }
+  &.warn { background: rgba(245, 158, 11, 0.12); color: #c2410c; }
+}
+
+.hp-ugap-ver-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: #92400e;
-  font-family: var(--font-sans);
-  white-space: nowrap;
+
+  &.good { color: #16a34a; }
+  &.warn { color: #c2410c; }
 }
 
-.hp-ugap-signal-val {
-  color: var(--extensionshield-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.hp-ugap-ver-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
-.hp-ugap-footer {
+/* Dashed arrow aligned with the version pills (above the captions) */
+.hp-ugap-arrow {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.9rem;
+  color: var(--extensionshield-text-muted);
+}
+
+/* What changed — status tiles */
+.hp-ugap-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.hp-ugap-tile {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.625rem 1rem;
-  border-top: 1px solid var(--extensionshield-border);
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border-radius: 11px;
+  border: 1px solid transparent;
+
+  &.good { background: rgba(22, 163, 74, 0.07);  border-color: rgba(22, 163, 74, 0.16); }
+  &.warn { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.20); }
+}
+
+.hp-ugap-tile-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.hp-ugap-tile.good .hp-ugap-tile-icon { color: #16a34a; }
+.hp-ugap-tile.warn .hp-ugap-tile-icon { color: #c2410c; }
+
+.hp-ugap-tile-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.hp-ugap-tile-strong {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--extensionshield-text-primary);
+}
+
+.hp-ugap-tile-sub {
   font-size: 0.75rem;
-  font-weight: 500;
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.04);
-  font-family: var(--font-sans);
-
-  svg { flex-shrink: 0; color: #f59e0b; }
+  color: var(--extensionshield-text-muted);
 }
 
-/* ── Animation: scoped only to .hp-ugap.is-animated ───────────────────────
-   Timing (≈ 6s total):
-     0.0–1.0s  v1 visible (already painted) + green dot pulses once
-     1.0–2.0s  amber timeline rule draws + label fades in
-     2.0–3.0s  v2 base reveals (label, unchanged marker, identical chips)
-     3.0–4.2s  three change-signal rows stagger in
-     4.2–5.3s  signals briefly highlighted, settle
-     5.3–6.0s  footer fades in
-   Reduced-motion users get `.is-reduced` instead: final state only. */
-@keyframes hp-ugap-fade-up {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Narrow: stack the status tiles */
+@media (max-width: 420px) {
+  .hp-ugap-tiles { grid-template-columns: 1fr; }
 }
 
-@keyframes hp-ugap-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes hp-ugap-draw {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
-
-@keyframes hp-ugap-dot-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }
-  60%  { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
-  100% { box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2); }
-}
-
-@keyframes hp-ugap-signals-highlight {
-  0%   { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
-  35%  { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.18); }
-  100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
-}
-
-.hp-ugap.is-animated {
-  .hp-ugap-dot--green {
-    animation: hp-ugap-dot-pulse 1s 0.2s 1;
-  }
-
-  .hp-ugap-divider-rule {
-    transform: scaleX(0);
-    animation: hp-ugap-draw 0.55s 1s both;
-
-    &.hp-ugap-divider-rule--left  { transform-origin: left center; }
-    &.hp-ugap-divider-rule--right {
-      transform-origin: right center;
-      animation-delay: 1.25s;
-      animation-duration: 0.45s;
-    }
-  }
-
-  .hp-ugap-divider-label {
-    opacity: 0;
-    animation: hp-ugap-fade 0.4s 1.5s both;
-  }
-
-  .hp-ugap-v2 {
-    opacity: 0;
-    transform: translateY(6px);
-    animation: hp-ugap-fade-up 0.45s 2s both;
-  }
-
-  .hp-ugap-unchanged {
-    opacity: 0;
-    animation: hp-ugap-fade 0.4s 2.55s both;
-  }
-
-  .hp-ugap-signal--n1 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 3.0s both; }
-  .hp-ugap-signal--n2 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 3.4s both; }
-  .hp-ugap-signal--n3 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 3.8s both; }
-  .hp-ugap-signal--n4 { opacity: 0; transform: translateY(4px); animation: hp-ugap-fade-up 0.4s 4.2s both; }
-
-  .hp-ugap-signals {
-    animation: hp-ugap-signals-highlight 1.1s 4.8s 1 both;
-  }
-
-  .hp-ugap-footer {
-    opacity: 0;
-    animation: hp-ugap-fade 0.5s 5.7s both;
-  }
-}
-
-/* ── Section 4 — How it works (connected flow) ─────────────────────────────── */
-.hp-how {
-  padding: var(--hp-section-py) var(--hp-px);
-}
-
-.hp-how-inner,
-.hp-layers-inner,
+/* Preserved shared rule — these inners still rely on it for centering.
+   (Was bundled with the now-removed .hp-how-inner / .hp-layers-inner.) */
 .hp-open-inner,
 .hp-ent-inner-wrap {
   max-width: var(--hp-max);
   margin: 0 auto;
 }
 
-/* Three-step flow — wrapper handles hover/focus replay, inner is the grid */
-.hp-flow {
-  outline: none;
-  border-radius: 12px;
-  transition: box-shadow 0.2s ease;
-
-  /* Focus ring kept for accessibility even though sequence does not replay on
-     focus — this is just the standard keyboard-focus affordance. */
-  &:focus-visible {
-    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22);
-  }
+/* ============================================================================
+   Section 2 — Risk analysis  (How it works + Scoring model, merged)
+   One framed module: centered header → 3-step flow (search → scan → findings)
+   with connectors → composite score roll-up → foot CTA + topic links.
+   Light-only, emerald accent, no "AI" language. Horizontal on desktop; stacks
+   vertically under 900px. Reduced motion honoured via .hp-ra-flow state classes.
+   ========================================================================== */
+.hp-ra {
+  padding: var(--hp-section-py) var(--hp-px);
 }
 
-.hp-flow-inner {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
-  gap: 0;
-  align-items: start;
-}
-
-/* Animation — scoped to .hp-flow.is-animated.
-   One-shot search → scan → findings sequence, total ~3.3s. Fires when
-   IntersectionObserver crosses 0.4 threshold. `.is-pending` holds the same
-   initial-hidden state until IO fires so elements do not flash visible.
-   `.is-reduced` skips both classes entirely and renders the final state.
-   Transform + opacity + border-color only. No loops, no replay. */
-@keyframes hp-flow-fade-up {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes hp-flow-bar-fill {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
-
-@keyframes hp-flow-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes hp-flow-focus-ring {
-  from { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-  60%  { box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25); }
-  to   { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-}
-
-/* Initial-hidden state shared by both is-pending and is-animated, so the
-   pre-IO state matches the keyframe `from` block. .is-reduced does not get
-   these rules — its elements render in their normal visible state. */
-.hp-flow.is-pending,
-.hp-flow.is-animated {
-  .hp-flow-step:nth-child(1) .hp-flow-ui { opacity: 0; transform: translateY(4px); }
-  .hp-flow-step:nth-child(3) .hp-flow-ui { opacity: 0; transform: translateY(4px); }
-  .hp-flow-step:nth-child(5) .hp-flow-ui { opacity: 0; transform: translateY(4px); }
-  .hp-flow-conn:nth-child(2) { opacity: 0; }
-  .hp-flow-conn:nth-child(4) { opacity: 0; }
-  .hp-flow-step:nth-child(3) .hp-flow-lr-fill { transform: scaleX(0); transform-origin: left center; }
-  .hp-flow-step:nth-child(3) .hp-flow-elapsed { opacity: 0; }
-  .hp-flow-step:nth-child(5) .hp-flow-report-score { opacity: 0; }
-  .hp-flow-step:nth-child(5) .hp-flow-find { opacity: 0; transform: translateY(3px); }
-  .hp-flow-step:nth-child(1) .hp-flow-url { opacity: 0; }
-}
-
-.hp-flow.is-animated {
-  /* === Card 1 — Search (0.00s – 0.95s) ============================ */
-  /* Card surface fades up */
-  .hp-flow-step:nth-child(1) .hp-flow-ui {
-    animation: hp-flow-fade-up 0.4s 0s both;
-  }
-  /* Sample query "PayPal Honey" reveals inside the search bar after the card
-     has settled — gives the "field activates → sample appears" beat without
-     a literal typing effect. */
-  .hp-flow-step:nth-child(1) .hp-flow-url {
-    animation: hp-flow-fade 0.35s 0.45s both;
-  }
-  /* Subtle one-shot accent ring on the input bar to read as "field active" */
-  .hp-flow-step:nth-child(1) .hp-flow-input-bar {
-    animation: hp-flow-focus-ring 0.9s 0.3s 1 both;
-  }
-  /* Connector hairline 1 → bridges into Card 2 */
-  .hp-flow-conn:nth-child(2) {
-    animation: hp-flow-fade 0.4s 0.95s both;
-  }
-
-  /* === 250 ms pause ============================================== */
-
-  /* === Card 2 — Scan (1.20s – 2.40s) ============================== */
-  .hp-flow-step:nth-child(3) .hp-flow-ui {
-    animation: hp-flow-fade-up 0.4s 1.2s both;
-  }
-  .hp-flow-step:nth-child(3) .hp-flow-lr-fill {
-    animation: hp-flow-bar-fill 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-  .hp-flow-step:nth-child(3) .hp-flow-lr:nth-child(1) .hp-flow-lr-fill { animation-delay: 1.50s; }
-  .hp-flow-step:nth-child(3) .hp-flow-lr:nth-child(2) .hp-flow-lr-fill { animation-delay: 1.65s; }
-  .hp-flow-step:nth-child(3) .hp-flow-lr:nth-child(3) .hp-flow-lr-fill { animation-delay: 1.80s; }
-  .hp-flow-step:nth-child(3) .hp-flow-elapsed {
-    animation: hp-flow-fade 0.35s 2.30s both;
-  }
-  /* Connector hairline 2 → bridges into Card 3 */
-  .hp-flow-conn:nth-child(4) {
-    animation: hp-flow-fade 0.4s 2.45s both;
-  }
-
-  /* === 250 ms pause ============================================== */
-
-  /* === Card 3 — Report (2.70s – 3.30s) ============================ */
-  .hp-flow-step:nth-child(5) .hp-flow-ui {
-    animation: hp-flow-fade-up 0.4s 2.70s both;
-  }
-  .hp-flow-step:nth-child(5) .hp-flow-report-score {
-    animation: hp-flow-fade 0.4s 2.95s both;
-  }
-  .hp-flow-step:nth-child(5) .hp-flow-find:nth-child(1) { animation: hp-flow-fade-up 0.3s 3.05s both; }
-  .hp-flow-step:nth-child(5) .hp-flow-find:nth-child(2) { animation: hp-flow-fade-up 0.3s 3.15s both; }
-  .hp-flow-step:nth-child(5) .hp-flow-find:nth-child(3) { animation: hp-flow-fade-up 0.3s 3.25s both; }
-}
-
-.hp-flow-step {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-}
-
-/* Mini UI panels */
-.hp-flow-ui {
-  border: 1px solid var(--extensionshield-border);
-  border-radius: 12px;
+/* Framed outer card — the module floats on the page background. */
+.hp-ra-inner {
+  max-width: var(--hp-max);
+  margin: 0 auto;
   background: var(--extensionshield-bg-card);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  margin-bottom: 1.25rem;
-  position: relative;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-
-  /* Accent top edge — gives each card a product-native feel */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      var(--extensionshield-accent) 0%,
-      color-mix(in srgb, var(--extensionshield-accent) 40%, transparent) 100%
-    );
-  }
-
-  &:hover {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
-  }
+  padding:
+    clamp(2.25rem, 5vw, 2.75rem)
+    clamp(1.25rem, 5vw, 2.75rem)
+    clamp(1.75rem, 4vw, 2rem);
 }
 
-/* Step 1 — Input */
-.hp-flow-ui--input {
-  padding: 0.75rem;
-}
-
-.hp-flow-input-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.625rem;
-  border: 1px solid var(--extensionshield-border);
-  border-radius: 8px;
-  background: var(--extensionshield-bg-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.hp-flow-chrome {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.hp-flow-url {
-  font-size: 0.8125rem;
-  color: var(--extensionshield-text-secondary);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-mono, ui-monospace, monospace);
-}
-
-.hp-flow-go {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--extensionshield-accent);
-  flex-shrink: 0;
-  padding: 0.2rem 0.5rem;
-  background: color-mix(in srgb, var(--extensionshield-accent) 10%, transparent);
-  border-radius: 4px;
-}
-
-.hp-flow-hint {
-  font-size: 0.6875rem;
-  color: var(--extensionshield-text-muted);
-  margin: 0;
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.hp-ra-head {
   text-align: center;
+  max-width: 40rem;
+  margin: 0 auto clamp(1.75rem, 3.5vw, 2.75rem);
 }
 
-/* Step 2 — Scan */
-.hp-flow-ui--scan {
-  padding: 0.875rem;
-}
-
-.hp-flow-layer-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 0.625rem;
-}
-
-.hp-flow-lr {
-  display: grid;
-  grid-template-columns: 14px 5.5rem 1fr 1.5rem;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-
-  svg { color: var(--extensionshield-accent); }
-
-  span:first-of-type { color: var(--extensionshield-text-secondary); }
-
-  span:last-child {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    color: var(--extensionshield-accent);
-
-    &.bad  { color: #dc2626; }
-    &.good { color: #16a34a; }
-  }
-}
-
-.hp-flow-lr-bar {
-  height: 4px;
-  background: var(--extensionshield-border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.hp-flow-lr-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--extensionshield-accent);
-
-  &.bad  { background: #ef4444; }
-  &.good { background: #10b981; }
-}
-
-.hp-flow-elapsed {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--extensionshield-text-muted);
-  text-align: center;
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--extensionshield-border);
-}
-
-/* Step 3 — Report */
-.hp-flow-ui--report {
-  padding: 0.875rem;
-}
-
-.hp-flow-report-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.hp-flow-report-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--extensionshield-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hp-flow-report-pill {
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 0.175rem 0.4rem;
-  border-radius: 3px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-
-  &.medium { background: rgba(245, 158, 11, 0.1); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.2); }
-}
-
-.hp-flow-report-score {
-  font-size: 1.625rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: #b45309;
-  line-height: 1;
-  margin-bottom: 0.625rem;
-
-  em {
-    font-style: normal;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--extensionshield-text-muted);
-  }
-}
-
-.hp-flow-report-finds {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.hp-flow-find {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.6875rem;
-  line-height: 1.4;
-
-  svg { flex-shrink: 0; }
-
-  &.warn { color: #b45309; svg { stroke: #f59e0b; } }
-  &.ok   { color: var(--extensionshield-text-muted); svg { stroke: #10b981; } }
-}
-
-/* Flow step head — keeps step number badge and title on the SAME row */
-.hp-flow-step-head {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  margin: 0 0 0.875rem;
-  min-width: 0;
-  flex-wrap: nowrap;
-}
-
-.hp-flow-num {
+.hp-ra-eyebrow {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  flex-shrink: 0;
-  font-size: 0.625rem;
+  gap: 0.4rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--extensionshield-accent);
-  background: color-mix(in srgb, var(--extensionshield-accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--extensionshield-accent) 25%, transparent);
-  border-radius: 50%;
+  margin: 0 0 0.75rem;
+
+  svg { color: var(--extensionshield-accent); }
 }
 
-.hp-flow-step h3 {
-  font-size: 1rem;
+.hp-ra-head h2 {
+  font-size: clamp(1.5rem, 3.2vw, 2.125rem);
   font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem;
   color: var(--extensionshield-text-primary);
-  /* Margin now lives on .hp-flow-step-head; h3 is just a flex child */
-  margin: 0;
-  min-width: 0;
 }
 
-.hp-flow-step p {
-  font-size: 0.875rem;
+.hp-ra-sub {
+  font-size: clamp(0.9375rem, 1.6vw, 1.0625rem);
   line-height: 1.6;
   color: var(--extensionshield-text-secondary);
   margin: 0;
 }
 
-/* Connector between steps */
-.hp-flow-conn {
+/* ── Three-step flow ─────────────────────────────────────────────────────── */
+.hp-ra-flow {
+  position: relative;
+  max-width: min(100%, 62rem);
+  margin: 0 auto;
+}
+
+/* Steps stack vertically — one spacious full-width row each, connected by a
+   left-hand timeline (see .hp-ra-conn). */
+.hp-ra-steps {
   display: flex;
   flex-direction: column;
+}
+
+/* Each row: step copy on the left, the mock card on the right. */
+.hp-ra-step {
+  display: grid;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 29rem);
+  grid-template-areas: "head card";
+  column-gap: clamp(3rem, 6vw, 5.5rem);
+  justify-content: center;
   align-items: center;
-  justify-content: flex-start;
-  /* Aligns with the vertical center of each card's mock UI panel. The mock
-     UI now sits below the step number + title, so the connector needs to
-     drop further down to meet the new panel center on desktop. */
-  padding-top: 7rem;
-  gap: 0;
+  min-width: 0;
+}
 
-  span:first-child {
-    display: block;
-    width: 24px;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--extensionshield-accent) 30%, transparent),
-      color-mix(in srgb, var(--extensionshield-accent) 10%, transparent)
-    );
+.hp-ra-step > .hp-ra-card { grid-area: card; align-self: start; }
+
+/* Step head: numbered badge + (title + description); vertically centred against
+   the card that sits beside it. */
+.hp-ra-step-head {
+  grid-area: head;
+  align-self: center;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.hp-ra-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: var(--extensionshield-accent);
+  box-shadow: 0 1px 5px color-mix(in srgb, var(--extensionshield-accent) 45%, transparent);
+}
+
+.hp-ra-step-heading {
+  min-width: 0;
+
+  h3 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0 0 0.35rem;
+    color: var(--extensionshield-text-primary);
   }
 
-  span:last-child {
-    display: block;
-    font-size: 0.6875rem;
-    color: color-mix(in srgb, var(--extensionshield-accent) 60%, transparent);
-    margin-top: 0.25rem;
-    line-height: 1;
+  p {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--extensionshield-text-secondary);
+    margin: 0;
   }
 }
 
-/* ── Section 5 — Scoring model (unified visual) ─────────────────────────────── */
-.hp-layers {
-  padding: var(--hp-section-py) var(--hp-px);
-}
-
-/* Unified scoring framework card */
-.hp-sf {
+/* Mock cards (shared shell) */
+.hp-ra-card {
   border: 1px solid var(--extensionshield-border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--extensionshield-bg-card);
-  overflow: hidden;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.06);
+  padding: 1rem 1.125rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
-.hp-sf-overall {
+/* Step 1 — search */
+.hp-ra-card--search {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--extensionshield-border);
+}
+
+.hp-ra-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem 0.5rem 0.75rem;
+  border: 1px solid var(--extensionshield-border);
+  border-radius: 9px;
   background: var(--extensionshield-bg-secondary);
 }
 
-.hp-sf-overall-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--extensionshield-text-muted);
-  white-space: nowrap;
+.hp-ra-search-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  .chrome-logo { width: 18px; height: 18px; display: block; }
 }
 
-.hp-sf-overall-track {
+.hp-ra-search-text {
   flex: 1;
-  height: 6px;
-  background: var(--extensionshield-border);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.hp-sf-overall-fill {
-  height: 100%;
-  background: #f59e0b;
-  border-radius: 3px;
-}
-
-.hp-sf-overall-num {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-
-  &.warn { color: #b45309; }
-
-  .hp-sf-overall-max {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--extensionshield-text-muted);
-  }
-}
-
-.hp-sf-risk-pill {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  text-transform: uppercase;
-
-  &.medium { background: rgba(245, 158, 11, 0.1); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.2); }
-}
-
-/* Signal-flow cue — quiet annotation sitting between the composite bar and
-   the three layer columns. Three small ticks align with each column center;
-   the centered label clarifies the merge. No SVG, no dominant arrows. */
-.hp-sf-flow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: center;
-  position: relative;
-  padding: 0.6rem 0 0.4rem;
-  margin: 0;
-  border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 70%, transparent);
-}
-
-.hp-sf-flow-tick {
-  width: 1px;
-  height: 8px;
-  background: color-mix(in srgb, var(--extensionshield-border) 80%, transparent);
-  justify-self: center;
-}
-
-.hp-sf-flow-label {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 0.6875rem;
-  letter-spacing: 0.01em;
-  color: var(--extensionshield-text-muted);
-  background: var(--extensionshield-bg-card);
-  padding: 0 0.625rem;
-  white-space: nowrap;
-  font-style: italic;
-}
-
-.hp-sf-layers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.hp-sf-layer {
-  padding: 1.25rem 1.375rem 1.375rem;
   min-width: 0;
+  font-size: 0.875rem;
+  color: var(--extensionshield-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-ra-search-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 7px;
+  color: #fff;
+  background: var(--extensionshield-accent);
+}
+
+/* Step 2 — three risk layers */
+.hp-ra-card--layers {
   display: flex;
   flex-direction: column;
-
-  & + & {
-    /* Softened internal divider: lighter, dashed */
-    border-left: 1px dashed color-mix(in srgb, var(--extensionshield-border) 65%, transparent);
-  }
+  gap: 0.75rem;
 }
 
-.hp-sf-layer-head {
-  display: flex;
+.hp-ra-layer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.625rem;
+  gap: 0.75rem;
 }
 
-.hp-sf-layer-icon {
+.hp-ra-layer-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1872,59 +1444,233 @@
   color: var(--extensionshield-accent);
   background: color-mix(in srgb, var(--extensionshield-accent) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--extensionshield-accent) 20%, transparent);
+
+  &.warn { color: #b45309; background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.28); }
+  &.bad  { color: #dc2626; background: rgba(220, 38, 38, 0.10);  border-color: rgba(220, 38, 38, 0.24); }
 }
 
-.hp-sf-layer-name {
-  font-size: 1rem;
+.hp-ra-layer-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.0625rem;
+}
+
+.hp-ra-layer-name {
+  font-size: 0.8125rem;
   font-weight: 600;
-  margin: 0;
+  color: var(--extensionshield-text-primary);
+  line-height: 1.25;
+}
+
+.hp-ra-layer-desc {
+  font-size: 0.6875rem;
+  color: var(--extensionshield-text-muted);
+  line-height: 1.3;
+}
+
+.hp-ra-layer-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.hp-ra-meter {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.hp-ra-meter-seg {
+  width: 4px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--extensionshield-border);
+}
+
+.hp-ra-meter.good .hp-ra-meter-seg.on { background: #16a34a; }
+.hp-ra-meter.warn .hp-ra-meter-seg.on { background: #f59e0b; }
+.hp-ra-meter.bad  .hp-ra-meter-seg.on { background: #ef4444; }
+
+.hp-ra-layer-score {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 2rem;
+  text-align: right;
+
+  &.good { color: #16a34a; }
+  &.warn { color: #b45309; }
+  &.bad  { color: #dc2626; }
+}
+
+/* Step 3 — report (real link to the frozen scan) */
+/* Step 3 — report card, styled as a scan-summary card:
+   icon + title/publisher, score + risk pill top-right, rule, findings, rule,
+   footer link with the arrow pushed to the far right. */
+.hp-ra-card--report {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem 1.25rem;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 12px 28px rgba(15, 23, 42, 0.11);
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--extensionshield-accent) 30%, var(--extensionshield-border));
+  }
+  &:focus-visible { outline: 2px solid var(--extensionshield-accent); outline-offset: 2px; }
+}
+
+.hp-ra-rep-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.hp-ra-rep-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+
+  svg { width: 40px; height: 40px; display: block; }
+}
+
+.hp-ra-rep-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.hp-ra-rep-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--extensionshield-text-primary);
 }
 
-.hp-sf-layer-body {
-  font-size: 0.875rem;
-  line-height: 1.55;
-  color: var(--extensionshield-text-secondary);
-  margin: 0 0 0.875rem;
-}
-
-/* Direction line — quieter technical annotation, no bright green */
-.hp-sf-layer-direction {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+.hp-ra-rep-pub {
+  font-size: 0.75rem;
+  line-height: 1.3;
   color: var(--extensionshield-text-muted);
-  margin: auto 0 0.75rem;
-  padding-top: 0.625rem;
-  border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 60%, transparent);
-  font-family: var(--font-mono, ui-monospace, monospace);
 }
 
-.hp-sf-layer-link {
+.hp-ra-rep-scorebox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.hp-ra-rep-score {
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #b45309;
+  white-space: nowrap;
+
+  em {
+    font-style: normal;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--extensionshield-text-muted);
+  }
+}
+
+.hp-ra-rep-rule {
+  height: 1px;
+  background: var(--extensionshield-border);
+}
+
+.hp-ra-rep-finds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hp-ra-find {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--extensionshield-text-secondary);
+
+  svg { flex-shrink: 0; }
+  &.warn svg { color: #f59e0b; }
+  &.ok   svg { color: #16a34a; }
+}
+
+.hp-ra-rep-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  svg { color: var(--extensionshield-accent); transition: transform 0.15s ease; }
+}
+
+.hp-ra-rep-link {
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--extensionshield-accent);
-  text-decoration: none;
-  align-self: flex-start;
-
-  &:hover { text-decoration: underline; }
-  &:focus-visible { outline: 2px solid var(--extensionshield-accent); outline-offset: 3px; border-radius: 3px; }
 }
 
-/* Section-level CTA — sits below the panel. Primary is a restrained text link
-   with an arrow; secondary is an even quieter inline link. Neither competes
-   with the hero scan CTA. */
-.hp-sf-cta {
+.hp-ra-card--report:hover .hp-ra-rep-foot svg { transform: translateX(3px); }
+
+/* Risk pill — soft tinted pill (e.g. "Medium risk"). */
+.hp-ra-risk-pill {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  &.medium { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+}
+
+/* Connector between rows — a short vertical timeline segment aligned under the
+   number badges (badge is 1.75rem wide, so its centre sits at 0.875rem). */
+.hp-ra-conn {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding-left: calc(0.875rem - 1px);
+  min-height: clamp(2rem, 3.25vw, 2.75rem);
+}
+
+.hp-ra-conn-line {
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--extensionshield-accent) 42%, transparent),
+    color-mix(in srgb, var(--extensionshield-accent) 12%, transparent)
+  );
+}
+
+/* ── Foot: CTA + preserved topic links ───────────────────────────────────── */
+.hp-ra-foot {
+  max-width: var(--hp-max);
+  margin: clamp(1.25rem, 2.5vw, 1.75rem) auto 0;
+  text-align: center;
+}
+
+.hp-ra-foot-cta {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
   flex-wrap: wrap;
-  margin-top: 1.5rem;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
 }
 
-.hp-sf-cta-primary {
+.hp-ra-cta-primary {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -1940,11 +1686,9 @@
   &:focus-visible { outline: none; }
 }
 
-.hp-sf-cta-sep {
-  color: var(--extensionshield-text-muted);
-}
+.hp-ra-cta-sep { color: var(--extensionshield-text-muted); }
 
-.hp-sf-cta-secondary {
+.hp-ra-cta-secondary {
   color: var(--extensionshield-text-secondary);
   text-decoration: none;
   border-bottom: 1px solid transparent;
@@ -1958,26 +1702,101 @@
   &:focus-visible { outline: none; }
 }
 
-/* Mobile: stack flow cue ticks horizontally if needed and the columns stack */
-@media (max-width: 720px) {
-  .hp-sf-flow {
+.hp-ra-foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.hp-ra-foot-link {
+  color: var(--extensionshield-text-secondary);
+  text-decoration: none;
+
+  &:hover { color: var(--extensionshield-accent); text-decoration: underline; }
+  &:focus-visible { outline: 2px solid var(--extensionshield-accent); outline-offset: 2px; border-radius: 3px; }
+}
+
+.hp-ra-foot-sep { color: var(--extensionshield-border); }
+
+/* ── One-shot reveal (state class set in JS). ONLY the two aria-hidden
+      decorative cards (search, layers) + connectors animate. The Step-3 report
+      card is a real navigational <Link> with unique content, so it is NEVER
+      hidden — the prerendered/no-JS page must always show it (and never trap
+      focus on an invisible link). Step copy and scores stay visible too. ──── */
+@keyframes hp-ra-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes hp-ra-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.hp-ra-flow.is-pending {
+  .hp-ra-card--search,
+  .hp-ra-card--layers,
+  .hp-ra-conn { opacity: 0; }
+}
+
+.hp-ra-flow.is-animated {
+  .hp-ra-card--search                     { animation: hp-ra-rise 0.5s 0s both; }
+  .hp-ra-steps > .hp-ra-conn:nth-child(2) { animation: hp-ra-fade 0.4s 0.14s both; }
+  .hp-ra-card--layers                     { animation: hp-ra-rise 0.5s 0.16s both; }
+  .hp-ra-steps > .hp-ra-conn:nth-child(4) { animation: hp-ra-fade 0.4s 0.30s both; }
+}
+
+.hp-ra-flow.is-reduced {
+  .hp-ra-card--search,
+  .hp-ra-card--layers,
+  .hp-ra-conn { opacity: 1; }
+}
+
+/* Safety net: never leave the decorative cards hidden for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  .hp-ra-flow .hp-ra-card--search,
+  .hp-ra-flow .hp-ra-card--layers,
+  .hp-ra-flow .hp-ra-conn {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ── Responsive: below the two-column row, stack head → card ──────────────── */
+@media (max-width: 760px) {
+  .hp-ra-step {
     grid-template-columns: 1fr;
-    padding: 0.5rem 0;
+    grid-template-areas:
+      "head"
+      "card";
+    row-gap: 0.85rem;
+    align-items: start;
   }
-  .hp-sf-flow-tick {
-    display: none;
+  .hp-ra-step-head { align-self: start; }
+  .hp-ra-conn { min-height: 1.5rem; }
+
+  /* Report card head: stack the score/pill below the icon + title so the
+     narrow card doesn't squeeze the name into a tall column. */
+  .hp-ra-rep-head {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "icon id"
+      "score score";
+    column-gap: 0.75rem;
+    row-gap: 0.75rem;
   }
-  .hp-sf-flow-label {
-    position: static;
-    transform: none;
-    background: transparent;
-    padding: 0;
-    white-space: normal;
-    text-align: center;
-  }
-  .hp-sf-layer + .hp-sf-layer {
-    border-left: none;
-    border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 65%, transparent);
+  .hp-ra-rep-icon { grid-area: icon; }
+  .hp-ra-rep-id { grid-area: id; }
+  .hp-ra-rep-scorebox {
+    grid-area: score;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
 }
 
@@ -1988,29 +1807,9 @@
 
 .hp-open-inner {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(2rem, 4vw, 4rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(2.5rem, 5vw, 5rem);
   align-items: center;
-}
-
-.hp-open-copy {
-  min-width: 0;
-
-  h2 {
-    font-size: clamp(1.375rem, 3vw, 1.875rem);
-    font-weight: 600;
-    line-height: 1.25;
-    letter-spacing: -0.02em;
-    margin: 0 0 1rem;
-    color: var(--extensionshield-text-primary);
-  }
-
-  p {
-    margin: 0 0 1rem;
-    font-size: 0.9375rem;
-    line-height: 1.7;
-    color: var(--extensionshield-text-secondary);
-  }
 }
 
 .hp-open-honest {
@@ -2023,7 +1822,7 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
-  margin-top: 1.5rem;
+  margin-top: 2rem;
 }
 
 /* Repo proof artifact */
@@ -2062,66 +1861,81 @@
   white-space: nowrap;
 }
 
-.hp-repo-tree {
-  padding: 0.875rem 1rem;
+.hp-repo-sep {
+  color: var(--extensionshield-text-muted);
+  margin: 0 0.4rem;
+}
+
+/* File rows — each is a link to the real source on GitHub */
+.hp-repo-rows {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
 }
 
-.hp-repo-dir {
+.hp-repo-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--extensionshield-text-primary);
-  margin-bottom: 0.125rem;
+  gap: 0.7rem;
+  padding: 0.7rem 1.125rem;
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--extensionshield-border) 60%, transparent);
+  transition: background 0.15s ease;
 
-  svg { color: var(--extensionshield-accent); flex-shrink: 0; }
+  &:last-child { border-bottom: none; }
+  &:hover { background: var(--extensionshield-bg-secondary); }
+  &:focus-visible { outline: 2px solid var(--extensionshield-accent); outline-offset: -2px; }
 }
 
-.hp-repo-slash {
+.hp-repo-caret {
   color: var(--extensionshield-text-muted);
-}
-
-.hp-repo-file {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  font-size: 0.78125rem;
-  line-height: 1.5;
-}
-
-.hp-repo-tree-chr {
-  color: var(--extensionshield-border);
   flex-shrink: 0;
-  font-size: 0.75rem;
 }
 
-.hp-repo-ext {
-  font-size: 0.5625rem;
+.hp-repo-py,
+.hp-repo-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 1.625rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--extensionshield-accent) 12%, transparent);
+  color: var(--extensionshield-accent);
+}
+
+.hp-repo-py {
+  padding: 0 0.45rem;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  padding: 0.1rem 0.25rem;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--extensionshield-accent) 10%, transparent);
-  color: var(--extensionshield-accent);
-  flex-shrink: 0;
+}
+
+.hp-repo-badge-icon {
+  width: 1.625rem;
 }
 
 .hp-repo-fname {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.8125rem;
   color: var(--extensionshield-text-primary);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hp-repo-dash {
+  color: var(--extensionshield-text-muted);
+  flex-shrink: 0;
 }
 
 .hp-repo-fdesc {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
   color: var(--extensionshield-text-muted);
-  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .hp-repo-footer {
@@ -2730,6 +2544,10 @@
     display: none !important;
   }
 
+  .hero-shield-bg {
+    display: none;
+  }
+
   .hero-mobile-message {
     display: flex;
     flex-direction: column;
@@ -2887,27 +2705,6 @@
   .hp-open-inner,
   .hp-ent-inner {
     grid-template-columns: 1fr;
-  }
-
-  /* How it works — stack the three-step flow vertically.
-     Grid lives on `.hp-flow-inner` (the wrapper). Connectors are hidden
-     since they only make sense in the horizontal layout. */
-  .hp-flow-inner {
-    grid-template-columns: 1fr;
-    gap: 1.75rem;
-  }
-
-  .hp-flow-conn {
-    display: none;
-  }
-
-  .hp-sf-layers {
-    grid-template-columns: 1fr;
-  }
-
-  .hp-sf-layer + .hp-sf-layer {
-    border-left: none;
-    border-top: 1px dashed color-mix(in srgb, var(--extensionshield-border) 65%, transparent);
   }
 
   .hp-open-inner .hp-repo {
