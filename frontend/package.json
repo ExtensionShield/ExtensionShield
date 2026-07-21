@@ -42,6 +42,8 @@
     "@supabase/supabase-js": "^2.94.1",
     "axios": "^1.12.2",
     "framer-motion": "^12.34.0",
+    "jszip": "^3.10.1",
+    "monaco-editor": "^0.56.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-helmet-async": "^2.0.5",
