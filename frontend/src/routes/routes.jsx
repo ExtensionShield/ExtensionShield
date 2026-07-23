@@ -29,7 +29,7 @@ const BenchmarksPage = React.lazy(() => import("../pages/research/BenchmarksPage
 // GSoC / Open Source Pages
 const GSoCIdeasPage = React.lazy(() => import("../pages/gsoc/GSoCIdeasPage"));
 const ContributePage = React.lazy(() => import("../pages/gsoc/ContributePage"));
-const CommunityLandingPage = React.lazy(() => import("../pages/community/CommunityLandingPage"));
+const LeadershipDashboardPage = React.lazy(() => import("../pages/community/LeadershipDashboardPage"));
 const OpenSourcePage = React.lazy(() => import("../pages/open-source/OpenSourcePage"));
 const OpenSourceProgramsPage = React.lazy(() => import("../pages/open-source/OpenSourceProgramsPage"));
 const AboutUsPage = React.lazy(() => import("../pages/AboutUsPage"));
@@ -732,7 +732,7 @@ export const routes = [
   },
   {
     path: "/community",
-    element: <CommunityLandingPage />,
+    element: <LeadershipDashboardPage />,
     seo: {
       title: "Community | ExtensionShield",
       description: "Join the ExtensionShield community: connect with contributors, run scans, earn karma, and help make the web safer for everyone.",

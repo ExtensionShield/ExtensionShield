@@ -81,6 +81,9 @@ function AuthProviderEnabled({ children }) {
       name,
       avatar,
       provider,
+      // Phase-A contributor opt-in lives in Supabase user_metadata (client-
+      // writable, zero migration). Phase B moves this to user_profiles.is_contributor.
+      isContributor: Boolean(meta.is_contributor),
     };
   }, []);
 

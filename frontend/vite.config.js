@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // unsafe-inline for React
         "font-src 'self' https://fonts.gstatic.com data:",
         "img-src 'self' data: https:",
-        "connect-src 'self' https://*.supabase.co https://*.supabase.io http://localhost:* ws://localhost:* wss://localhost:* https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com",
+        "connect-src 'self' https://*.supabase.co https://*.supabase.io http://localhost:* ws://localhost:* wss://localhost:* https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://api.github.com",
         "frame-src 'self' https://*.supabase.co https://www.googletagmanager.com",
         // Vite creates workers from blob: URLs in dev
         "worker-src 'self' blob:",
@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // unsafe-inline needed for React inline styles
         "font-src 'self' https://fonts.gstatic.com data:",
         "img-src 'self' data: https:",
-        "connect-src 'self' https://*.supabase.co https://*.supabase.io https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com",
+        "connect-src 'self' https://*.supabase.co https://*.supabase.io https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://api.github.com",
         "frame-src 'self' https://*.supabase.co https://www.googletagmanager.com",
         "worker-src 'self'",
         "manifest-src 'self'",
