@@ -107,7 +107,7 @@ body {
   &.solid .header-container {
     max-width: calc(100% - 10vw);
     margin: 0 auto;
-    border-radius: 9999px;
+    border-radius: 10px;
     background: transparent;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
@@ -875,30 +875,28 @@ body {
 }
 
 /* Compact GitHub trust-signal badge in the nav header */
+/* Matches the footer GitHub pill (.app-footer__social-link) but icon-only —
+   no "GitHub" text — so it stays compact: [octocat] | ★ 95 */
 .header-gh-badge {
-  // display: inline-flex;
-  // align-items: center;
-  // gap: 0.3rem;
-  // padding: 0.3rem 0.625rem;
-  // font-size: 0.8125rem;
-  // font-weight: 600;
-  // border-radius: 8px;
-  // text-decoration: none;
-  // color: var(--extensionshield-text-secondary);
-  // border: 1px solid var(--extensionshield-border);
-  // background: transparent;
-  // white-space: nowrap;
-  // transition: color 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--extensionshield-text-secondary);
+  border: 1px solid var(--extensionshield-border);
+  background: var(--extensionshield-bg-secondary);
+  white-space: nowrap;
+  transition: color 0.2s ease, border-color 0.2s ease;
 
-  .header-gh-icon {
-    height: 42px;
-    flex-shrink: 0;
-    color: var(--extensionshield-text-primary);
-  }
+  .header-gh-icon { flex-shrink: 0; }
 
   &:hover {
     color: var(--extensionshield-text-primary);
-    border-color: color-mix(in srgb, var(--extensionshield-accent) 30%, var(--extensionshield-border));
+    border-color: color-mix(in srgb, var(--extensionshield-accent) 35%, var(--extensionshield-border));
   }
 
   &:focus-visible {
@@ -907,16 +905,17 @@ body {
   }
 }
 
-.header-gh-stars {
+.header-gh-star {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  padding-left: 0.375rem;
-  margin-left: 0.1rem;
+  padding-left: 0.5rem;
+  margin-left: 0.15rem;
   border-left: 1px solid var(--extensionshield-border);
   font-variant-numeric: tabular-nums;
   color: var(--extensionshield-text-muted);
 
+  svg { color: #f59e0b; }
 }
 
 
@@ -1323,9 +1322,11 @@ body {
   margin-right: auto;
 }
 
-/* For pages that need padding from header */
+/* For pages that need padding from header — clear the fixed header AND add
+   breathing room so page content never sits flush against the header pill.
+   (.page-container pages set their own padding with !important and are unaffected.) */
 .extensionshield-main > div:not(.home-page) {
-  padding-top: var(--extensionshield-header-offset);
+  padding-top: calc(var(--extensionshield-header-offset) + clamp(1.5rem, 3vh, 2.5rem));
 }
 
 /* ============================================================================

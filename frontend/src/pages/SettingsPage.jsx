@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import SEOHead from "../components/SEOHead";
 import { Button } from "../components/ui/button";
+import ContributorOptInToggle from "../components/ContributorOptInToggle";
 import "./SettingsPage.scss";
 
 const SettingsPage = () => {
@@ -156,6 +157,9 @@ const SettingsPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Community Contributor Section */}
+          <ContributorOptInToggle />
         </div>
       </div>
     </div>
