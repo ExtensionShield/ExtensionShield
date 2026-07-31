@@ -225,12 +225,20 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   
+  /* Neutral editorial label — see HoneyCaseStudyPage.scss for why these are
+     not severity-coloured. */
+  &.case-study {
+    background: rgba(148, 163, 184, 0.14);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
   &.critical {
     background: rgba(239, 68, 68, 0.2);
     color: #fca5a5;
     border: 1px solid rgba(239, 68, 68, 0.4);
   }
-  
+
   &.high {
     background: rgba(249, 115, 22, 0.2);
     color: #fdba74;
@@ -355,4 +363,9 @@
 
 .light .read-more {
   color: var(--extensionshield-accent);
+}
+.light .severity-badge.case-study {
+  background: rgba(15, 23, 42, 0.05);
+  color: #475569;
+  border-color: rgba(15, 23, 42, 0.15);
 }

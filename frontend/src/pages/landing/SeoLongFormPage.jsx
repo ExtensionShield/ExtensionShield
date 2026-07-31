@@ -34,8 +34,25 @@ const SeoLongFormPage = ({ page }) => {
             </button>
           </div>
 
+          {/* Optional breadcrumb — preserves the trail some hand-written landing pages
+              carried before they moved onto this shared long-form renderer. */}
+          {page.breadcrumb?.length > 0 && (
+            <nav className="breadcrumb" aria-label="Breadcrumb">
+              {page.breadcrumb.map((crumb, i) => (
+                <React.Fragment key={crumb.label}>
+                  {i > 0 && <span aria-hidden>/</span>}
+                  {crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}
+                </React.Fragment>
+              ))}
+            </nav>
+          )}
+
+          {/* The eyebrow used to render `page.eyebrow`, whose value on every one
+              of these pages was literally "Primary keyword: <keyword>" — the SEO
+              target printed above the H1 for readers to see. Removed 2026-07-30.
+              If an eyebrow comes back it must say something to the reader, not
+              to a search engine. */}
           <header className="compare-header seo-long-form-header">
-            <span className="seo-long-form-eyebrow">{page.eyebrow}</span>
             <h1>{page.h1}</h1>
             {page.intro.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>

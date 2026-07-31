@@ -4586,6 +4586,47 @@ def _load_routes_manifest():
 _KNOWN_STATIC, _KNOWN_DYNAMIC = _load_routes_manifest()
 
 
+# --- Permanent (301) redirect map for retired URLs. Generated at build time by
+# frontend/scripts/generate-sitemap.js from frontend/src/routes/redirects.js.
+# The SPA also carries client-side <Navigate> fallbacks for in-app navigation,
+# but only this server-side 301 reliably consolidates ranking signals onto the
+# surviving page — a JS redirect does not.
+def _load_redirects() -> dict:
+    """Return {from_path: to_path}. Empty dict when the map is absent."""
+    try:
+        redirects_file = STATIC_DIR / "redirects.json"
+        if not redirects_file.is_file():
+            return {}
+        data = json.loads(redirects_file.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {}
+        # Normalise to a leading slash, no trailing slash, and keep only
+        # site-relative targets (never redirect off-origin from this map).
+        cleaned = {}
+        for src, dst in data.items():
+            if not isinstance(src, str) or not isinstance(dst, str):
+                continue
+            if not dst.startswith("/") or dst.startswith("//"):
+                continue
+            cleaned["/" + src.strip("/")] = dst
+        return cleaned
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Could not load redirects.json: %s", exc)
+        return {}
+
+
+_REDIRECTS = _load_redirects()
+if _REDIRECTS:
+    logger.info("Loaded %d permanent redirects", len(_REDIRECTS))
+
+
+def _redirect_target(full_path: str) -> str | None:
+    """Return the 301 target for a retired URL, or None."""
+    if not _REDIRECTS:
+        return None
+    return _REDIRECTS.get("/" + full_path.strip("/"))
+
+
 def _is_known_route(full_path: str) -> bool:
     """True if the path is a real SPA route (serve 200) vs unknown (serve 404)."""
     if _KNOWN_STATIC is None:
@@ -4600,7 +4641,7 @@ def _is_known_route(full_path: str) -> bool:
 
 # Catch-all route for SPA - must be defined last
 @app.get("/{full_path:path}")
-async def serve_spa(full_path: str):
+async def serve_spa(request: Request, full_path: str):
     """
     Serve React SPA for all non-API routes.
     This enables client-side routing in the React app.
@@ -4608,6 +4649,17 @@ async def serve_spa(full_path: str):
     # Don't intercept API routes
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="API endpoint not found")
+
+    # Retired URL -> real HTTP 301 before any HTML is served. Must come before
+    # the known-route/prerender/404 logic so a retired path is never answered
+    # with a 200 shell (which would leave the old URL indexable).
+    redirect_to = _redirect_target(full_path)
+    if redirect_to:
+        query = request.url.query
+        return RedirectResponse(
+            url=f"{redirect_to}?{query}" if query else redirect_to,
+            status_code=301,
+        )
     
     # Don't intercept data files (should be handled by static mount above)
     if full_path.startswith("data/"):

@@ -1,16 +1,16 @@
-const requiredInternalLinks = [
-  { label: "Scan an extension", to: "/scan" },
-  { label: "Browser extension security", to: "/extension-security" },
-  { label: "Extension risk score", to: "/extension-risk-score" },
-  { label: "Browser extension security blog", to: "/blog" },
-];
-
+/**
+ * Long-form content for the landing pages that render through SeoLongFormPage.
+ *
+ * Each object carries its OWN `internalLinks` (and optionally `breadcrumb`) so the
+ * related-links block stays specific to the page. An earlier shared
+ * `requiredInternalLinks` constant pointed every page at the same four destinations;
+ * it was replaced with per-page lists when these pages were wired up.
+ */
 export const extensionSecurityContent = {
   title: "Browser Extension Security | Open-Source Extension Governance",
   description: "Browser extension security guide and platform for pre-install Chrome Web Store scans, private CRX/ZIP audits, evidence-based risk scores, and extension governance.",
   pathname: "/extension-security",
   keywords: "browser extension security, extension security audit, browser extension security platform, extension risk assessment",
-  eyebrow: "Primary keyword: browser extension security",
   h1: "Browser Extension Security",
   intro: [
     "Browser extension security is the process of reviewing what a browser extension can access, how its code behaves, which domains it can contact, and whether it should be trusted before it reaches a user's browser.",
@@ -169,7 +169,13 @@ export const extensionSecurityContent = {
       ]
     }
   ],
-  internalLinks: requiredInternalLinks
+  internalLinks: [
+    { label: "Chrome extension permissions explained", to: "/chrome-extension-permissions" },
+    { label: "Extension risk score", to: "/extension-risk-score" },
+    { label: "Extension governance", to: "/extension-governance" },
+    { label: "How we score extensions", to: "/research/methodology" },
+    { label: "Scan an extension", to: "/scan" },
+  ]
 };
 
 export const extensionRiskScoreContent = {
@@ -177,7 +183,6 @@ export const extensionRiskScoreContent = {
   description: "Extension risk score explained: how Security, Privacy, and Governance signals help users, developers, and enterprises decide whether to allow, block, monitor, or fix extensions.",
   pathname: "/extension-risk-score",
   keywords: "extension risk score, chrome extension risk score, extension security scoring, extension risk assessment",
-  eyebrow: "Primary keyword: extension risk score",
   h1: "Extension Risk Score",
   intro: [
     "An extension risk score is a structured way to summarize browser extension risk using evidence from permissions, code behavior, privacy signals, publisher context, and governance fit.",
@@ -215,7 +220,10 @@ export const extensionRiskScoreContent = {
     {
       heading: "What an extension risk score measures",
       paragraphs: [
-        "An extension risk score measures how much trust a browser extension requires relative to what it appears to do. A low score should mean the extension requests limited access, behaves consistently with its purpose, and provides enough context for a reviewer to understand the risk. A high score should mean the extension has broad access, suspicious behavior, unclear disclosures, or governance concerns that need action.",
+        // Direction matters and this paragraph previously had it backwards.
+        // ExtensionShield scores 0-100 where HIGHER IS SAFER: scoring/decision.py
+        // blocks below 30 and flags for review below 75 (`score < threshold`).
+        "An extension risk score measures how much trust a browser extension requires relative to what it appears to do. ExtensionShield reports it on a 0–100 scale where higher is safer. A high score should mean the extension requests limited access, behaves consistently with its purpose, and provides enough context for a reviewer to understand the risk. A low score should mean the extension has broad access, unexplained code patterns, unclear disclosures, or governance concerns that need action — below 75 an extension is flagged for review, and below 30 it is a block recommendation.",
         "The score should never hide the evidence. A number without drivers can create false confidence. ExtensionShield exposes the layers behind the number so a reviewer can see whether the problem is malware-like behavior, privacy exposure, excessive permissions, weak disclosure, or policy mismatch.",
         "A useful extension risk score also needs to support different audiences. A consumer wants a simple answer before install. A developer wants fix guidance before release. A security team wants a repeatable basis for allow, block, monitor, and exception decisions."
       ]
@@ -305,7 +313,13 @@ export const extensionRiskScoreContent = {
       ]
     }
   ],
-  internalLinks: requiredInternalLinks
+  internalLinks: [
+    { label: "How we score extensions", to: "/research/methodology" },
+    { label: "Browser extension security", to: "/extension-security" },
+    { label: "Extension governance", to: "/extension-governance" },
+    { label: "Chrome extension security scanner", to: "/chrome-extension-security-scanner" },
+    { label: "Scan an extension", to: "/scan" },
+  ]
 };
 
 export const extensionPermissionsContent = {
@@ -313,7 +327,6 @@ export const extensionPermissionsContent = {
   description: "Chrome extension permissions explained for users, developers, and security teams. Learn which permissions are risky, how to review them, and how ExtensionShield scores access.",
   pathname: "/chrome-extension-permissions",
   keywords: "chrome extension permissions, dangerous chrome extension permissions, extension permissions explained, browser extension permissions",
-  eyebrow: "Primary keyword: chrome extension permissions",
   h1: "Chrome Extension Permissions",
   intro: [
     "Chrome extension permissions define what an extension can access in the browser, including pages, tabs, cookies, history, downloads, clipboard data, network requests, and specific Chrome APIs.",
@@ -323,7 +336,7 @@ export const extensionPermissionsContent = {
   heroCtas: [
     { label: "Scan extension permissions", to: "/scan" },
     { label: "Check risk score", to: "/extension-risk-score" },
-    { label: "Read the blog", to: "/blog" },
+    { label: "Read the guides", to: "/guides" },
   ],
   schema: {
     "@context": "https://schema.org",
@@ -400,6 +413,28 @@ export const extensionPermissionsContent = {
       cta: { label: "See how scoring handles permissions", to: "/extension-risk-score" }
     },
     {
+      // Owns the exact phrase Chrome shows at the install prompt. Two retired blog stubs
+      // (/blog/read-and-change-all-your-data-extension-permission and
+      // /blog/all-urls-chrome-extension-permission) 301 to this page, so it has to answer
+      // both queries directly rather than in a single bullet.
+      heading: "What \"Read and change all your data on all websites\" means",
+      paragraphs: [
+        "\"Read and change all your data on all websites\" is the warning Chrome shows at install time when an extension requests broad host access. It is not a separate permission you will find in the manifest. It is Chrome's plain-language translation of a host permission whose match pattern covers every site you visit.",
+        "In practice the extension can read the content of pages you open and modify what those pages display. That includes text you see, form fields you fill, and data rendered by web applications you are signed in to. It reaches your banking dashboard, your email, and your company's internal tools with the same access it has on any other site.",
+        "Some categories genuinely require it. Ad blockers, password managers, translators, accessibility tools, and developer tools cannot do their job without reading and changing page content. The prompt is not evidence of wrongdoing. The question is whether the extension's stated purpose explains why it needs every site rather than a specific list. A tool that only works on one service has no functional reason to reach everywhere, and that gap is the finding worth investigating."
+      ],
+      cta: { label: "See which host permissions an extension requests", to: "/scan" }
+    },
+    {
+      heading: "What all_urls means in a Chrome extension manifest",
+      paragraphs: [
+        "The <all_urls> match pattern is what sits behind that warning. In a manifest it appears under host_permissions and matches every URL the extension is permitted to access. The related patterns *://*/*, https://*/*, and http://*/* are narrower in scheme but similarly broad in reach.",
+        "Broad patterns set the blast radius. If an extension's code is malicious, later compromised, or simply careless, the data exposed is bounded by how many sites its host permissions cover. A narrow pattern limits the damage of a bad update; <all_urls> does not.",
+        "It is also common. Across the 57 extensions in ExtensionShield's public scan corpus, <all_urls> appears in 24.6 percent, with https://*/* in a further 14.0 percent. That corpus is a convenience sample of extensions submitted to the scanner, not a random sample of the Chrome Web Store, so read it as an indication of how routine the pattern is rather than a store-wide statistic.",
+        "Developers can narrow this. Listing specific hosts, or moving broad access into optional_permissions so it is requested at the moment a feature needs it, gives users a real choice and gives reviewers less to object to."
+      ]
+    },
+    {
       heading: "Examples by extension category",
       paragraphs: [
         "Different extension categories need different levels of access. The review should compare the permission to the job the extension claims to do.",
@@ -465,7 +500,18 @@ export const extensionPermissionsContent = {
       ]
     }
   ],
-  internalLinks: requiredInternalLinks
+  breadcrumb: [
+    { label: "Home", to: "/" },
+    { label: "Guide", to: "/is-this-chrome-extension-safe" },
+    { label: "Permissions" },
+  ],
+  internalLinks: [
+    { label: "Is this Chrome extension safe?", to: "/is-this-chrome-extension-safe" },
+    { label: "How we score extensions", to: "/research/methodology" },
+    { label: "Glossary: permissions and security terms", to: "/glossary" },
+    { label: "Browser extension security guides", to: "/guides" },
+    { label: "Scan an extension", to: "/scan" },
+  ]
 };
 
 export const extensionGovernanceContent = {
@@ -473,7 +519,6 @@ export const extensionGovernanceContent = {
   description: "Extension governance guide for browser extension compliance, pre-install review, allow/block decisions, governance evidence, audit records, and enterprise review workflows.",
   pathname: "/extension-governance",
   keywords: "extension governance, extension governance platform, browser extension compliance, browser extension governance",
-  eyebrow: "Primary keyword: extension governance",
   h1: "Extension Governance",
   intro: [
     "Extension governance is the process of deciding which browser extensions users can install, which extensions developers can ship, and which extension risks an organization is willing to accept.",
@@ -623,7 +668,13 @@ export const extensionGovernanceContent = {
       ]
     }
   ],
-  internalLinks: requiredInternalLinks
+  internalLinks: [
+    { label: "Chrome extension allowlist policy", to: "/guides/chrome-extension-allowlist-policy" },
+    { label: "Browser extension risk assessment", to: "/browser-extension-risk-assessment" },
+    { label: "Extension risk score", to: "/extension-risk-score" },
+    { label: "Private CRX/ZIP audit", to: "/scan/upload" },
+    { label: "Enterprise", to: "/enterprise" },
+  ]
 };
 
 export const freeExtensionScannerContent = {
@@ -633,7 +684,6 @@ export const freeExtensionScannerContent = {
   pathname: "/free-extension-scanner",
   keywords:
     "free extension scanner, free chrome extension scanner, extension scanner, chrome extension scanner, scan chrome extension",
-  eyebrow: "Primary keyword: free extension scanner",
   h1: "Free Chrome Extension Scanner",
   intro: [
     "A free extension scanner lets you check what a browser extension can access — and whether it shows risky behavior — before you install it. Paste a Chrome Web Store URL and ExtensionShield returns a risk report in under a minute. No account, no download.",
@@ -769,6 +819,6 @@ export const freeExtensionScannerContent = {
     { label: "Chrome extension permissions", to: "/chrome-extension-permissions" },
     { label: "Extension risk score explained", to: "/extension-risk-score" },
     { label: "Chrome extension security scanner", to: "/chrome-extension-security-scanner" },
-    { label: "Browser extension security blog", to: "/blog" },
+    { label: "Extension security guides", to: "/guides" },
   ],
 };

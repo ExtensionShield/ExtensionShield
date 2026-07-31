@@ -253,7 +253,6 @@ const MethodologyPage = () => {
             <ul>
               <li><Link to="/scan">Scan an extension</Link> — Get a risk score in under a minute</li>
               <li><Link to="/research/case-studies">Browse case studies</Link> — Real-world analysis</li>
-              <li><Link to="/compare">Compare Tools</Link> — ExtensionShield vs CRXcavator and others</li>
             </ul>
           </section>
         </div>

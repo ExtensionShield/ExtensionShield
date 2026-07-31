@@ -105,17 +105,12 @@ const IsThisChromeExtensionSafePage = () => {
               <div className="hub-examples-grid">
                 <Link to="/research/case-studies/honey" className="hub-example-card">
                   <h3>Honey</h3>
-                  <p>Reported affiliate link hijacking and shopping tracking—17M+ users. Why star ratings aren’t enough.</p>
-                  <span className="hub-example-link">Read case study →</span>
-                </Link>
-                <Link to="/research/case-studies/pdf-converters" className="hub-example-card">
-                  <h3>PDF converter extensions</h3>
-                  <p>Networks of extensions that harvest document contents and user data via remote configuration.</p>
+                  <p>Reported affiliate attribution practices on a 17M-user extension. Why star ratings aren’t enough.</p>
                   <span className="hub-example-link">Read case study →</span>
                 </Link>
                 <Link to="/research/case-studies/fake-ad-blockers" className="hub-example-card">
                   <h3>Fake ad blockers</h3>
-                  <p>Ad blocker clones that inject ads instead of blocking them—20M–80M+ users affected.</p>
+                  <p>Ad blocker clones that inject ads instead of blocking them—20M+ installs across five extensions.</p>
                   <span className="hub-example-link">Read case study →</span>
                 </Link>
               </div>
@@ -129,9 +124,7 @@ const IsThisChromeExtensionSafePage = () => {
               <li><Link to="/chrome-extension-permissions">Chrome extension permissions explained</Link></li>
               <li><Link to="/research/methodology">How we score extensions</Link></li>
               <li><Link to="/research/case-studies">Case studies: real extension risks</Link></li>
-              <li><Link to="/compare">Compare Tools</Link></li>
-              <li><Link to="/crxcavator-alternative">Comparing scanners? See CRXcavator alternative</Link></li>
-              <li><Link to="/enterprise">Enterprise extension security</Link></li>
+                            <li><Link to="/enterprise">Enterprise extension security</Link></li>
             </ul>
           </div>
         </div>

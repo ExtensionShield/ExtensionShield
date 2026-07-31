@@ -945,50 +945,10 @@
 }
 
 /* Scanner comparison table (optional data) */
-.scanner-comparison-section {
-  margin-top: 3rem;
-}
 
-.scanner-comparison-table-wrap {
-  overflow-x: auto;
-  border-radius: 8px;
-  border: 1px solid var(--extensionshield-border, rgba(148, 163, 184, 0.2));
-}
 
-.scanner-comparison-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
 
-.scanner-comparison-table th,
-.scanner-comparison-table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid var(--extensionshield-border, rgba(148, 163, 184, 0.15));
-}
 
-.scanner-comparison-table th {
-  background: rgba(15, 23, 42, 0.5);
-  font-weight: 600;
-  color: var(--extensionshield-text-primary, #f8fafc);
-}
 
-.scanner-comparison-table tbody tr:hover {
-  background: rgba(148, 163, 184, 0.05);
-}
 
-.scanner-comparison-table a {
-  color: var(--extensionshield-accent, #22c55e);
-  text-decoration: none;
-}
 
-.scanner-comparison-table a:hover {
-  text-decoration: underline;
-}
-
-.scanner-comparison-meta {
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
-  color: var(--extensionshield-text-secondary, #94a3b8);
-}

@@ -3,16 +3,73 @@ import { Link } from "react-router-dom";
 import SEOHead from "../../components/SEOHead";
 import "./HoneyCaseStudyPage.scss";
 
+/**
+ * Fake ad blockers case study.
+ *
+ * Every factual claim below traces to one of SOURCES. Fact-checked 2026-07-30;
+ * the following were corrected in that pass and must not be reintroduced:
+ *
+ *  - "20M-80M+ users affected" fused two non-cumulative AdGuard studies two
+ *    years apart into a range no source states, then added a "+". The 80M
+ *    figure carries its own author's caveat that it is partly bot-inflated.
+ *    We now cite the 2018 figure alone, dated and attributed.
+ *  - A stat tile rendered "Adblock Plus / AdGuard" at 32px under a CRITICAL /
+ *    Malware badge. Both are legitimate shipping products and neither was the
+ *    subject of this research; the five extensions behind the 20M figure were
+ *    not clones of either. AdGuard is also the publisher of the research.
+ *  - "sent every visited URL to a remote server" overstated Imperva, which
+ *    documents link harvesting from the rendered page plus that page's URL,
+ *    and notes major search engines were excluded.
+ *  - "Users leave positive reviews and the extension climbs rankings" inverted
+ *    the cited finding: AdGuard identified implausibly FEW reviews as the tell.
+ *  - The 2021-2025 date badge was unsupported; the load-bearing evidence is
+ *    2018-2021.
+ */
+
+const SOURCES = [
+  {
+    title: "Over 20,000,000 of Chrome Users are Victims of Fake Ad Blockers",
+    publisher: "AdGuard — Andrey Meshkov",
+    date: "17 April 2018",
+    url: "https://adguard.com/en/blog/over-20-000-000-of-chrome-users-are-victims-of-fake-ad-blockers/",
+  },
+  {
+    title: "The Ad Blocker That Injects Ads (AllBlock)",
+    publisher: "Imperva",
+    date: "October 2021",
+    url: "https://www.imperva.com/blog/the-ad-blocker-that-injects-ads/",
+  },
+  {
+    title: "Malicious browser extensions (16 trojanized extensions, 3.2M+ users)",
+    publisher: "GitLab Threat Intelligence",
+    date: "13 February 2025",
+    url: "https://gitlab-com.gitlab.io/gl-security/security-tech-notes/threat-intelligence-tech-notes/malicious-browser-extensions-feb-2025/",
+  },
+  {
+    title: "Fake ad blockers, part 3",
+    publisher: "AdGuard — Andrey Meshkov",
+    date: "August 2020",
+    url: "https://adguard.com/en/blog/fake-ad-blockers-part-3.html",
+  },
+];
+
 const articleSchema = {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Fake Ad Blocker Chrome Extensions: Malware That Injects Ads",
-  "description": "Case study on malicious ad blocker extensions that inject ads instead of blocking them. 20M–80M+ users affected. Chrome extension security and enterprise risk.",
+  "description":
+    "Case study on ad blocker clones that inject ads instead of blocking them: the documented payload, signature matching, and anti-debugging techniques, with sources.",
   "author": { "@type": "Organization", "name": "ExtensionShield" },
   "datePublished": "2025-02-01",
-  "dateModified": "2025-02-18",
+  "dateModified": "2026-07-30",
   "publisher": { "@type": "Organization", "name": "ExtensionShield" },
-  "image": "https://extensionshield.com/og.png"
+  "image": "https://extensionshield.com/og.png",
+  "citation": SOURCES.map((s) => ({
+    "@type": "CreativeWork",
+    "name": s.title,
+    "url": s.url,
+    "publisher": { "@type": "Organization", "name": s.publisher },
+  })),
 };
 
 const FakeAdBlockersCaseStudyPage = () => {
@@ -20,7 +77,7 @@ const FakeAdBlockersCaseStudyPage = () => {
     <>
       <SEOHead
         title="Fake Ad Blocker Extensions Case Study | ExtensionShield"
-        description="Chrome extension malware case study: fake ad blockers that inject ads and steal traffic. Research on 20M–80M+ affected users, affiliate fraud, and how to scan extensions for security risks."
+        description="How ad blocker clones inject ads instead of blocking them: the documented jQuery payload, signature matching, and anti-debugging techniques. Sourced case study."
         pathname="/research/case-studies/fake-ad-blockers"
         schema={articleSchema}
       />
@@ -37,28 +94,33 @@ const FakeAdBlockersCaseStudyPage = () => {
 
           <header className="honey-header">
             <div className="honey-meta">
-              <span className="severity-badge critical">CRITICAL</span>
-              <span className="category-badge">Malware</span>
-              <span className="date-badge">2021–2025</span>
+              <span className="severity-badge case-study">CASE STUDY</span>
+              <span className="category-badge">Ad Injection</span>
+              <span className="date-badge">2018–2021</span>
             </div>
             <h1>Fake Ad Blockers: Wolves in Sheep&apos;s Clothing</h1>
             <p className="honey-subtitle">
-              How malicious Chrome extensions disguised as ad blockers inject ads, hijack traffic, and affect tens of millions of users—and what enterprises can do to reduce extension risk.
+              How Chrome extensions marketed as ad blockers were found injecting ads and rewriting links—and what the published analyses actually established.
             </p>
           </header>
 
+          <p className="case-study-scope">
+            Editorial write-up of a threat pattern documented by third-party researchers. Not an ExtensionShield scan
+            result for any specific extension, and not a statement about any ad blocker currently on the Chrome Web Store.
+          </p>
+
           <div className="honey-stats">
             <div className="stat">
-              <span className="stat-value">20M–80M+</span>
-              <span className="stat-label">Users Affected (Research Estimates)</span>
+              <span className="stat-value">20M+</span>
+              <span className="stat-label">Installs across five extensions (AdGuard, 2018)</span>
             </div>
             <div className="stat">
-              <span className="stat-value">Adblock Plus / AdGuard</span>
-              <span className="stat-label">Cloned to Gain Trust</span>
+              <span className="stat-value">Impersonation</span>
+              <span className="stat-label">Clones borrow the look of trusted blockers</span>
             </div>
             <div className="stat danger">
               <span className="stat-value">Inject</span>
-              <span className="stat-label">Ads Instead of Blocking</span>
+              <span className="stat-label">Ads instead of blocking them</span>
             </div>
           </div>
 
@@ -66,7 +128,16 @@ const FakeAdBlockersCaseStudyPage = () => {
             <section>
               <h2>Scale of the Problem</h2>
               <p>
-                Fake ad blocker extensions are among the most widespread forms of Chrome extension malware. Security researchers and vendors have reported that over 20 million users were affected by malicious ad-blocking extensions in earlier studies; more recent analyses suggest the number may reach approximately 80 million. These extensions promise to block ads but instead inject ads, redirect traffic to affiliate links, or harvest browsing data—making them a top concern for both consumers and enterprise extension security.
+                In April 2018 AdGuard reported that five ad blocker clones on the Chrome Web Store had accumulated more
+                than 20 million installs between them—AdRemover for Google Chrome (10M+), uBlock Plus (8M+), Adblock Pro
+                (2M+), HD for YouTube, and Webutation. AdGuard is both the publisher of that research and a maker of ad
+                blocking software, which is worth stating plainly when citing it.
+              </p>
+              <p>
+                A larger figure circulates from AdGuard&apos;s 2020 follow-up—a cluster of 295 extensions with roughly 80
+                million combined users—but that set is mostly not ad blockers, and its own author wrote that he suspected
+                the number was &ldquo;in part caused by bots.&rdquo; We cite the 2018 figure because it is the one the
+                evidence on this page actually rests on.
               </p>
             </section>
 
@@ -77,28 +148,39 @@ const FakeAdBlockersCaseStudyPage = () => {
                   <div className="finding-icon">🎭</div>
                   <h3>Look Legitimate</h3>
                   <p>
-                    Many clones implement basic ad-blocking so the extension appears to work. Users leave positive reviews and the extension climbs store rankings. Meanwhile, hidden code runs in the background—loading payloads from remote servers, often obfuscated inside modified jQuery or image files to evade manual review.
+                    The clones were forks of genuine open-source blockers, so they really did block ads. AdGuard found
+                    the malicious logic hidden inside a modified jQuery library, with a further obfuscated script pulled
+                    from an image hosted on a third-party domain and executed in the extension&apos;s privileged
+                    background context.
                   </p>
                 </div>
                 <div className="finding-card">
                   <div className="finding-icon">🔗</div>
-                  <h3>Traffic Hijacking &amp; Affiliate Fraud</h3>
+                  <h3>Link Harvesting &amp; Affiliate Rewriting</h3>
                   <p>
-                    Analyzed extensions (e.g. AllBlock) sent every visited URL to a remote server, which returned replacement URLs. When users clicked modified links, they were redirected to affiliate links—earning the operators money when users completed purchases or signups. Anti-debugging and exclusion of major search engines helped avoid detection.
+                    Imperva&apos;s 2021 analysis of AllBlock found it collecting the links present on each rendered page,
+                    including that page&apos;s own URL, and sending them to a remote server that returned replacements.
+                    Clicking a rewritten link routed the user through an affiliate link. Major search engines were
+                    excluded from targeting. AllBlock&apos;s own code was not obfuscated.
                   </p>
                 </div>
                 <div className="finding-card">
                   <div className="finding-icon">📄</div>
-                  <h3>iframe &amp; Ad Injection</h3>
+                  <h3>Signature Matching &amp; iframe Injection</h3>
                   <p>
-                    Some fake ad blockers monitor every browser request and compare URLs against a signature list. When a match is found (e.g. Google.com), they load an iframe from a third-party domain and re-initialize—injecting ads or tracking scripts into pages the user trusts.
+                    The best-documented mechanism: AdGuard found a hidden script listening to every browser request and
+                    comparing a salted MD5 of the URL against a signature list loaded from a remote{" "}
+                    <code>coupons.txt</code>. On a match—Google.com among them—it loaded an iframe from a third-party
+                    domain and re-initialised.
                   </p>
                 </div>
                 <div className="finding-card">
                   <div className="finding-icon">📢</div>
-                  <h3>SEO &amp; Keyword Spam</h3>
+                  <h3>Ranking Manipulation</h3>
                   <p>
-                    Attackers stuff extension names and descriptions with keywords (e.g. “ad blocker”, “block ads”, “privacy”) to rank highly in Chrome Web Store search. Top placement plus a familiar name (Adblock, AdGuard-style) leads users to install without suspecting malware.
+                    Operators stuffed keywords into extension names and descriptions to surface in Chrome Web Store
+                    search. Notably, positive reviews were not the mechanism—AdGuard flagged the opposite as the tell,
+                    citing extensions with over a million claimed users and only a handful of reviews.
                   </p>
                 </div>
               </div>
@@ -108,25 +190,48 @@ const FakeAdBlockersCaseStudyPage = () => {
               <h2>Red Flags &amp; How to Protect Your Organization</h2>
               <ul className="lessons-list">
                 <li>
-                  <strong>Scan before allowing extensions.</strong> Use a Chrome extension security scanner to check for obfuscation, excessive permissions, and suspicious network behavior. ExtensionShield’s three-layer model (security, privacy, governance) gives enterprises the evidence to make allow/block decisions.
+                  <strong>Scan before allowing extensions.</strong> Check for obfuscation, excessive permissions, and
+                  suspicious network behavior. ExtensionShield&apos;s three-layer model (security, privacy, governance)
+                  gives teams evidence for allow/block decisions.
                 </li>
                 <li>
-                  <strong>Don’t trust names and ratings alone.</strong> Clones of popular ad blockers have been caught injecting ads and stealing traffic. High install counts and positive reviews can be gamed.
+                  <strong>Install counts and ratings can be gamed.</strong> A high install count with very few reviews is
+                  itself a signal worth checking, not a reassurance.
                 </li>
                 <li>
-                  <strong>Audit “read and change data on all sites”.</strong> Ad blockers need broad host access—but that same permission allows injecting content. Look for evidence of script injection, remote config, and exfiltration in extension analysis reports.
+                  <strong>Audit &ldquo;read and change data on all sites&rdquo;.</strong> Ad blockers legitimately need
+                  broad host access—and that same permission is what allows content injection. The permission does not
+                  distinguish the two; only behavior does.
                 </li>
                 <li>
-                  <strong>Maintain an allow list.</strong> For enterprises, the safest approach is to only allow extensions that have been scanned and approved—and to rescan when extensions update.
+                  <strong>Rescan on update.</strong> Every case here involved code that arrived or changed after install.
+                  A one-time review at install does not cover the extension you end up running.
                 </li>
               </ul>
+            </section>
+
+            <section className="case-study-sources">
+              <h2>Sources</h2>
+              <ol>
+                {SOURCES.map((s) => (
+                  <li key={s.url}>
+                    <a href={s.url} target="_blank" rel="noopener noreferrer nofollow">
+                      {s.title}
+                    </a>
+                    <span className="source-meta">
+                      {s.publisher} · {s.date}
+                    </span>
+                  </li>
+                ))}
+              </ol>
             </section>
           </article>
 
           <div className="honey-cta">
             <h3>Scan Extensions Before You Install or Allow</h3>
             <p>
-              Get a clear risk score and evidence-based report for any Chrome extension. ExtensionShield helps security teams and consumers identify malicious extensions, privacy risks, and compliance issues—so you find extension threats before they find you.
+              Get a risk score and evidence-linked report for any Chrome extension, so you can review what an extension
+              can reach before you allow it.
             </p>
             <Link to="/scan" className="cta-button">
               Scan an Extension

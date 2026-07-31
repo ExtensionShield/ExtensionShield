@@ -48,12 +48,11 @@ export const topNavItems = [
     category: NAV_CATEGORIES.RESEARCH,
     label: "Research",
     path: "/research",
-    matchPaths: ["/research", "/compare", "/blog"],
+    matchPaths: ["/research", "/blog"],
     dropdownItems: [
       { icon: "📋", label: "Case Studies", description: "Real-world analysis", path: "/research/case-studies" },
       { icon: "⚙️", label: "How We Score", description: "How we score risk", path: "/research/methodology" },
       { icon: "benchmarks", label: "Benchmarks", description: "Industry trends & scoring", path: "/research/benchmarks" },
-      { icon: "compare", label: "Compare Tools", description: "Security tool comparison", path: "/compare" },
       { icon: "📰", label: "Blog", description: "Articles and updates", path: "/blog" }
     ]
   },
@@ -172,9 +171,7 @@ export const footerConfig = {
         { label: "Case Studies", path: "/research/case-studies" },
         { label: "How We Score", path: "/research/methodology" },
         { label: "Benchmarks", path: "/research/benchmarks" },
-        { label: "Compare Tools", path: "/compare" },
-        { label: "Blog", path: "/blog" },
-        { label: "Spin.ai Comparison", path: "/compare/spin-ai" }
+        { label: "Blog", path: "/blog" }
       ]
     },
     {

@@ -92,6 +92,15 @@
     color: #fca5a5;
     border: 1px solid rgba(239, 68, 68, 0.4);
   }
+
+  /* Editorial label, deliberately neutral. A red/orange severity chip on a page
+     about one named product reads as an ExtensionShield scan verdict on that
+     product, which is not what these pages are. */
+  &.case-study {
+    background: rgba(148, 163, 184, 0.14);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
 }
 
 .category-badge {
@@ -412,4 +421,82 @@
   border-color: var(--extensionshield-border-accent);
   color: var(--extensionshield-accent);
   font-weight: 600;
+}
+/* Scope note — states what the page is and is not, directly under the header.
+   These pages describe named third-party products, so the disclaimer has to be
+   visible on the page itself, not only in the prose hedging. */
+.case-study-scope {
+  margin: 0 0 2rem;
+  padding: 0.875rem 1.125rem;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--extensionshield-text-secondary, #94a3b8);
+  background: rgba(13, 20, 36, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-left: 3px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+
+  strong {
+    color: var(--extensionshield-text-primary, #f8fafc);
+  }
+}
+
+/* Sources list. Every case study must render one. */
+.case-study-sources {
+  ol {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  li {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--extensionshield-text-secondary, #94a3b8);
+  }
+
+  a {
+    display: block;
+    color: var(--extensionshield-accent, #22c55e);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .source-meta {
+    display: block;
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    color: var(--extensionshield-text-tertiary, #64748b);
+  }
+}
+
+.light .case-study-scope {
+  color: #475569;
+  background: rgba(15, 23, 42, 0.03);
+  border-color: rgba(15, 23, 42, 0.1);
+  border-left-color: rgba(15, 23, 42, 0.28);
+
+  strong {
+    color: #0f172a;
+  }
+}
+
+.light .case-study-sources {
+  li {
+    color: #475569;
+  }
+
+  a {
+    color: #15803d;
+  }
+
+  .source-meta {
+    color: #64748b;
+  }
 }

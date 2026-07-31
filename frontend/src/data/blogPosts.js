@@ -130,90 +130,6 @@ export const blogPosts = [
     ]
   },
   {
-    slug: "spin-ai-vs-extensionshield",
-    title: "Spin.ai vs ExtensionShield: Honest Browser Extension Security Comparison",
-    description: "Compare Spin.ai SpinMonitor and SpinCRX with ExtensionShield for extension risk assessment, governance, open-source trust, and pre-install scanning.",
-    date: "2026-04",
-    category: "Comparison",
-    sections: [
-      {
-        heading: "Where Spin.ai is strong",
-        body: "Spin.ai is positioned as an enterprise SaaS security platform with browser extension risk assessment inside a broader security posture workflow. That can be valuable for teams already buying centralized SaaS protection."
-      },
-      {
-        heading: "Where ExtensionShield is different",
-        body: "ExtensionShield focuses on transparent browser extension security: open-source core, pre-install scans, private CRX/ZIP audits, evidence-linked reports, and governance decisions that can be reviewed before an extension reaches users."
-      },
-      {
-        heading: "Best-fit summary",
-        body: "Choose Spin.ai for a broader SaaS security program. Choose ExtensionShield when open-source trust, extension-specific evidence, developer audits, and pre-install governance are the main requirements."
-      }
-    ]
-  },
-  {
-    slug: "crxcavator-vs-extensionshield-2026",
-    title: "CRXcavator vs ExtensionShield in 2026",
-    description: "Compare CRXcavator and ExtensionShield for Chrome extension risk scores, transparent methodology, SAST, governance, and pre-install scanning.",
-    date: "2026-04",
-    category: "Comparison",
-    sections: [
-      {
-        heading: "CRXcavator's legacy",
-        body: "CRXcavator helped popularize extension risk scoring for enterprise review. It is still a common comparison point for teams evaluating Chrome extension security tooling."
-      },
-      {
-        heading: "ExtensionShield's angle",
-        body: "ExtensionShield adds open-source trust, modern UX, Security/Privacy/Governance scoring, private build audits, and evidence-first reports that are designed for pre-install and enterprise governance workflows."
-      },
-      {
-        heading: "What to compare",
-        body: "Compare methodology visibility, evidence quality, current availability, governance depth, developer workflow support, and whether the tool helps make allow/block decisions."
-      }
-    ]
-  },
-  {
-    slug: "extension-auditor-vs-extensionshield",
-    title: "Extension Auditor vs ExtensionShield: Which Extension Security Tool Fits?",
-    description: "Compare Extension Auditor and ExtensionShield for extension security, privacy review, monitoring, governance, open-source trust, and developer audits.",
-    date: "2026-04",
-    category: "Comparison",
-    sections: [
-      {
-        heading: "Where Extension Auditor is strong",
-        body: "Extension Auditor emphasizes enterprise extension monitoring, inventory, and risk management. It is relevant for teams that want commercial browser extension oversight."
-      },
-      {
-        heading: "Where ExtensionShield competes",
-        body: "ExtensionShield differentiates with open-source core positioning, pre-install URL scans, private CRX/ZIP audits, transparent scoring, and evidence-linked Security, Privacy, and Governance reports."
-      },
-      {
-        heading: "Decision point",
-        body: "If you want a transparent extension-specific platform that works before install and before release, ExtensionShield is the stronger fit."
-      }
-    ]
-  },
-  {
-    slug: "crxplorer-vs-extensionshield",
-    title: "CRXplorer vs ExtensionShield: Free Scanner or Governance Platform?",
-    description: "Compare CRXplorer and ExtensionShield for Chrome extension risk scoring, code review, methodology transparency, and governance workflows.",
-    date: "2026-04",
-    category: "Comparison",
-    sections: [
-      {
-        heading: "Scanner value",
-        body: "CRXplorer is useful for quick extension risk review. It competes on speed and accessibility for users who want a fast check."
-      },
-      {
-        heading: "Governance value",
-        body: "ExtensionShield is designed to go further: transparent risk layers, open-source trust, private build audits, policy evidence, and enterprise allow/block context."
-      },
-      {
-        heading: "Best-fit summary",
-        body: "Use a scanner for one-off checks. Use ExtensionShield when the decision must be explainable, repeatable, and tied to governance evidence."
-      }
-    ]
-  },
-  {
     slug: "chrome-web-store-ratings-do-not-prove-extension-safety",
     title: "Why Chrome Web Store Ratings Do Not Prove an Extension Is Safe",
     description: "Star ratings and reviews are useful, but they do not prove Chrome extension safety. Learn what ratings miss and what evidence to check instead.",
@@ -403,27 +319,6 @@ export const blogPosts = [
     ]
   },
   {
-    slug: "best-chrome-extension-security-scanner-tools-2026",
-    title: "Best Chrome Extension Security Scanner Tools in 2026",
-    description: "Compare Chrome extension security scanner tools in 2026: ExtensionShield, Spin.ai, CRXcavator, Extension Auditor, and CRXplorer.",
-    date: "2026-04",
-    category: "Comparison",
-    sections: [
-      {
-        heading: "What to compare",
-        body: "Compare tools by methodology transparency, permission analysis, SAST depth, threat intelligence, governance workflows, monitoring, private build support, and audit evidence."
-      },
-      {
-        heading: "Scanner vs platform",
-        body: "A scanner is enough for one-off checks. A platform is better when teams need repeatable governance decisions, governance evidence, and audit-ready records for allow/block policy."
-      },
-      {
-        heading: "ExtensionShield's position",
-        body: "ExtensionShield combines free pre-install scans, open-source trust, private build audits, and Security/Privacy/Governance reports for users, developers, and enterprises."
-      }
-    ]
-  },
-  {
     slug: "extension-security-scoring-explained",
     title: "Extension Security Scoring Explained: Security, Privacy, and Governance",
     description: "Extension security scoring explained: how Security, Privacy, and Governance signals combine into an extension risk score.",
@@ -488,20 +383,6 @@ export const blogStrategyTopics = [
     intent: "Rank for annual risk queries without publishing an unsupported blacklist.",
     featuredSnippetAngle: "List risky patterns such as all-site access, data collection, obfuscation, ownership changes, and suspicious updates.",
     internalLinks: ["/scan", "/chrome-extension-permissions", "/extension-risk-score", "/blog"]
-  },
-  {
-    title: "Spin.ai vs ExtensionShield",
-    longTailKeyword: "Spin.ai alternative",
-    intent: "Capture high-intent comparison traffic from buyers evaluating browser extension security tools.",
-    featuredSnippetAngle: "Neutral best-fit comparison table by workflow.",
-    internalLinks: ["/compare/spin-ai", "/extension-governance", "/scan", "/blog"]
-  },
-  {
-    title: "CRXcavator vs ExtensionShield",
-    longTailKeyword: "CRXcavator alternative",
-    intent: "Capture users looking for a current extension risk scoring and governance workflow.",
-    featuredSnippetAngle: "Compare historical risk scoring criteria with current governance requirements.",
-    internalLinks: ["/compare/crxcavator", "/extension-risk-score", "/scan", "/blog"]
   },
   {
     title: "How to Build a Chrome Extension Allowlist Policy",
