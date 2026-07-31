@@ -38,12 +38,6 @@ const AboutUsPage = React.lazy(() => import("../pages/AboutUsPage"));
 const ChallengePage = React.lazy(() => import("../pages/challenge/ChallengePage"));
 const ChallengeEditionPage = React.lazy(() => import("../pages/challenge/ChallengeEditionPage"));
 
-// Compare pages (SEO: best scanner, CRXcavator alternatives)
-const CompareIndexPage = React.lazy(() => import("../pages/compare/CompareIndexPage"));
-const CompareCrxcavatorPage = React.lazy(() => import("../pages/compare/CompareCrxcavatorPage"));
-const CompareCrxplorerPage = React.lazy(() => import("../pages/compare/CompareCrxplorerPage"));
-const CompareExtensionAuditorPage = React.lazy(() => import("../pages/compare/CompareExtensionAuditorPage"));
-const CompareSpinAiPage = React.lazy(() => import("../pages/compare/CompareSpinAiPage"));
 
 // SEO keyword landing pages (high-intent) + educational hub
 const FreeExtensionScannerPage = React.lazy(() => import("../pages/landing/FreeExtensionScannerPage"));
@@ -51,7 +45,6 @@ const IsThisChromeExtensionSafePage = React.lazy(() => import("../pages/landing/
 const ChromeExtensionPermissionsPage = React.lazy(() => import("../pages/landing/ChromeExtensionPermissionsPage"));
 const ChromeExtensionSecurityScannerPage = React.lazy(() => import("../pages/landing/ChromeExtensionSecurityScannerPage"));
 const BrowserExtensionRiskAssessmentPage = React.lazy(() => import("../pages/landing/BrowserExtensionRiskAssessmentPage"));
-const CrxcavatorAlternativePage = React.lazy(() => import("../pages/landing/CrxcavatorAlternativePage"));
 const ExtensionSecurityPage = React.lazy(() => import("../pages/landing/ExtensionSecurityPage"));
 const ExtensionRiskScorePage = React.lazy(() => import("../pages/landing/ExtensionRiskScorePage"));
 const ExtensionPermissionsPage = React.lazy(() => import("../pages/landing/ExtensionPermissionsPage"));
@@ -319,74 +312,8 @@ export const routes = [
     priority: 0.8,
     changefreq: "monthly"
   },
-  {
-    path: "/crxcavator-alternative",
-    element: <CrxcavatorAlternativePage />,
-    seo: {
-      title: "CRXcavator Alternative | Chrome Extension Risk Score & Security | ExtensionShield",
-      description: "Looking for a CRXcavator alternative? Compare Chrome extension risk scoring, SAST, private build audits, and governance evidence with ExtensionShield.",
-      canonical: "/crxcavator-alternative"
-    },
-    priority: 0.8,
-    changefreq: "monthly"
-  },
 
   // ============ COMPARE ROUTES (SEO: best scanner, alternatives) ============
-  {
-    path: "/compare",
-    element: <CompareIndexPage />,
-    seo: {
-      title: "Compare Browser Extension Security Tools | Scanner & Governance Comparison",
-      description: "Compare browser extension security tools. ExtensionShield vs Spin.ai, CRXcavator, CRXplorer, and Extension Auditor for risk scoring, governance, and audits.",
-      canonical: "/compare"
-    },
-    priority: 0.8,
-    changefreq: "monthly"
-  },
-  {
-    path: "/compare/crxcavator",
-    element: <CompareCrxcavatorPage />,
-    seo: {
-      title: "CRXcavator Alternative | CRXcavator vs ExtensionShield",
-      description: "Compare CRXcavator and ExtensionShield for Chrome extension risk scores, permission analysis, SAST, pre-install scanning, private CRX/ZIP audits, and governance evidence.",
-      canonical: "/compare/crxcavator"
-    },
-    priority: 0.7,
-    changefreq: "monthly"
-  },
-  {
-    path: "/compare/crxplorer",
-    element: <CompareCrxplorerPage />,
-    seo: {
-      title: "CRXplorer Alternative | CRXplorer vs ExtensionShield",
-      description: "Compare CRXplorer and ExtensionShield for Chrome extension security analysis, risk scores, code review, pre-install scanning, private audits, and governance workflows.",
-      canonical: "/compare/crxplorer"
-    },
-    priority: 0.7,
-    changefreq: "monthly"
-  },
-  {
-    path: "/compare/extension-auditor",
-    element: <CompareExtensionAuditorPage />,
-    seo: {
-      title: "Extension Auditor Alternative | Extension Auditor vs ExtensionShield",
-      description: "Compare Extension Auditor and ExtensionShield for browser extension security, risk scores, permission analysis, governance workflows, private audits, and evidence-backed decisions.",
-      canonical: "/compare/extension-auditor"
-    },
-    priority: 0.7,
-    changefreq: "monthly"
-  },
-  {
-    path: "/compare/spin-ai",
-    element: <CompareSpinAiPage />,
-    seo: {
-      title: "Spin.ai vs ExtensionShield | Browser Extension Security Comparison",
-      description: "Compare Spin.ai SpinMonitor and SpinCRX with ExtensionShield for browser extension security, governance, pre-install scanning, open-source trust, and private build audits.",
-      canonical: "/compare/spin-ai"
-    },
-    priority: 0.7,
-    changefreq: "monthly"
-  },
 
   // ============ CAREERS ROUTES ============
   {
@@ -506,50 +433,6 @@ export const routes = [
     changefreq: "monthly"
   },
   {
-    path: "/blog/spin-ai-vs-extensionshield",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Spin.ai vs ExtensionShield: Honest Browser Extension Security Comparison",
-      description: "Compare Spin.ai SpinMonitor and SpinCRX with ExtensionShield for extension risk assessment, governance, open-source trust, and pre-install scanning.",
-      canonical: "/blog/spin-ai-vs-extensionshield"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/crxcavator-vs-extensionshield-2026",
-    element: <BlogPostPage />,
-    seo: {
-      title: "CRXcavator vs ExtensionShield in 2026",
-      description: "Compare CRXcavator and ExtensionShield for Chrome extension risk scores, transparent methodology, SAST, governance, and pre-install scanning.",
-      canonical: "/blog/crxcavator-vs-extensionshield-2026"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/extension-auditor-vs-extensionshield",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Extension Auditor vs ExtensionShield: Which Extension Security Tool Fits?",
-      description: "Compare Extension Auditor and ExtensionShield for extension security, privacy review, monitoring, governance, open-source trust, and developer audits.",
-      canonical: "/blog/extension-auditor-vs-extensionshield"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/crxplorer-vs-extensionshield",
-    element: <BlogPostPage />,
-    seo: {
-      title: "CRXplorer vs ExtensionShield: Free Scanner or Governance Platform?",
-      description: "Compare CRXplorer and ExtensionShield for Chrome extension risk scoring, code review, methodology transparency, and governance workflows.",
-      canonical: "/blog/crxplorer-vs-extensionshield"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
     path: "/blog/chrome-web-store-ratings-do-not-prove-extension-safety",
     element: <BlogPostPage />,
     seo: {
@@ -644,17 +527,6 @@ export const routes = [
       title: "How to Audit a CRX or ZIP Chrome Extension Before Release",
       description: "Audit a private CRX or ZIP Chrome extension before release: SAST, permissions, privacy, policy checks, evidence, and fix guidance.",
       canonical: "/blog/audit-crx-zip-before-release"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/best-chrome-extension-security-scanner-tools-2026",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Best Chrome Extension Security Scanner Tools in 2026",
-      description: "Compare Chrome extension security scanner tools in 2026: ExtensionShield, Spin.ai, CRXcavator, Extension Auditor, and CRXplorer.",
-      canonical: "/blog/best-chrome-extension-security-scanner-tools-2026"
     },
     priority: 0.6,
     changefreq: "monthly"

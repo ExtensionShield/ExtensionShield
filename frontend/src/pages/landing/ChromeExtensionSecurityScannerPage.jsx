@@ -58,8 +58,7 @@ const ChromeExtensionSecurityScannerPage = () => {
               <li><Link to="/research/methodology">How we score extensions</Link></li>
               <li><Link to="/extension-security">Browser extension security platform</Link></li>
               <li><Link to="/enterprise">Enterprise extension security</Link></li>
-              <li><Link to="/compare/crxcavator">CRXcavator alternative</Link></li>
-            </ul>
+                          </ul>
           </div>
         </div>
       </div>

@@ -24,6 +24,37 @@
  */
 
 export const REDIRECTS = [
+  // --- Competitor comparison pages, retired entirely (2026-07) ---
+  // ExtensionShield publishes its own extension research; it does not publish
+  // competitor comparisons. Every page that named, described or linked a
+  // competitor is gone, and no redirect target names one either.
+  //
+  // These pages also carried claims that can no longer be verified:
+  // /compare/crxcavator and /crxcavator-alternative described CRXcavator in the
+  // present tense and cited "public docs as of June 2026", but the service is
+  // gone — crxcavator.io has no A record, its API returns 502, and both Cisco's
+  // product page and the duo-labs GitHub repo 404 (checked 2026-07-28).
+  //
+  // Everything lands on /extension-security: the topical home for extension
+  // security tooling, and substantial enough (~1,450 words) to be a legitimate
+  // destination rather than a soft-404 risk.
+  { from: "/compare", to: "/extension-security" },
+  { from: "/compare/spin-ai", to: "/extension-security" },
+  { from: "/compare/crxcavator", to: "/extension-security" },
+  { from: "/compare/crxplorer", to: "/extension-security" },
+  { from: "/compare/extension-auditor", to: "/extension-security" },
+  { from: "/crxcavator-alternative", to: "/extension-security" },
+
+  // --- Retired competitor-comparison blog stubs ---
+  // 61-83 words each, named a competitor, concluded we win. These pointed at
+  // the /compare pages until those were retired too; they now go straight to
+  // the final destination, because a 301 into another 301 dilutes the signal.
+  { from: "/blog/spin-ai-vs-extensionshield", to: "/extension-security" },
+  { from: "/blog/crxcavator-vs-extensionshield-2026", to: "/extension-security" },
+  { from: "/blog/extension-auditor-vs-extensionshield", to: "/extension-security" },
+  { from: "/blog/crxplorer-vs-extensionshield", to: "/extension-security" },
+  { from: "/blog/best-chrome-extension-security-scanner-tools-2026", to: "/extension-security" },
+
   // --- Retired case study (2026-07) ---
   // /research/case-studies/pdf-converters asserted that PDF converter
   // extensions are a documented document-harvesting category. Fact-checking on

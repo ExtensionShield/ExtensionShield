@@ -1,3 +1,14 @@
 {
+  "/compare": "/extension-security",
+  "/compare/spin-ai": "/extension-security",
+  "/compare/crxcavator": "/extension-security",
+  "/compare/crxplorer": "/extension-security",
+  "/compare/extension-auditor": "/extension-security",
+  "/crxcavator-alternative": "/extension-security",
+  "/blog/spin-ai-vs-extensionshield": "/extension-security",
+  "/blog/crxcavator-vs-extensionshield-2026": "/extension-security",
+  "/blog/extension-auditor-vs-extensionshield": "/extension-security",
+  "/blog/crxplorer-vs-extensionshield": "/extension-security",
+  "/blog/best-chrome-extension-security-scanner-tools-2026": "/extension-security",
   "/research/case-studies/pdf-converters": "/blog/can-chrome-extensions-steal-data"
 }

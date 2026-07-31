@@ -68,6 +68,28 @@ describe("redirect map", () => {
 });
 
 /**
+ * ExtensionShield publishes its own extension research; it does not publish
+ * competitor comparisons. The retired pages described CRXcavator in the present
+ * tense while the service was already gone, which is the failure this guards.
+ */
+describe("competitor content", () => {
+  const COMPETITORS = /crxcavator|crxplorer|spin\.ai|extension auditor/i;
+
+  it("has no indexable route under /compare", () => {
+    const seoRoutes = getSeoRoutes(ROUTES_SOURCE);
+    expect(seoRoutes.filter((r) => r.path.startsWith("/compare"))).toEqual([]);
+  });
+
+  it("never redirects to a URL naming a competitor", () => {
+    expect(REDIRECTS.filter((r) => COMPETITORS.test(r.to))).toEqual([]);
+  });
+
+  it("keeps competitor names out of routes.jsx entirely", () => {
+    expect(COMPETITORS.test(ROUTES_SOURCE)).toBe(false);
+  });
+});
+
+/**
  * Case study guardrails.
  *
  * These pages name real, shipping products in the context of fraud and malware.
