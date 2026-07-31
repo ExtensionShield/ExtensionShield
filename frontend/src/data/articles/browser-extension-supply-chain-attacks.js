@@ -532,8 +532,8 @@ export default {
       "to": "/extension-governance"
     },
     {
-      "label": "Browser extension risk assessment",
-      "to": "/browser-extension-risk-assessment"
+      "label": "Extension risk score",
+      "to": "/extension-risk-score"
     },
     {
       "label": "Scan an extension",

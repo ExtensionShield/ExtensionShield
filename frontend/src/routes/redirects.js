@@ -104,6 +104,19 @@ export const REDIRECTS = [
   { from: "/blog/can-chrome-extensions-steal-cookies-sessions", to: "/guides/can-chrome-extensions-steal-data" },
   { from: "/blog/browser-extension-compliance-checklist", to: "/guides/chrome-extension-allowlist-policy" },
 
+  // --- Thin landing pages retired (2026-07) ---
+  // 86-143 words each, thinner than the blog stubs retired above, and each a
+  // strict subset of a longer page targeting the same intent. Keeping them
+  // split the same query across two URLs and gave a searcher the shallower one
+  // roughly half the time.
+  //
+  // /extension-permissions was additionally an orphan — nothing on the site
+  // linked to it — and every one of its headings mapped 1:1 onto
+  // /chrome-extension-permissions, which answers the same query in ~1,650 words.
+  { from: "/extension-permissions", to: "/chrome-extension-permissions" },
+  { from: "/chrome-extension-security-scanner", to: "/free-extension-scanner" },
+  { from: "/browser-extension-risk-assessment", to: "/extension-risk-score" },
+
   // --- Retired case study (2026-07) ---
   // /research/case-studies/pdf-converters asserted that PDF converter
   // extensions are a documented document-harvesting category. Fact-checking on
