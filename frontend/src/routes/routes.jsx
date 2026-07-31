@@ -297,7 +297,12 @@ export const routes = [
     seo: {
       title: "Apply | Careers | ExtensionShield",
       description: "Apply to join ExtensionShield. Submit your application for open engineering and security roles.",
-      canonical: "/careers/apply"
+      canonical: "/careers/apply",
+      // A submission form, not a document: 43 rendered words, all of them field
+      // labels. The role descriptions people actually search for live on
+      // /careers, which links here. Indexing the form competes with that page
+      // and offers a searcher nothing.
+      noindex: true
     },
     priority: 0.6,
     changefreq: "monthly"
@@ -312,7 +317,12 @@ export const routes = [
     seo: {
       title: "Enterprise (planned) | ExtensionShield",
       description: "ExtensionShield is currently focused on open-source extension analysis. Enterprise capabilities are planned for the future.",
-      canonical: "/enterprise"
+      canonical: "/enterprise",
+      // Keep the route (inbound links, the interest form) but out of the index:
+      // 74 rendered words describing a capability that does not exist yet. A
+      // page whose subject is "not shipped" is thin content by definition.
+      // Remove noindex when there is an actual enterprise offering to describe.
+      noindex: true
     },
     priority: 0.3,
     changefreq: "monthly"
