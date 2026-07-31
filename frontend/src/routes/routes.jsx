@@ -18,6 +18,10 @@ const PrivacyPolicyPage = React.lazy(() => import("../pages/PrivacyPolicyPage"))
 const AuthCallbackPage = React.lazy(() => import("../pages/auth/AuthCallbackPage"));
 const AuthDiagnosticsPage = React.lazy(() => import("../pages/auth/AuthDiagnosticsPage"));
 
+// Articles (research findings + reference guides)
+const ArticlePage = React.lazy(() => import("../pages/articles/ArticlePage"));
+const GuidesIndexPage = React.lazy(() => import("../pages/articles/GuidesIndexPage"));
+
 // Research Pages
 const ResearchPage = React.lazy(() => import("../pages/research/ResearchPage"));
 const MethodologyPage = React.lazy(() => import("../pages/research/MethodologyPage"));
@@ -50,9 +54,6 @@ const ExtensionRiskScorePage = React.lazy(() => import("../pages/landing/Extensi
 const ExtensionPermissionsPage = React.lazy(() => import("../pages/landing/ExtensionPermissionsPage"));
 const ExtensionGovernancePage = React.lazy(() => import("../pages/landing/ExtensionGovernancePage"));
 
-// Blog (SEO long-tail)
-const BlogIndexPage = React.lazy(() => import("../pages/blog/BlogIndexPage"));
-const BlogPostPage = React.lazy(() => import("../pages/blog/BlogPostPage"));
 
 // Careers
 const CareersPage = React.lazy(() => import("../pages/careers/CareersPage"));
@@ -338,128 +339,6 @@ export const routes = [
     priority: 0.6,
     changefreq: "monthly"
   },
-  // ============ BLOG ROUTES (SEO long-tail) ============
-  {
-    path: "/blog",
-    element: <BlogIndexPage />,
-    seo: {
-      title: "Browser Extension Security Blog | Permissions, Risk & Governance",
-      description: "Browser extension security guides: dangerous permissions, risky Chrome extensions, data theft, extension risk scores, governance, and honest scanner comparisons.",
-      canonical: "/blog"
-    },
-    priority: 0.75,
-    changefreq: "weekly"
-  },
-  {
-    path: "/blog/top-risky-chrome-extensions-2026",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Top Risky Chrome Extensions in 2026: What to Check Before You Install",
-      description: "A practical 2026 guide to risky Chrome extension patterns: broad permissions, data access, suspicious updates, and how to check risk before installing.",
-      canonical: "/blog/top-risky-chrome-extensions-2026"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/can-chrome-extensions-steal-data",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Can Chrome Extensions Steal Data? What Users and Teams Need to Know",
-      description: "Can Chrome extensions steal data? Learn how extension permissions, page access, cookies, clipboard access, and network calls can expose sensitive information.",
-      canonical: "/blog/can-chrome-extensions-steal-data"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/how-hackers-use-browser-extensions-to-steal-data",
-    element: <BlogPostPage />,
-    seo: {
-      title: "How Hackers Use Browser Extensions to Steal Data",
-      description: "Browser extension attack paths explained: malicious permissions, injected scripts, cookies, clipboard theft, update abuse, and data exfiltration.",
-      canonical: "/blog/how-hackers-use-browser-extensions-to-steal-data"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/chrome-web-store-ratings-do-not-prove-extension-safety",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Why Chrome Web Store Ratings Do Not Prove an Extension Is Safe",
-      description: "Star ratings and reviews are useful, but they do not prove Chrome extension safety. Learn what ratings miss and what evidence to check instead.",
-      canonical: "/blog/chrome-web-store-ratings-do-not-prove-extension-safety"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/can-chrome-extensions-steal-cookies-sessions",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Can Chrome Extensions Steal Cookies or Sessions?",
-      description: "Can browser extensions steal cookies or sessions? Learn how cookie permissions, page access, and token exposure can create session risk.",
-      canonical: "/blog/can-chrome-extensions-steal-cookies-sessions"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/browser-extension-supply-chain-attacks",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Browser Extension Supply Chain Attacks Explained",
-      description: "Browser extension supply chain attacks explained: ownership changes, malicious updates, compromised publishers, remote configuration, and extension governance controls.",
-      canonical: "/blog/browser-extension-supply-chain-attacks"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/manifest-v3-extension-security",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Manifest V3 Extension Security: What Changed and What Still Matters",
-      description: "Manifest V3 changed Chrome extension architecture, but permissions, host access, data flows, updates, and governance still determine extension risk.",
-      canonical: "/blog/manifest-v3-extension-security"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/chrome-extension-allowlist-policy",
-    element: <BlogPostPage />,
-    seo: {
-      title: "How to Build a Chrome Extension Allowlist Policy",
-      description: "Build a Chrome extension allowlist policy with risk scoring, permission thresholds, exception handling, monitoring, and audit evidence.",
-      canonical: "/blog/chrome-extension-allowlist-policy"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/browser-extension-compliance-checklist",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Browser Extension Compliance Checklist for Security Teams",
-      description: "A browser extension compliance checklist for enterprise teams: inventory, permissions, privacy disclosures, update monitoring, allowlists, and audit evidence.",
-      canonical: "/blog/browser-extension-compliance-checklist"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/audit-crx-zip-before-release",
-    element: <BlogPostPage />,
-    seo: {
-      title: "How to Audit a CRX or ZIP Chrome Extension Before Release",
-      description: "Audit a private CRX or ZIP Chrome extension before release: SAST, permissions, privacy, policy checks, evidence, and fix guidance.",
-      canonical: "/blog/audit-crx-zip-before-release"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
 
   // ============ ENTERPRISE ROUTES ============
   // Route preserved (200 response, sitemap entry kept) while the section is hidden
@@ -659,6 +538,96 @@ export const routes = [
   {
     path: "/debug/theme",
     element: <ThemeDebugPage />
+  },
+
+  // ============ ARTICLES (research findings + guides) ============
+  {
+    path: "/guides",
+    element: <GuidesIndexPage />,
+    seo: {
+      title: "Chrome Extension Security Guides | Permissions, Manifest V3 & Governance",
+      description: "Reference guides on browser extension security: what permissions grant, how supply chain attacks reach installed users, what Manifest V3 changed, allowlist policy, and pre-release CRX audits.",
+      canonical: "/guides"
+    },
+    priority: 0.7,
+    changefreq: "weekly"
+  },
+  {
+    path: "/research/chrome-web-store-ratings-do-not-prove-extension-safety",
+    element: <ArticlePage />,
+    seo: {
+      title: "Why Chrome Web Store Ratings Do Not Prove an Extension Is Safe",
+      description: "Star rating and ExtensionShield security score correlate at r = 0.11 across 56 rated listings in a 57-extension convenience sample. The data, the method, and why they diverge.",
+      canonical: "/research/chrome-web-store-ratings-do-not-prove-extension-safety"
+    },
+    priority: 0.85,
+    changefreq: "monthly"
+  },
+  {
+    path: "/research/chrome-extension-risk-patterns-2026",
+    element: <ArticlePage />,
+    seo: {
+      title: "Chrome Extension Risk Patterns in 2026: What 57 Scans Show",
+      description: "Permission prevalence, host-permission breadth and security-score distribution across 57 scanned Chrome extensions, with methodology and limits stated.",
+      canonical: "/research/chrome-extension-risk-patterns-2026"
+    },
+    priority: 0.85,
+    changefreq: "monthly"
+  },
+  {
+    path: "/guides/can-chrome-extensions-steal-data",
+    element: <ArticlePage />,
+    seo: {
+      title: "Can Chrome Extensions Steal Data? What Users and Teams Need to Know",
+      description: "Yes, within the permissions they hold. A technical breakdown of the extension data-theft chain, cookie and session token exposure, and what it does not mean.",
+      canonical: "/guides/can-chrome-extensions-steal-data"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+  {
+    path: "/guides/browser-extension-supply-chain-attacks",
+    element: <ArticlePage />,
+    seo: {
+      title: "Browser Extension Supply Chain Attacks Explained",
+      description: "How extension auto-updates, ownership transfers, developer OAuth phishing, and remote config turn installed extensions into a live supply chain risk.",
+      canonical: "/guides/browser-extension-supply-chain-attacks"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+  {
+    path: "/guides/manifest-v3-extension-security",
+    element: <ArticlePage />,
+    seo: {
+      title: "Manifest V3 Extension Security: What Changed and What Still Matters",
+      description: "A technical account of what Manifest V3 changed in Chrome extension security, what it left untouched, and how to review an MV3 manifest properly.",
+      canonical: "/guides/manifest-v3-extension-security"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+  {
+    path: "/guides/chrome-extension-allowlist-policy",
+    element: <ArticlePage />,
+    seo: {
+      title: "How to Build a Chrome Extension Allowlist Policy",
+      description: "A copy-pasteable Chrome extension allowlist policy: risk tiers, permission thresholds, exception expiry, evidence records, and verified enterprise policy JSON.",
+      canonical: "/guides/chrome-extension-allowlist-policy"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+  {
+    path: "/guides/audit-crx-zip-before-release",
+    element: <ArticlePage />,
+    seo: {
+      title: "How to Audit a CRX or ZIP Chrome Extension Before Release",
+      description: "A step-by-step pre-release audit for Chrome extensions: unpack a CRX, review the manifest, trace scripts, map network destinations, and pass Web Store review.",
+      canonical: "/guides/audit-crx-zip-before-release"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
   },
 
   // ============ RETIRED URLS ============

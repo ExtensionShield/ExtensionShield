@@ -18,7 +18,18 @@
   "/blog/extension-security-scoring-explained": "/research/methodology",
   "/blog/how-to-check-chrome-extension-permissions": "/chrome-extension-permissions",
   "/blog/how-to-audit-chrome-extension-before-installing": "/is-this-chrome-extension-safe",
-  "/blog/enterprise-browser-extension-risk-management": "/blog/chrome-extension-allowlist-policy",
-  "/blog/how-to-detect-malicious-chrome-extensions": "/blog/how-hackers-use-browser-extensions-to-steal-data",
-  "/research/case-studies/pdf-converters": "/blog/can-chrome-extensions-steal-data"
+  "/blog/enterprise-browser-extension-risk-management": "/guides/chrome-extension-allowlist-policy",
+  "/blog/how-to-detect-malicious-chrome-extensions": "/guides/can-chrome-extensions-steal-data",
+  "/blog": "/guides",
+  "/blog/chrome-web-store-ratings-do-not-prove-extension-safety": "/research/chrome-web-store-ratings-do-not-prove-extension-safety",
+  "/blog/top-risky-chrome-extensions-2026": "/research/chrome-extension-risk-patterns-2026",
+  "/blog/can-chrome-extensions-steal-data": "/guides/can-chrome-extensions-steal-data",
+  "/blog/browser-extension-supply-chain-attacks": "/guides/browser-extension-supply-chain-attacks",
+  "/blog/manifest-v3-extension-security": "/guides/manifest-v3-extension-security",
+  "/blog/chrome-extension-allowlist-policy": "/guides/chrome-extension-allowlist-policy",
+  "/blog/audit-crx-zip-before-release": "/guides/audit-crx-zip-before-release",
+  "/blog/how-hackers-use-browser-extensions-to-steal-data": "/guides/can-chrome-extensions-steal-data",
+  "/blog/can-chrome-extensions-steal-cookies-sessions": "/guides/can-chrome-extensions-steal-data",
+  "/blog/browser-extension-compliance-checklist": "/guides/chrome-extension-allowlist-policy",
+  "/research/case-studies/pdf-converters": "/guides/can-chrome-extensions-steal-data"
 }

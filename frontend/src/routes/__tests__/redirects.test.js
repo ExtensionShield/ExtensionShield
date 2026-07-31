@@ -164,3 +164,56 @@ describe("case studies", () => {
     }
   });
 });
+
+/**
+ * Article guardrails.
+ *
+ * The split is deliberate: /research is original evidence built on our own scan
+ * corpus, /guides is reference material synthesised from public documentation.
+ * Calling synthesis "research" devalues the word for the audits that depend on
+ * it, so the collection field is load-bearing and must stay accurate.
+ */
+describe("articles", () => {
+  const indexablePaths = new Set(getSeoRoutes(ROUTES_SOURCE).map((r) => r.path));
+
+  it("publishes 2 research pieces and 5 guides, all indexable", async () => {
+    const { researchArticles, guideArticles, articlePath } = await import("../../data/articles/index.js");
+    expect(researchArticles.length).toBe(2);
+    expect(guideArticles.length).toBe(5);
+    for (const a of [...researchArticles, ...guideArticles]) {
+      expect(indexablePaths.has(articlePath(a)), `${articlePath(a)} is not indexable`).toBe(true);
+    }
+  });
+
+  it("gives every article exactly one canonical URL", async () => {
+    const { articles, articlePath } = await import("../../data/articles/index.js");
+    const paths = articles.map(articlePath);
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+
+  it("requires a collection, a byline and key findings on every article", async () => {
+    const { articles } = await import("../../data/articles/index.js");
+    for (const a of articles) {
+      expect(["research", "guide"], `${a.slug} collection`).toContain(a.collection);
+      expect(a.author?.name, `${a.slug} has no byline`).toBeTruthy();
+      expect(a.keyFindings?.length, `${a.slug} has no key findings`).toBeGreaterThan(0);
+      expect(a.sources?.length, `${a.slug} cites too few sources`).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it("cites no competitor domain in any article's sources", async () => {
+    const { articles } = await import("../../data/articles/index.js");
+    const cited = articles.flatMap((a) => (a.sources || []).map((s) => s.url));
+    expect(cited.filter((u) => /crxcavator|crxplorer|spin\.ai/i.test(u))).toEqual([]);
+  });
+
+  it("reports the star-rating correlation on the rated listings only", async () => {
+    // One of the 57 scans has no published rating; the database stores that as
+    // 0. Counting it as a real zero-star score drags r from 0.11 to 0.05, so
+    // the headline figure must be the n=56 pairing.
+    const { articles } = await import("../../data/articles/index.js");
+    const blob = JSON.stringify(articles);
+    expect(blob).toContain("r = 0.11");
+    expect(blob).not.toMatch(/correlate at r = 0\.05/);
+  });
+});

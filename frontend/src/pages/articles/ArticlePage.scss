@@ -1,0 +1,312 @@
+.article-page {
+  min-height: 100vh;
+  background: transparent;
+  color: var(--theme-text-primary);
+  font-family: var(--font-sans);
+  position: relative;
+}
+
+.article-page .compare-container {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.article-meta {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--theme-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.article-page .compare-prose h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+  color: var(--theme-text-primary);
+}
+
+.article-page .compare-prose p {
+  margin-bottom: 1rem;
+}
+
+.guides-index-list {
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+}
+
+.guides-index-list li {
+  margin-bottom: 1rem;
+}
+
+.guides-index-link {
+  display: block;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--theme-border, rgba(148, 163, 184, 0.2));
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.15s ease, border-color 0.2s ease;
+}
+
+.guides-index-link:hover,
+.guides-index-link:focus-visible {
+  opacity: 0.9;
+  border-color: var(--theme-accent, #6366f1);
+}
+
+.guides-index-link:focus-visible {
+  outline: 2px solid var(--theme-accent, #6366f1);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.guides-index-link strong {
+  display: block;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+  color: var(--theme-accent, #6366f1);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.guides-index-link:hover strong,
+.guides-index-link:focus-visible strong {
+  color: var(--theme-text-primary);
+  text-decoration-color: currentColor;
+}
+
+.guides-index-meta {
+  font-size: 0.8rem;
+  color: var(--theme-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.guides-index-desc {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--theme-text-secondary);
+  line-height: 1.5;
+}
+
+/* ============================================================
+   Long-form research post chrome
+   (standfirst, table of contents, FAQ, sources)
+   ============================================================ */
+
+/* Research posts run long; give them more room than the 720px stub width. */
+.article-page .compare-container {
+  max-width: 780px;
+}
+
+.article-byline {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--theme-text-secondary);
+
+  a {
+    color: var(--theme-text-primary);
+    font-weight: 550;
+    text-decoration: underline;
+    text-decoration-color: var(--theme-border, rgba(148, 163, 184, 0.5));
+    text-underline-offset: 0.18em;
+    transition: text-decoration-color 0.15s ease;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration-color: currentColor;
+    }
+  }
+
+  .byline-role {
+    color: var(--theme-text-muted);
+  }
+}
+
+.article-standfirst {
+  margin: 0.75rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--theme-text-secondary);
+}
+
+.article-updated {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--theme-text-muted);
+}
+
+.article-page .compare-prose h2 {
+  /* Anchored sections: keep the heading clear of any sticky header on jump. */
+  scroll-margin-top: 5rem;
+  font-size: 1.3rem;
+  margin: 2.5rem 0 0.85rem;
+  letter-spacing: -0.01em;
+}
+
+.article-page .compare-prose section:first-child h2 {
+  margin-top: 1.5rem;
+}
+
+.article-toc {
+  margin: 2rem 0 0.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--theme-border, rgba(148, 163, 184, 0.22));
+  border-radius: 10px;
+  background: var(--theme-surface-subtle, rgba(148, 163, 184, 0.06));
+
+  h2 {
+    margin: 0 0 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--theme-text-muted);
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  li {
+    margin-bottom: 0.3rem;
+  }
+
+  li::marker {
+    color: var(--theme-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  a {
+    color: var(--theme-text-secondary);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--theme-accent, #6366f1);
+      border-bottom-color: currentColor;
+    }
+  }
+}
+
+.article-faq,
+.article-sources {
+  margin-top: 2.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--theme-border, rgba(148, 163, 184, 0.22));
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    font-weight: 620;
+    color: var(--theme-text-primary);
+  }
+}
+
+.article-faq {
+  dl {
+    margin: 0;
+  }
+
+  dt {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--theme-text-primary);
+    margin-bottom: 0.35rem;
+  }
+
+  dd {
+    margin: 0 0 1.25rem;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    color: var(--theme-text-secondary);
+  }
+}
+
+.article-sources {
+  ol {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: 0.86rem;
+    line-height: 1.6;
+  }
+
+  li {
+    margin-bottom: 0.65rem;
+    color: var(--theme-text-secondary);
+    /* Long URLs must never push the page wider than the viewport. */
+    overflow-wrap: anywhere;
+  }
+
+  li::marker {
+    color: var(--theme-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  a {
+    color: var(--theme-accent, #6366f1);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .source-publisher,
+  .source-date {
+    color: var(--theme-text-muted);
+  }
+}
+
+/* ============================================================
+   Key findings — the summary that sits above a long article so a
+   reader gets the conclusion without committing to 2,000 words.
+   ============================================================ */
+
+.article-key-findings {
+  margin: 2rem 0 0;
+  padding: 1.15rem 1.35rem;
+  border: 1px solid var(--theme-border, rgba(148, 163, 184, 0.22));
+  border-left: 3px solid var(--theme-accent, #15803d);
+  border-radius: 10px;
+  background: var(--theme-surface-subtle, rgba(148, 163, 184, 0.06));
+
+  h2 {
+    margin: 0 0 0.7rem;
+    font-size: 0.74rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--theme-accent, #15803d);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  li {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--theme-text-primary);
+  }
+
+  li::marker {
+    color: var(--theme-accent, #15803d);
+  }
+}
+
+/* The TOC follows the summary, so tighten the gap between them. */
+.article-key-findings + .article-toc {
+  margin-top: 1rem;
+}
