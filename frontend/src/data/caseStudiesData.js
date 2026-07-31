@@ -1,8 +1,14 @@
 /**
  * Case studies data for Research > Case Studies.
  * Used for listing, pagination, and correct links to detail pages.
- * SEO: titles and descriptions include keywords people search for
- * (Chrome extension security, malicious extensions, enterprise risk, etc.).
+ *
+ * POLICY: every entry here must correspond to a page that actually exists and
+ * cites its sources. Three "Coming Soon" placeholders (cryptominers, fake
+ * password managers, rogue VPN extensions) were removed in 2026-07 — they
+ * promised research that was never written and carried keyword-stuffed
+ * descriptions for URLs that did not resolve. A research index that advertises
+ * work it has not done undercuts the work it has. Add an entry when the page
+ * ships, not before.
  */
 export const CASE_STUDIES_PER_PAGE = 4;
 
@@ -12,30 +18,14 @@ export const caseStudies = [
     slug: "honey",
     path: "/research/case-studies/honey",
     title: "Honey Extension Case Study",
-    subtitle: "17M+ users reported. $4B acquisition.",
+    subtitle: "17M monthly users at acquisition. $4B deal.",
     date: "December 2024",
-    category: "Affiliate Fraud",
-    severity: "HIGH",
+    category: "Affiliate Practices",
+    severity: "CASE STUDY",
     description:
-      "Reported analysis: alleged affiliate link hijacking, shopping behavior tracking, and disputed savings claims. How a highly rated Chrome extension can still pose privacy and trust risks for consumers and enterprises.",
-    keywords: ["Chrome extension security", "affiliate fraud", "browser extension privacy", "PayPal Honey"],
+      "What the December 2024 reporting on PayPal's Honey extension established, what the affiliate industry disputes, and why a high star rating said nothing about any of it.",
+    keywords: ["Chrome extension security", "affiliate marketing", "browser extension privacy", "PayPal Honey"],
     featured: true,
-    comingSoon: false,
-  },
-  {
-    id: "pdf-converters",
-    slug: "pdf-converters",
-    path: "/research/case-studies/pdf-converters",
-    title: "PDF Converter Extensions",
-    subtitle: "The Hidden Data Harvesting Network",
-    date: "2024–2025",
-    category: "Data Exfiltration",
-    severity: "HIGH",
-    description:
-      "Analysis of popular PDF converter extensions that harvest document contents and user data. Security research shows networks of malicious extensions using remote configuration to bypass store review—critical for enterprise extension risk management.",
-    keywords: ["Chrome extension malware", "PDF extension security", "data harvesting", "extension threat research"],
-    featured: false,
-    comingSoon: false,
   },
   {
     id: "fake-ad-blockers",
@@ -43,49 +33,12 @@ export const caseStudies = [
     path: "/research/case-studies/fake-ad-blockers",
     title: "Fake Ad Blockers",
     subtitle: "Wolves in Sheep's Clothing",
-    date: "2021–2025",
-    category: "Malware",
-    severity: "CRITICAL",
+    date: "2018–2021",
+    category: "Ad Injection",
+    severity: "CASE STUDY",
     description:
-      "How malicious ad blocker clones inject ads instead of blocking them. Research indicates 20M–80M+ users affected. Essential reading for security teams and anyone evaluating browser extension security before deploy.",
+      "How ad blocker clones were found injecting ads instead of blocking them: the jQuery-hidden payload, signature matching against a remote list, and anti-debugging. 20M+ installs across five extensions.",
     keywords: ["fake ad blocker", "Chrome extension malware", "ad injection", "malicious extension"],
     featured: false,
-    comingSoon: false,
-  },
-  {
-    id: "cryptominers",
-    title: "Cryptominer Extensions",
-    subtitle: "Background Mining at Your Expense",
-    date: "Coming Soon",
-    category: "Abuse of Resources",
-    severity: "HIGH",
-    description:
-      "Chrome extensions that silently mine cryptocurrency in the background. How to detect resource abuse and permission misuse in browser extensions—important for enterprise extension governance.",
-    keywords: ["cryptominer extension", "Chrome extension abuse", "browser extension security"],
-    comingSoon: true,
-  },
-  {
-    id: "password-managers",
-    title: "Fake Password Manager Extensions",
-    subtitle: "Stealing Credentials in Plain Sight",
-    date: "Coming Soon",
-    category: "Credential Theft",
-    severity: "CRITICAL",
-    description:
-      "Fake password manager extensions that phish or exfiltrate credentials. Red flags and how security teams can scan extensions for credential theft risk before allowing install.",
-    keywords: ["fake password manager", "extension credential theft", "Chrome extension phishing"],
-    comingSoon: true,
-  },
-  {
-    id: "vpn-extensions",
-    title: "Rogue VPN & Proxy Extensions",
-    subtitle: "Traffic Interception and Data Leaks",
-    date: "Coming Soon",
-    category: "Privacy",
-    severity: "HIGH",
-    description:
-      "VPN and proxy extensions that log or sell user traffic. Why enterprises need to audit extension permissions and network behavior—browser extension security best practices.",
-    keywords: ["VPN extension security", "proxy extension risk", "extension traffic interception"],
-    comingSoon: true,
   },
 ];

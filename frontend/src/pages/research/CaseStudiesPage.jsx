@@ -12,7 +12,7 @@ const caseStudiesItemListSchema = {
   "name": "Chrome Extension Security Case Studies",
   "description": "Real-world case studies of malicious and deceptive Chrome extensions for security teams and enterprises.",
   "numberOfItems": caseStudies.length,
-  "itemListElement": caseStudies.filter((s) => !s.comingSoon && s.path).map((s, i) => ({
+  "itemListElement": caseStudies.map((s, i) => ({
     "@type": "ListItem",
     "position": i + 1,
     "url": `${CASE_STUDIES_BASE}${s.path}`,
@@ -46,7 +46,7 @@ const CaseStudiesPage = () => {
     <>
       <SEOHead
         title="Chrome Extension Security Case Studies | Malicious Extensions Research | ExtensionShield"
-        description="Real-world case studies of malicious and deceptive Chrome extensions: Honey affiliate fraud, PDF converter data harvesting, fake ad blocker malware. For security teams, enterprises, and anyone evaluating extension risk. Learn patterns, tactics, and red flags."
+        description="Sourced case studies of deceptive Chrome extensions: the reported Honey affiliate controversy and the documented fake ad blocker payload. For security teams, enterprises, and anyone evaluating extension risk."
         pathname="/research/case-studies"
         schema={caseStudiesItemListSchema}
       />
@@ -67,40 +67,29 @@ const CaseStudiesPage = () => {
           </header>
 
           <div className="case-studies-list">
-            {paginatedStudies.map((study) => {
-              const href = study.comingSoon ? undefined : study.path;
-              const isLink = Boolean(href);
-              const Wrapper = isLink ? Link : "div";
-              const wrapperProps = isLink ? { to: href } : {};
-
-              return (
-                <Wrapper
-                  key={study.id}
-                  {...wrapperProps}
-                  className={`case-study-card ${study.featured ? "featured" : ""} ${study.comingSoon ? "coming-soon" : ""}`}
-                  onClick={study.comingSoon ? (e) => e.preventDefault() : undefined}
-                >
-                  <div className="case-study-meta">
-                    <span className={`severity-badge ${(study.severity || "").toLowerCase()}`}>
-                      {study.severity}
-                    </span>
-                    <span className="category-badge">{study.category}</span>
-                    {study.comingSoon && <span className="coming-soon-badge">Coming Soon</span>}
-                  </div>
-                  <h3 className="case-study-title">{study.title}</h3>
-                  <p className="subtitle">{study.subtitle}</p>
-                  <p className="description">{study.description}</p>
-                  {!study.comingSoon && (
-                    <span className="read-more">
-                      Read case study
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                        <path d="M5 12h14M12 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  )}
-                </Wrapper>
-              );
-            })}
+            {paginatedStudies.map((study) => (
+              <Link
+                key={study.id}
+                to={study.path}
+                className={`case-study-card ${study.featured ? "featured" : ""}`}
+              >
+                <div className="case-study-meta">
+                  <span className={`severity-badge ${(study.severity || "").toLowerCase().replace(/\s+/g, "-")}`}>
+                    {study.severity}
+                  </span>
+                  <span className="category-badge">{study.category}</span>
+                </div>
+                <h3 className="case-study-title">{study.title}</h3>
+                <p className="subtitle">{study.subtitle}</p>
+                <p className="description">{study.description}</p>
+                <span className="read-more">
+                  Read case study
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </Link>
+            ))}
           </div>
 
           {totalPages > 1 && (

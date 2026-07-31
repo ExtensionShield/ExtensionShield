@@ -19,6 +19,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { REDIRECTS, REDIRECT_MAP } from '../src/routes/redirects.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -86,7 +87,15 @@ export function getPrerenderRoutes(source = readFileSync(ROUTES_PATH, 'utf-8')) 
  */
 export function getRoutesManifest(source = readFileSync(ROUTES_PATH, 'utf-8')) {
   const parsed = parseRoutes(source).filter((r) => r.path !== '*');
-  const staticPaths = parsed.filter((r) => !r.path.includes(':')).map((r) => r.path);
+  // Redirect sources are built into routes.jsx by spreading REDIRECTS.map(),
+  // so no literal `path:` string exists for the regex parser to find. Add them
+  // explicitly: a retired URL must resolve as a KNOWN route (-> 301) and must
+  // never fall through to the unknown-route 404 branch.
+  const redirectPaths = REDIRECTS.map((r) => r.from);
+  const staticPaths = parsed
+    .filter((r) => !r.path.includes(':'))
+    .map((r) => r.path)
+    .concat(redirectPaths);
   const dynamic = parsed
     .filter((r) => r.path.includes(':'))
     .map((r) => '^' + r.path.replace(/:[^/]+/g, '[^/]+').replace(/\//g, '\\/') + '\\/?$');
@@ -126,19 +135,52 @@ ${urls}
 </urlset>`;
 }
 
+/**
+ * Fail the build on a broken redirect map. A 301 into another 301 dilutes the
+ * signal it exists to consolidate, and a retired URL left in the sitemap tells
+ * Google to keep crawling a page we just told it to stop crawling.
+ */
+export function validateRedirects(seoRoutes) {
+  const errors = [];
+  const sources = new Set(REDIRECTS.map((r) => r.from));
+  const indexable = new Set(seoRoutes.map((r) => r.path));
+
+  for (const { from, to } of REDIRECTS) {
+    if (from === to) errors.push(`self-redirect: ${from}`);
+    if (sources.has(to)) errors.push(`redirect chain: ${from} -> ${to} (${to} is itself redirected)`);
+    if (indexable.has(from)) errors.push(`retired URL still in sitemap: ${from}`);
+    if (!to.startsWith('/')) errors.push(`target must be site-relative: ${from} -> ${to}`);
+  }
+  const seen = new Set();
+  for (const { from } of REDIRECTS) {
+    if (seen.has(from)) errors.push(`duplicate redirect source: ${from}`);
+    seen.add(from);
+  }
+  return errors;
+}
+
 function main() {
   try {
     const source = readFileSync(ROUTES_PATH, 'utf-8');
     const seoRoutes = getSeoRoutes(source);
     const manifest = getRoutesManifest(source);
 
+    const redirectErrors = validateRedirects(seoRoutes);
+    if (redirectErrors.length) {
+      console.error('❌ Invalid redirect map in src/routes/redirects.js:');
+      redirectErrors.forEach((e) => console.error(`   - ${e}`));
+      process.exit(1);
+    }
+
     writeFileSync(join(__dirname, '../public/sitemap.xml'), generateSitemap(seoRoutes), 'utf-8');
     writeFileSync(join(__dirname, '../public/routes-manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
+    writeFileSync(join(__dirname, '../public/redirects.json'), JSON.stringify(REDIRECT_MAP, null, 2), 'utf-8');
 
     console.log('✅ Sitemap + route manifest generated from src/routes/routes.jsx');
     console.log(`🌐 Site URL: ${SITE_URL}`);
     console.log(`📊 Sitemap URLs: ${seoRoutes.length}`);
     console.log(`🧭 Manifest: ${manifest.static.length} static + ${manifest.dynamic.length} dynamic routes`);
+    console.log(`↪️  Redirects: ${REDIRECTS.length} permanent (301)`);
   } catch (err) {
     console.error('❌ Error generating sitemap:', err.message);
     process.exit(1);

@@ -1,5 +1,6 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
+import { REDIRECTS } from "./redirects";
 import RedirectExtensionToScanResults from "./RedirectExtensionToScanResults";
 import GlossaryPage from "../pages/GlossaryPage";
 
@@ -22,7 +23,6 @@ const ResearchPage = React.lazy(() => import("../pages/research/ResearchPage"));
 const MethodologyPage = React.lazy(() => import("../pages/research/MethodologyPage"));
 const CaseStudiesPage = React.lazy(() => import("../pages/research/CaseStudiesPage"));
 const HoneyCaseStudyPage = React.lazy(() => import("../pages/research/HoneyCaseStudyPage"));
-const PdfConvertersCaseStudyPage = React.lazy(() => import("../pages/research/PdfConvertersCaseStudyPage"));
 const FakeAdBlockersCaseStudyPage = React.lazy(() => import("../pages/research/FakeAdBlockersCaseStudyPage"));
 const BenchmarksPage = React.lazy(() => import("../pages/research/BenchmarksPage"));
 
@@ -183,17 +183,7 @@ export const routes = [
     priority: 0.7,
     changefreq: "monthly"
   },
-  {
-    path: "/research/case-studies/pdf-converters",
-    element: <PdfConvertersCaseStudyPage />,
-    seo: {
-      title: "PDF Converter Extensions Data Harvesting Case Study | ExtensionShield",
-      description: "Chrome extension security case study: malicious PDF converter extensions that harvest document contents and user data. Enterprise extension risk.",
-      canonical: "/research/case-studies/pdf-converters"
-    },
-    priority: 0.7,
-    changefreq: "monthly"
-  },
+  // /research/case-studies/pdf-converters was retired 2026-07; see routes/redirects.js.
   {
     path: "/research/case-studies/fake-ad-blockers",
     element: <FakeAdBlockersCaseStudyPage />,
@@ -880,6 +870,16 @@ export const routes = [
     path: "/debug/theme",
     element: <ThemeDebugPage />
   },
+
+  // ============ RETIRED URLS ============
+  // Client-side fallback for in-app navigation. The authoritative 301 is served
+  // by FastAPI before any HTML (see api/main.py serve_spa); these entries only
+  // cover SPA-internal navigation, where no HTTP request is made. Generated
+  // from the same map so the two can never drift.
+  ...REDIRECTS.map(({ from, to }) => ({
+    path: from,
+    element: <Navigate to={to} replace />
+  })),
 
   // ============ CATCH-ALL (real 404 — do NOT redirect to "/") ============
   // Rendering a noindex NotFoundPage (instead of <Navigate to="/">) avoids a

@@ -30,7 +30,7 @@ const ResearchPage = () => {
               <div className="card-icon">📋</div>
               <div className="card-content">
                 <h3>Case Studies</h3>
-                <p>Real-world analysis of malicious and deceptive extensions, including Honey, PDF converters, and more.</p>
+                <p>Sourced write-ups of deceptive extensions, including the Honey affiliate controversy and fake ad blockers.</p>
                 <span className="card-link">
                   Explore case studies
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -72,15 +72,12 @@ const ResearchPage = () => {
               </div>
             </Link>
 
-            {/* Threat Intel */}
-            <div className="research-card coming-soon">
-              <div className="card-icon">🔍</div>
-              <div className="card-content">
-                <h3>Threat Intelligence</h3>
-                <p>Aggregated signals from VirusTotal, malware databases, and community reports.</p>
-                <span className="coming-soon-badge">Coming Soon</span>
-              </div>
-            </div>
+            {/* A "Threat Intelligence — Coming Soon" card used to sit here. It
+                was removed in 2026-07: VirusTotal aggregation is not upcoming,
+                it already ships (core/analyzers/virustotal.py, surfaced in every
+                scan report and in the governance facts). Advertising a shipped
+                capability as unbuilt undersells the product and reads as filler.
+                Add a card back when there is a threat-intel page to link to. */}
 
             {/* Open Source */}
             <Link to="/open-source" className="research-card">
