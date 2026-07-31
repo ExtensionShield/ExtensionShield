@@ -81,7 +81,7 @@ const OpenSourcePage = () => {
               <span className="arrow">→</span>
             </Link>
 
-            <Link to="/blog" className="link-card">
+            <Link to="/guides" className="link-card">
               <div className="link-icon blog">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -89,8 +89,8 @@ const OpenSourcePage = () => {
                 </svg>
               </div>
               <div className="link-content">
-                <h3>Blog</h3>
-                <p>Updates and research articles.</p>
+                <h3>Guides</h3>
+                <p>Extension security reference, with sources.</p>
               </div>
               <span className="arrow">→</span>
             </Link>

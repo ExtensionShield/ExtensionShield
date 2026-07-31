@@ -242,3 +242,75 @@
   color: var(--extensionshield-text-muted, #64748b);
 }
 
+
+/* ============================================================
+   Published findings — original research, listed above the
+   navigational cards because it is primary evidence.
+   ============================================================ */
+
+.research-reports {
+  margin: 0 0 2.5rem;
+}
+
+.research-reports-heading {
+  margin: 0 0 0.9rem;
+  font-size: 0.74rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--theme-text-muted);
+}
+
+.research-reports-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 1.05rem 1.25rem;
+    border: 1px solid var(--theme-border, rgba(148, 163, 184, 0.22));
+    border-left: 3px solid var(--theme-accent, #15803d);
+    border-radius: 10px;
+    background: var(--theme-surface-subtle, rgba(148, 163, 184, 0.06));
+    text-decoration: none;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--theme-accent, #15803d);
+      transform: translateY(-1px);
+    }
+  }
+
+  strong {
+    font-size: 1rem;
+    font-weight: 620;
+    color: var(--theme-text-primary);
+    line-height: 1.35;
+  }
+
+  span {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--theme-text-secondary);
+  }
+}
+
+.research-reports-finding {
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--theme-border, rgba(148, 163, 184, 0.18));
+  font-size: 0.83rem !important;
+  color: var(--theme-text-muted) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-reports-list a { transition: none; }
+  .research-reports-list a:hover { transform: none; }
+}

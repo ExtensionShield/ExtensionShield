@@ -76,7 +76,7 @@ const ExtensionGovernancePage = () => {
               <li><Link to="/browser-extension-risk-assessment">Browser extension risk assessment</Link></li>
               <li><Link to="/extension-risk-score">Extension risk score</Link></li>
               <li><Link to="/scan/upload">Private CRX/ZIP audit</Link></li>
-              <li><Link to="/blog/browser-extension-compliance-checklist">Browser extension compliance checklist</Link></li>
+              <li><Link to="/guides/chrome-extension-allowlist-policy">Chrome extension allowlist policy</Link></li>
             </ul>
           </div>
         </div>
