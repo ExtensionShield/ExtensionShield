@@ -154,7 +154,9 @@ const BenchmarksPage = () => {
               <div className="highlight-tile">
                 <div className="highlight-number">50+</div>
                 <div className="highlight-label">Evidence Artifacts</div>
-                <div className="highlight-detail">Hashes, rule hits, IOCs, screenshots</div>
+                {/* Screenshots were listed here; the scanner produces none.
+                    Analysis is static, so there is no runtime capture. */}
+                <div className="highlight-detail">Hashes, rule hits, IOCs, manifest excerpts</div>
               </div>
               
               <div className="highlight-tile">
@@ -228,14 +230,19 @@ const BenchmarksPage = () => {
                   id: 'network',
                   name: 'Network',
                   status: 'implemented',
+                  // Named for what static analysis can actually establish. We
+                  // read the endpoints a package references; we do not observe
+                  // traffic, so we cannot report exfiltration as a fact — only
+                  // the patterns that would enable it. "Tracker endpoints" was
+                  // listed here previously and has no implementation behind it.
                   signals: [
                     'Remote code fetch',
-                    'Tracker endpoints',
-                    'Data exfiltration'
+                    'Third-party endpoints referenced',
+                    'Data exfiltration patterns'
                   ],
                   allSignals: [
                     'Remote code fetch',
-                    'Tracker endpoints',
+                    'Third-party endpoints referenced',
                     'Third-party domain analysis',
                     'HTTPS enforcement',
                     'Data exfiltration patterns',

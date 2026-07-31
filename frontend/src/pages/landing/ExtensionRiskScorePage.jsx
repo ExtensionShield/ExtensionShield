@@ -76,7 +76,7 @@ const ExtensionRiskScorePage = () => {
               <li><Link to="/research/methodology">Full methodology</Link></li>
               <li><Link to="/extension-security">Browser extension security</Link></li>
               <li><Link to="/extension-governance">Extension governance</Link></li>
-              <li><Link to="/chrome-extension-security-scanner">Chrome extension security scanner</Link></li>
+              <li><Link to="/free-extension-scanner">Free Chrome extension scanner</Link></li>
             </ul>
           </div>
         </div>

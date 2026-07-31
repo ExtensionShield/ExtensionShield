@@ -31,5 +31,8 @@
   "/blog/how-hackers-use-browser-extensions-to-steal-data": "/guides/can-chrome-extensions-steal-data",
   "/blog/can-chrome-extensions-steal-cookies-sessions": "/guides/can-chrome-extensions-steal-data",
   "/blog/browser-extension-compliance-checklist": "/guides/chrome-extension-allowlist-policy",
+  "/extension-permissions": "/chrome-extension-permissions",
+  "/chrome-extension-security-scanner": "/free-extension-scanner",
+  "/browser-extension-risk-assessment": "/extension-risk-score",
   "/research/case-studies/pdf-converters": "/guides/can-chrome-extensions-steal-data"
 }

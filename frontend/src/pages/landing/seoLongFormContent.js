@@ -317,7 +317,7 @@ export const extensionRiskScoreContent = {
     { label: "How we score extensions", to: "/research/methodology" },
     { label: "Browser extension security", to: "/extension-security" },
     { label: "Extension governance", to: "/extension-governance" },
-    { label: "Chrome extension security scanner", to: "/chrome-extension-security-scanner" },
+    { label: "Free Chrome extension scanner", to: "/free-extension-scanner" },
     { label: "Scan an extension", to: "/scan" },
   ]
 };
@@ -670,7 +670,7 @@ export const extensionGovernanceContent = {
   ],
   internalLinks: [
     { label: "Chrome extension allowlist policy", to: "/guides/chrome-extension-allowlist-policy" },
-    { label: "Browser extension risk assessment", to: "/browser-extension-risk-assessment" },
+    { label: "Extension risk score", to: "/extension-risk-score" },
     { label: "Extension risk score", to: "/extension-risk-score" },
     { label: "Private CRX/ZIP audit", to: "/scan/upload" },
     { label: "Enterprise", to: "/enterprise" },
@@ -818,7 +818,7 @@ export const freeExtensionScannerContent = {
     { label: "Is this Chrome extension safe?", to: "/is-this-chrome-extension-safe" },
     { label: "Chrome extension permissions", to: "/chrome-extension-permissions" },
     { label: "Extension risk score explained", to: "/extension-risk-score" },
-    { label: "Chrome extension security scanner", to: "/chrome-extension-security-scanner" },
+    { label: "Free Chrome extension scanner", to: "/free-extension-scanner" },
     { label: "Extension security guides", to: "/guides" },
   ],
 };

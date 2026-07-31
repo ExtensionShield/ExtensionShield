@@ -73,7 +73,7 @@ const ExtensionGovernancePage = () => {
           <div className="compare-links">
             <h3>Related</h3>
             <ul>
-              <li><Link to="/browser-extension-risk-assessment">Browser extension risk assessment</Link></li>
+              <li><Link to="/extension-risk-score">Extension risk score</Link></li>
               <li><Link to="/extension-risk-score">Extension risk score</Link></li>
               <li><Link to="/scan/upload">Private CRX/ZIP audit</Link></li>
               <li><Link to="/guides/chrome-extension-allowlist-policy">Chrome extension allowlist policy</Link></li>

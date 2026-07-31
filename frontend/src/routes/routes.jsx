@@ -47,11 +47,8 @@ const ChallengeEditionPage = React.lazy(() => import("../pages/challenge/Challen
 const FreeExtensionScannerPage = React.lazy(() => import("../pages/landing/FreeExtensionScannerPage"));
 const IsThisChromeExtensionSafePage = React.lazy(() => import("../pages/landing/IsThisChromeExtensionSafePage"));
 const ChromeExtensionPermissionsPage = React.lazy(() => import("../pages/landing/ChromeExtensionPermissionsPage"));
-const ChromeExtensionSecurityScannerPage = React.lazy(() => import("../pages/landing/ChromeExtensionSecurityScannerPage"));
-const BrowserExtensionRiskAssessmentPage = React.lazy(() => import("../pages/landing/BrowserExtensionRiskAssessmentPage"));
 const ExtensionSecurityPage = React.lazy(() => import("../pages/landing/ExtensionSecurityPage"));
 const ExtensionRiskScorePage = React.lazy(() => import("../pages/landing/ExtensionRiskScorePage"));
-const ExtensionPermissionsPage = React.lazy(() => import("../pages/landing/ExtensionPermissionsPage"));
 const ExtensionGovernancePage = React.lazy(() => import("../pages/landing/ExtensionGovernancePage"));
 
 
@@ -247,17 +244,6 @@ export const routes = [
     changefreq: "monthly"
   },
   {
-    path: "/chrome-extension-security-scanner",
-    element: <ChromeExtensionSecurityScannerPage />,
-    seo: {
-      title: "Chrome Extension Security Scanner | Free Scan & Risk Score | ExtensionShield",
-      description: "Free Chrome extension scanner and security audit. Check any extension by Web Store URL for malware signals, a 0–100 risk score, and risky permissions — typically in well under a minute. For developers: audit extensions before release.",
-      canonical: "/chrome-extension-security-scanner"
-    },
-    priority: 0.85,
-    changefreq: "monthly"
-  },
-  {
     path: "/extension-security",
     element: <ExtensionSecurityPage />,
     seo: {
@@ -280,18 +266,6 @@ export const routes = [
     changefreq: "monthly"
   },
   {
-    path: "/extension-permissions",
-    element: <ExtensionPermissionsPage />,
-    seo: {
-      title: "Browser Extension Permissions Explained | Dangerous Permissions",
-      description: "Browser extension permissions explained: all-site access, cookies, history, clipboard, webRequest, scripting, and permission combinations.",
-      canonical: "/extension-permissions",
-      sitemap: false // canonicalized to /chrome-extension-permissions (near-duplicate intent)
-    },
-    priority: 0.85,
-    changefreq: "monthly"
-  },
-  {
     path: "/extension-governance",
     element: <ExtensionGovernancePage />,
     seo: {
@@ -300,17 +274,6 @@ export const routes = [
       canonical: "/extension-governance"
     },
     priority: 0.9,
-    changefreq: "monthly"
-  },
-  {
-    path: "/browser-extension-risk-assessment",
-    element: <BrowserExtensionRiskAssessmentPage />,
-    seo: {
-      title: "Browser Extension Risk Assessment | Extension Security Review | ExtensionShield",
-      description: "Browser extension risk assessment: review permissions, host access, code signals, and publisher disclosures, with evidence attached to every finding to support security review.",
-      canonical: "/browser-extension-risk-assessment"
-    },
-    priority: 0.8,
     changefreq: "monthly"
   },
 
