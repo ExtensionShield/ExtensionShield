@@ -10,5 +10,15 @@
   "/blog/extension-auditor-vs-extensionshield": "/extension-security",
   "/blog/crxplorer-vs-extensionshield": "/extension-security",
   "/blog/best-chrome-extension-security-scanner-tools-2026": "/extension-security",
+  "/blog/how-to-check-if-chrome-extension-is-safe": "/is-this-chrome-extension-safe",
+  "/blog/dangerous-chrome-extension-permissions": "/chrome-extension-permissions",
+  "/blog/read-and-change-all-your-data-extension-permission": "/chrome-extension-permissions",
+  "/blog/all-urls-chrome-extension-permission": "/chrome-extension-permissions",
+  "/blog/chrome-extension-scanner-vs-governance-platform": "/extension-governance",
+  "/blog/extension-security-scoring-explained": "/research/methodology",
+  "/blog/how-to-check-chrome-extension-permissions": "/chrome-extension-permissions",
+  "/blog/how-to-audit-chrome-extension-before-installing": "/is-this-chrome-extension-safe",
+  "/blog/enterprise-browser-extension-risk-management": "/blog/chrome-extension-allowlist-policy",
+  "/blog/how-to-detect-malicious-chrome-extensions": "/blog/how-hackers-use-browser-extensions-to-steal-data",
   "/research/case-studies/pdf-converters": "/blog/can-chrome-extensions-steal-data"
 }

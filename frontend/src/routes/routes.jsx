@@ -351,22 +351,6 @@ export const routes = [
     changefreq: "weekly"
   },
   {
-    path: "/blog/how-to-check-chrome-extension-permissions",
-    element: <Navigate to="/chrome-extension-permissions" replace />,
-  },
-  {
-    path: "/blog/how-to-audit-chrome-extension-before-installing",
-    element: <Navigate to="/blog/how-to-check-if-chrome-extension-is-safe" replace />,
-  },
-  {
-    path: "/blog/enterprise-browser-extension-risk-management",
-    element: <Navigate to="/blog/chrome-extension-allowlist-policy" replace />,
-  },
-  {
-    path: "/blog/how-to-detect-malicious-chrome-extensions",
-    element: <Navigate to="/blog/how-hackers-use-browser-extensions-to-steal-data" replace />,
-  },
-  {
     path: "/blog/top-risky-chrome-extensions-2026",
     element: <BlogPostPage />,
     seo: {
@@ -378,45 +362,12 @@ export const routes = [
     changefreq: "monthly"
   },
   {
-    path: "/blog/dangerous-chrome-extension-permissions",
-    element: <BlogPostPage />,
-    seo: {
-      title: "What Permissions Are Dangerous in Chrome Extensions?",
-      description: "Dangerous Chrome extension permissions explained: all-site access, cookies, history, clipboard, scripting, webRequest, debugger, and risky combinations.",
-      canonical: "/blog/dangerous-chrome-extension-permissions"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
     path: "/blog/can-chrome-extensions-steal-data",
     element: <BlogPostPage />,
     seo: {
       title: "Can Chrome Extensions Steal Data? What Users and Teams Need to Know",
       description: "Can Chrome extensions steal data? Learn how extension permissions, page access, cookies, clipboard access, and network calls can expose sensitive information.",
       canonical: "/blog/can-chrome-extensions-steal-data"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/how-to-check-if-chrome-extension-is-safe",
-    element: <BlogPostPage />,
-    seo: {
-      title: "How to Check if a Chrome Extension Is Safe Before Installing",
-      description: "A simple checklist to check if a Chrome extension is safe: permissions, publisher, reviews, updates, privacy policy, network behavior, and risk score.",
-      canonical: "/blog/how-to-check-if-chrome-extension-is-safe"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/chrome-extension-scanner-vs-governance-platform",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Chrome Extension Scanner vs Extension Governance Platform",
-      description: "A scanner finds extension risk. A governance platform turns extension findings into allow, block, monitor, and audit decisions.",
-      canonical: "/blog/chrome-extension-scanner-vs-governance-platform"
     },
     priority: 0.6,
     changefreq: "monthly"
@@ -439,28 +390,6 @@ export const routes = [
       title: "Why Chrome Web Store Ratings Do Not Prove an Extension Is Safe",
       description: "Star ratings and reviews are useful, but they do not prove Chrome extension safety. Learn what ratings miss and what evidence to check instead.",
       canonical: "/blog/chrome-web-store-ratings-do-not-prove-extension-safety"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/read-and-change-all-your-data-extension-permission",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Read and Change All Your Data: Chrome Extension Permission Explained",
-      description: "What the 'read and change all your data' Chrome extension permission means, why it can be risky, and when it may be justified.",
-      canonical: "/blog/read-and-change-all-your-data-extension-permission"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/all-urls-chrome-extension-permission",
-    element: <BlogPostPage />,
-    seo: {
-      title: "What Is all_urls in Chrome Extensions?",
-      description: "Learn what the all_urls Chrome extension permission means, why all-site access is risky, and how to decide if it is justified.",
-      canonical: "/blog/all-urls-chrome-extension-permission"
     },
     priority: 0.6,
     changefreq: "monthly"
@@ -527,17 +456,6 @@ export const routes = [
       title: "How to Audit a CRX or ZIP Chrome Extension Before Release",
       description: "Audit a private CRX or ZIP Chrome extension before release: SAST, permissions, privacy, policy checks, evidence, and fix guidance.",
       canonical: "/blog/audit-crx-zip-before-release"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
-  },
-  {
-    path: "/blog/extension-security-scoring-explained",
-    element: <BlogPostPage />,
-    seo: {
-      title: "Extension Security Scoring Explained: Security, Privacy, and Governance",
-      description: "Extension security scoring explained: how Security, Privacy, and Governance signals combine into an extension risk score.",
-      canonical: "/blog/extension-security-scoring-explained"
     },
     priority: 0.6,
     changefreq: "monthly"

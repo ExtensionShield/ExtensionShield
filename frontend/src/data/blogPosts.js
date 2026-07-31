@@ -25,27 +25,6 @@ export const blogPosts = [
     ]
   },
   {
-    slug: "dangerous-chrome-extension-permissions",
-    title: "What Permissions Are Dangerous in Chrome Extensions?",
-    description: "Dangerous Chrome extension permissions explained: all-site access, cookies, history, clipboard, scripting, webRequest, debugger, and risky combinations.",
-    date: "2026-04",
-    category: "Permissions",
-    sections: [
-      {
-        heading: "Most dangerous permissions",
-        body: "High-risk permissions include all-site access, cookies, history, clipboardRead, debugger, downloads, management, scripting, webRequest, and broad tab access. These permissions are not always malicious, but they create a larger blast radius."
-      },
-      {
-        heading: "Combinations matter",
-        body: "The most important question is how permissions combine. All-site access plus external network calls can enable data exfiltration. Cookie access plus host permissions can expose sensitive session context. Scripting plus broad host access can modify pages users trust."
-      },
-      {
-        heading: "What to do before installing",
-        body: "Check whether the permission matches the feature. Then scan the extension so you can see code, network, and governance signals beyond the permission prompt."
-      }
-    ]
-  },
-  {
     slug: "can-chrome-extensions-steal-data",
     title: "Can Chrome Extensions Steal Data? What Users and Teams Need to Know",
     description: "Can Chrome extensions steal data? Learn how extension permissions, page access, cookies, clipboard access, and network calls can expose sensitive information.",
@@ -63,48 +42,6 @@ export const blogPosts = [
       {
         heading: "How to reduce risk",
         body: "Scan before install, remove unused extensions, limit extension allowlists, and re-check extensions after major updates. ExtensionShield turns these checks into evidence-backed risk assessments."
-      }
-    ]
-  },
-  {
-    slug: "how-to-check-if-chrome-extension-is-safe",
-    title: "How to Check if a Chrome Extension Is Safe Before Installing",
-    description: "A simple checklist to check if a Chrome extension is safe: permissions, publisher, reviews, updates, privacy policy, network behavior, and risk score.",
-    date: "2026-04",
-    category: "Guide",
-    sections: [
-      {
-        heading: "Five-step safety checklist",
-        body: "Check permissions, publisher identity, recent update history, privacy policy, and whether the feature actually needs the requested access. Then use an extension risk score to review evidence before installation."
-      },
-      {
-        heading: "Red flags",
-        body: "Be cautious when a simple extension asks for all-site access, history, cookies, clipboard read, or broad scripting permissions. Also watch for vague privacy policies, sudden ownership changes, or updates that add powerful permissions."
-      },
-      {
-        heading: "Scan before you install",
-        body: "ExtensionShield provides a pre-install report with Security, Privacy, and Governance evidence so you can decide whether to allow, block, monitor, or find an alternative."
-      }
-    ]
-  },
-  {
-    slug: "chrome-extension-scanner-vs-governance-platform",
-    title: "Chrome Extension Scanner vs Extension Governance Platform",
-    description: "A scanner finds extension risk. A governance platform turns extension findings into allow, block, monitor, and audit decisions.",
-    date: "2026-04",
-    category: "Governance",
-    sections: [
-      {
-        heading: "The core difference",
-        body: "A Chrome extension scanner produces findings. An extension governance platform turns findings into decisions: approve, block, monitor, request a fix, or document an exception."
-      },
-      {
-        heading: "Why governance matters",
-        body: "Security teams need repeatable policy decisions, not one-off scores. Governance requires evidence, ownership, update monitoring, risk acceptance, and audit-ready records."
-      },
-      {
-        heading: "Where ExtensionShield fits",
-        body: "ExtensionShield keeps the scanner as the entry point, then adds Security, Privacy, and Governance layers so users, developers, and enterprises can act on the evidence."
       }
     ]
   },
@@ -147,48 +84,6 @@ export const blogPosts = [
       {
         heading: "What to check instead",
         body: "Use ratings as one input, then review permissions, code indicators, network access, update behavior, and governance evidence before trusting an extension."
-      }
-    ]
-  },
-  {
-    slug: "read-and-change-all-your-data-extension-permission",
-    title: "Read and Change All Your Data: Chrome Extension Permission Explained",
-    description: "What the 'read and change all your data' Chrome extension permission means, why it can be risky, and when it may be justified.",
-    date: "2026-04",
-    category: "Permissions",
-    sections: [
-      {
-        heading: "What it means",
-        body: "This permission usually means the extension can read and modify content on the websites covered by its host permissions. If the host scope is all sites, the extension can interact with a very broad set of pages."
-      },
-      {
-        heading: "When it is justified",
-        body: "Ad blockers, password managers, accessibility tools, translators, and developer tools may need broad page access. The key is whether the access is necessary and whether behavior matches the stated purpose."
-      },
-      {
-        heading: "How to evaluate it",
-        body: "Check host scope, network destinations, code behavior, privacy policy, and update history. ExtensionShield shows these signals in one risk report."
-      }
-    ]
-  },
-  {
-    slug: "all-urls-chrome-extension-permission",
-    title: "What Is all_urls in Chrome Extensions?",
-    description: "Learn what the all_urls Chrome extension permission means, why all-site access is risky, and how to decide if it is justified.",
-    date: "2026-04",
-    category: "Permissions",
-    sections: [
-      {
-        heading: "Definition",
-        body: "The all_urls host pattern gives an extension access across a very broad set of websites. It can be necessary for some products, but it should never be ignored."
-      },
-      {
-        heading: "Why it matters",
-        body: "All-site access increases blast radius. If code is malicious, compromised, or poorly designed, more websites and more data can be affected."
-      },
-      {
-        heading: "Review checklist",
-        body: "Confirm the feature requires all-site access, review privacy disclosures, check external network behavior, and scan the extension before installing or allowing it."
       }
     ]
   },
@@ -317,37 +212,6 @@ export const blogPosts = [
         body: "Upload a private CRX/ZIP build to ExtensionShield for an evidence-linked pre-release audit with Security, Privacy, and Governance findings."
       }
     ]
-  },
-  {
-    slug: "extension-security-scoring-explained",
-    title: "Extension Security Scoring Explained: Security, Privacy, and Governance",
-    description: "Extension security scoring explained: how Security, Privacy, and Governance signals combine into an extension risk score.",
-    date: "2026-04",
-    category: "Methodology",
-    sections: [
-      {
-        heading: "A useful score needs drivers",
-        body: "A risk score should not be a black box. Teams need to see which signals drove the result and whether those signals are security, privacy, or governance issues."
-      },
-      {
-        heading: "ExtensionShield's model",
-        body: "ExtensionShield's smooth score weights Security, Privacy, and Governance near-equally (about 34% / 33% / 33%), while hard gates override the score to BLOCK severe findings such as malware or credential capture. The report keeps each layer visible so the final number can be explained."
-      },
-      {
-        heading: "Use the score as a decision aid",
-        body: "The score helps prioritize review. The decision should come from the evidence: permissions, code indicators, network access, disclosure quality, and policy fit."
-      }
-    ]
-  }
-];
-
-export const blogStrategyTopics = [
-  {
-    title: "How to Check if a Chrome Extension Is Safe Before Installing",
-    longTailKeyword: "how to check if chrome extension is safe",
-    intent: "Practical pre-install safety checklist for users who are one search away from installing an extension.",
-    featuredSnippetAngle: "Answer with a numbered checklist: permissions, publisher, reviews, privacy policy, update history, and risk score.",
-    internalLinks: ["/scan", "/extension-security", "/extension-risk-score", "/blog"]
   },
   {
     title: "What Permissions Are Dangerous in Chrome Extensions?",

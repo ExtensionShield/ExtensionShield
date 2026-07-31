@@ -55,6 +55,33 @@ export const REDIRECTS = [
   { from: "/blog/crxplorer-vs-extensionshield", to: "/extension-security" },
   { from: "/blog/best-chrome-extension-security-scanner-tools-2026", to: "/extension-security" },
 
+  // --- Thin stubs retired to the page that already answers the query ---
+  // 61-115 words each, all duplicating a long-form landing page targeting the
+  // same search. Three separate URLs competed on permissions alone. Each 301
+  // points at the page that covers the intent in depth; the two permission
+  // phrases are answered by anchor sections on the destination, so this is not
+  // a soft 404.
+  { from: "/blog/how-to-check-if-chrome-extension-is-safe", to: "/is-this-chrome-extension-safe" },
+  { from: "/blog/dangerous-chrome-extension-permissions", to: "/chrome-extension-permissions" },
+  { from: "/blog/read-and-change-all-your-data-extension-permission", to: "/chrome-extension-permissions" },
+  { from: "/blog/all-urls-chrome-extension-permission", to: "/chrome-extension-permissions" },
+  { from: "/blog/chrome-extension-scanner-vs-governance-platform", to: "/extension-governance" },
+  { from: "/blog/extension-security-scoring-explained", to: "/research/methodology" },
+
+  // --- Pre-existing legacy redirects, migrated out of routes.jsx ---
+  // These were client-side <Navigate> entries only, so they never returned a
+  // real 301 and passed no link equity. Moving them into the map fixes that.
+  // Two of them pointed at posts, and how-to-audit-… pointed at
+  // how-to-check-if-chrome-extension-is-safe, which is retired directly above —
+  // that would have been a chain, so it is flattened to the final destination.
+  { from: "/blog/how-to-check-chrome-extension-permissions", to: "/chrome-extension-permissions" },
+  { from: "/blog/how-to-audit-chrome-extension-before-installing", to: "/is-this-chrome-extension-safe" },
+  // These two still point at live posts. Both of those posts retire when the
+  // articles land, so both targets must be updated in that same change or they
+  // become chains — the chain test will fail if they are not.
+  { from: "/blog/enterprise-browser-extension-risk-management", to: "/blog/chrome-extension-allowlist-policy" },
+  { from: "/blog/how-to-detect-malicious-chrome-extensions", to: "/blog/how-hackers-use-browser-extensions-to-steal-data" },
+
   // --- Retired case study (2026-07) ---
   // /research/case-studies/pdf-converters asserted that PDF converter
   // extensions are a documented document-harvesting category. Fact-checking on
