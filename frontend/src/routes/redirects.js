@@ -76,11 +76,33 @@ export const REDIRECTS = [
   // that would have been a chain, so it is flattened to the final destination.
   { from: "/blog/how-to-check-chrome-extension-permissions", to: "/chrome-extension-permissions" },
   { from: "/blog/how-to-audit-chrome-extension-before-installing", to: "/is-this-chrome-extension-safe" },
-  // These two still point at live posts. Both of those posts retire when the
-  // articles land, so both targets must be updated in that same change or they
-  // become chains — the chain test will fail if they are not.
-  { from: "/blog/enterprise-browser-extension-risk-management", to: "/blog/chrome-extension-allowlist-policy" },
-  { from: "/blog/how-to-detect-malicious-chrome-extensions", to: "/blog/how-hackers-use-browser-extensions-to-steal-data" },
+  // Retargeted now that the articles exist — these previously pointed at posts
+  // that are retired below, which would have been chains.
+  { from: "/blog/enterprise-browser-extension-risk-management", to: "/guides/chrome-extension-allowlist-policy" },
+  { from: "/blog/how-to-detect-malicious-chrome-extensions", to: "/guides/can-chrome-extensions-steal-data" },
+
+  // --- /blog retired entirely (2026-07) ---
+  // The surviving posts were never really blog posts. Two are original research
+  // built on our own scan corpus and now live under /research beside the case
+  // studies and methodology; the other five are reference guides synthesised
+  // from public documentation and live under /guides. Calling synthesis
+  // "research" would devalue the word for the audits that depend on it.
+  { from: "/blog", to: "/guides" },
+  { from: "/blog/chrome-web-store-ratings-do-not-prove-extension-safety", to: "/research/chrome-web-store-ratings-do-not-prove-extension-safety" },
+  // Slug realigned with the retitled piece: it reports risk PATTERNS from the
+  // corpus and deliberately names no extension, so "top-risky" oversold it.
+  { from: "/blog/top-risky-chrome-extensions-2026", to: "/research/chrome-extension-risk-patterns-2026" },
+  { from: "/blog/can-chrome-extensions-steal-data", to: "/guides/can-chrome-extensions-steal-data" },
+  { from: "/blog/browser-extension-supply-chain-attacks", to: "/guides/browser-extension-supply-chain-attacks" },
+  { from: "/blog/manifest-v3-extension-security", to: "/guides/manifest-v3-extension-security" },
+  { from: "/blog/chrome-extension-allowlist-policy", to: "/guides/chrome-extension-allowlist-policy" },
+  { from: "/blog/audit-crx-zip-before-release", to: "/guides/audit-crx-zip-before-release" },
+
+  // --- Merged into surviving articles ---
+  // Both former posts are now first-class sections of the merged article.
+  { from: "/blog/how-hackers-use-browser-extensions-to-steal-data", to: "/guides/can-chrome-extensions-steal-data" },
+  { from: "/blog/can-chrome-extensions-steal-cookies-sessions", to: "/guides/can-chrome-extensions-steal-data" },
+  { from: "/blog/browser-extension-compliance-checklist", to: "/guides/chrome-extension-allowlist-policy" },
 
   // --- Retired case study (2026-07) ---
   // /research/case-studies/pdf-converters asserted that PDF converter
@@ -95,8 +117,9 @@ export const REDIRECTS = [
   // restated a single 11-extension network as "10+ extension networks".
   //
   // Reader intent here is "can this extension read my documents", which the
-  // data-theft post answers directly.
-  { from: "/research/case-studies/pdf-converters", to: "/blog/can-chrome-extensions-steal-data" },
+  // data-theft guide answers directly — and its thesis, that capability is not
+  // conduct, is the exact correction this page needed.
+  { from: "/research/case-studies/pdf-converters", to: "/guides/can-chrome-extensions-steal-data" },
 ];
 
 /** Flat { from: to } map — the shape written to public/redirects.json. */

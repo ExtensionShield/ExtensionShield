@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import SEOHead from "../../components/SEOHead";
 import ShieldLogo from "../../components/ShieldLogo";
+import { researchArticles, articlePath } from "../../data/articles";
 import StatsIcon from "../../components/ui/StatsIcon";
 import "./ResearchPage.scss";
 
@@ -23,6 +24,27 @@ const ResearchPage = () => {
               In-depth analysis, case studies, and methodology behind ExtensionShield's security scoring.
             </p>
           </header>
+
+          {/* Published findings from our own scan corpus. These are primary
+              evidence, which is why they sit above the navigational cards. */}
+          {researchArticles.length > 0 && (
+            <section className="research-reports" aria-label="Published research">
+              <h2 className="research-reports-heading">Published findings</h2>
+              <ul className="research-reports-list">
+                {researchArticles.map((article) => (
+                  <li key={article.slug}>
+                    <Link to={articlePath(article)}>
+                      <strong>{article.title}</strong>
+                      <span>{article.description}</span>
+                      {article.keyFindings?.[0] && (
+                        <span className="research-reports-finding">{article.keyFindings[0]}</span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className="research-grid">
             {/* Case Studies */}
