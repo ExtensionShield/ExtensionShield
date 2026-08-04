@@ -33,8 +33,8 @@ def _get_current_provider() -> LLMProviderType:
         except ValueError:
             pass  # Fall through to default
     
-    # Default to WatsonX
-    return LLMProviderType.WATSONX
+    # Default to OpenAI
+    return LLMProviderType.OPENAI
 
 
 # For backward compatibility, keep LLM_PROVIDER as a property that can be accessed

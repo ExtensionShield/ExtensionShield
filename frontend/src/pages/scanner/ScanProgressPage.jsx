@@ -39,12 +39,22 @@ const ScanProgressPage = () => {
     setCurrentExtensionId,
     scanResults,
     currentExtensionId,
+    startScan,
   } = useScan();
-  
+
   const [extensionName, setExtensionName] = useState(null);
   const [alreadyScanned, setAlreadyScanned] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [timedOut, setTimedOut] = useState(false);
   const hasSeenInProgressRef = useRef(false);
+  const startTimeRef = useRef(Date.now());
+
+  // Show progress feedback while a scan runs, and stop with a clear message
+  // instead of spinning forever if a scan never reports back.
+  const SOFT_NUDGE_SEC = 120;   // after 2 min, offer "try again"
+  const HARD_TIMEOUT_SEC = 300; // after 5 min, show a terminal state
+  const formatElapsed = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   // Apply extension name from location state immediately.
   useEffect(() => {
@@ -90,6 +100,7 @@ const ScanProgressPage = () => {
   // before any in-progress state was observed).
   useEffect(() => {
     if (!scanId) return;
+    if (timedOut) return;  // stop polling once we've shown the terminal timeout state
     // If we already have results for this scan (e.g. fetch-first), don't poll.
     if (doesScanResultMatchIdentifier(scanResults, scanId, currentExtensionId)) return;
 
@@ -168,15 +179,45 @@ const ScanProgressPage = () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [scanId, navigate, setError, setScanResults, setCurrentExtensionId, scanResults, currentExtensionId]);
+  }, [scanId, navigate, setError, setScanResults, setCurrentExtensionId, scanResults, currentExtensionId, timedOut]);
 
   // Reset state when scanId changes or on mount
   useEffect(() => {
     if (scanId) {
       setAlreadyScanned(false);
       hasSeenInProgressRef.current = false;
+      startTimeRef.current = Date.now();
+      setElapsedSec(0);
+      setTimedOut(false);
     }
   }, [scanId]);
+
+  // Tick the elapsed timer while scanning; flip to a terminal state after the
+  // hard timeout so the page never spins forever (e.g. when a scan is lost).
+  useEffect(() => {
+    if (!scanId || errorMessage || timedOut) return;
+    if (doesScanResultMatchIdentifier(scanResults, scanId, currentExtensionId)) return;
+    const id = setInterval(() => {
+      const sec = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      setElapsedSec(sec);
+      if (sec >= HARD_TIMEOUT_SEC) setTimedOut(true);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [scanId, errorMessage, timedOut, scanResults, currentExtensionId, HARD_TIMEOUT_SEC]);
+
+  const handleRetry = useCallback(() => {
+    setTimedOut(false);
+    setErrorMessage("");
+    setError(null);
+    setElapsedSec(0);
+    startTimeRef.current = Date.now();
+    hasSeenInProgressRef.current = false;
+    if (/^[a-p]{32}$/.test(scanId) && typeof startScan === "function") {
+      startScan(`https://chromewebstore.google.com/detail/${scanId}`);
+    } else {
+      navigate("/scan");
+    }
+  }, [scanId, startScan, setError, navigate]);
 
   const shouldShowLoading = !!scanId;
 
@@ -321,13 +362,40 @@ const ScanProgressPage = () => {
       <div className="scan-progress-page">
         {showLoadingScreen ? (
         <>
-          {!hasError && (
+          {!hasError && timedOut && (
+            <div className="scan-progress-center" style={{ textAlign: "center" }}>
+              <h2 style={{ marginBottom: "0.5rem" }}>We couldn't finish this scan</h2>
+              <p style={{ color: "var(--extensionshield-text-muted)", maxWidth: "440px", margin: "0 auto 1.25rem" }}>
+                The scan didn't complete. This can happen with a very large extension or a busy server.
+              </p>
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+                <Button onClick={handleRetry} variant="default">Try again</Button>
+                <Button onClick={() => navigate("/scan")} variant="outline">Back to scan</Button>
+              </div>
+            </div>
+          )}
+
+          {!hasError && !timedOut && (
           <div className="scan-progress-center">
             <ScanActivityIndicator
               title="Scan in progress"
               stage={scanStage}
               meta={scanMeta}
             />
+            <div style={{ marginTop: "1rem", textAlign: "center" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "999px", border: "1px solid var(--extensionshield-border)", fontSize: "0.85rem", color: "var(--extensionshield-text-muted)" }}>
+                Elapsed {formatElapsed(elapsedSec)}
+              </span>
+              <p style={{ marginTop: "0.75rem", fontSize: "0.8rem", color: "var(--extensionshield-text-muted)" }}>
+                Large or busy extensions can take a few minutes.
+              </p>
+              {elapsedSec >= SOFT_NUDGE_SEC && (
+                <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", color: "var(--extensionshield-text-muted)" }}>
+                  <span>Taking longer than usual.</span>
+                  <Button onClick={handleRetry} variant="outline" style={{ padding: "4px 12px" }}>Try again</Button>
+                </div>
+              )}
+            </div>
           </div>
           )}
 

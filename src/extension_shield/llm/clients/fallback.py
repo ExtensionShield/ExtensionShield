@@ -50,8 +50,8 @@ def _parse_fallback_chain() -> List[LLMProviderType]:
         except ValueError:
             logger.warning(f"Invalid LLM_PROVIDER: {primary_provider}, using default")
 
-    # Default to groq (free tier), then watsonx, then openai
-    return [LLMProviderType.GROQ, LLMProviderType.WATSONX, LLMProviderType.OPENAI]
+    # Default to OpenAI only. Groq was removed from the chain.
+    return [LLMProviderType.OPENAI]
 
 
 def _invoke_with_timeout(
