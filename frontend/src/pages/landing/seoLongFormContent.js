@@ -91,7 +91,7 @@ export const extensionSecurityContent = {
         {
           heading: "Governance signals",
           paragraphs: [
-            "Governance review looks at publisher reputation, update cadence, disclosure quality, permission justification, policy fit, and whether a security team can defend the allow or block decision later."
+            "Governance review asks whether the extension does what it says it does: terms-of-service alignment, consistency between the stated purpose and the declared permissions, and whether the privacy disclosure matches the capability the manifest requests."
           ]
         }
       ]
@@ -277,7 +277,7 @@ export const extensionRiskScoreContent = {
       heading: "Governance drivers behind an extension risk score",
       paragraphs: [
         "Governance drivers answer whether the risk can be managed. A security team may allow a medium-risk extension if the business need is clear, the publisher is reputable, the permissions are justified, and monitoring is in place. The same score may be unacceptable for a different team or data environment.",
-        "Governance signals include publisher reputation, update cadence, ownership or listing changes, privacy policy quality, permission justification, policy alignment, and whether evidence is preserved. These signals are especially important for enterprise extension allowlists.",
+        "ExtensionShield's governance layer scores three things: terms-of-service alignment, consistency between the claimed purpose and the declared permissions, and privacy-disclosure alignment. Publisher history, update cadence and ownership changes matter to a reviewer but are not scored — track them yourself.",
         "This is where ExtensionShield goes beyond a simple scanner. The evidence is organized so a reviewer can make a repeatable decision and revisit that decision when the extension changes."
       ]
     },
@@ -716,7 +716,7 @@ export const freeExtensionScannerContent = {
           name: "Is the extension scanner really free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Private CRX/ZIP build audits are a Pro feature for developers and teams.",
+            text: "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Uploading a private CRX or ZIP build is also free but requires signing in.",
           },
         },
         {

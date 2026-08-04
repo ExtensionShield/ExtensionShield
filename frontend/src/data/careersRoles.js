@@ -45,7 +45,7 @@ export const careersRoles = [
     summary: "Build and maintain the ExtensionShield web app: scanner UI, results dashboards, and research pages. You'll work in React with our design system and keep the experience fast and accessible.",
     responsibilities: [
       "Build and maintain React components and pages for the scanner, results, and research experiences.",
-      "Implement responsive, accessible UIs that work across themes (light/dark) and devices.",
+      "Implement responsive, accessible UIs that work across viewport sizes and input methods.",
       "Integrate with backend APIs for scans, history, and reporting.",
       "Collaborate with design and product on UX and visual consistency.",
       "Write clear, maintainable code and participate in code review.",

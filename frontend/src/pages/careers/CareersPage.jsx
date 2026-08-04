@@ -6,6 +6,16 @@ import "./CareersPage.scss";
 
 const CANONICAL_ORIGIN = "https://extensionshield.com";
 
+/**
+ * Date the role list was last confirmed accurate. JobPosting.datePosted was
+ * previously a hardcoded "2025-01-01", which claimed every role had been open
+ * and unfilled for 19 months — Google treats a stale datePosted as a signal the
+ * posting is dead. Bump this whenever the roles in careersRoles.js are reviewed;
+ * if a role is no longer open, remove it from that file rather than leaving it
+ * listed with a fresh date.
+ */
+const ROLES_LAST_REVIEWED = "2026-08-01";
+
 const CareersPage = () => {
   const navigate = useNavigate();
 
@@ -26,7 +36,7 @@ const CareersPage = () => {
         "@type": "JobPosting",
         "title": role.title,
         "description": role.summary,
-        "datePosted": "2025-01-01",
+        "datePosted": ROLES_LAST_REVIEWED,
         "employmentType": "FULL_TIME",
         "hiringOrganization": {
           "@type": "Organization",

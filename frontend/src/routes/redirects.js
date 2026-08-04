@@ -159,6 +159,27 @@ export const REDIRECTS = [
   // /research/methodology is the honest destination — it is what the page's
   // "How We Score" half was duplicating, and it is sourced.
   { from: "/research/benchmarks", to: "/research/methodology" },
+
+  // --- Legacy app paths, migrated out of routes.jsx (2026-08) ---
+  // These were client-side <Navigate> entries only, so they returned 200 plus
+  // the generic SPA shell and passed no link equity — the same defect the /blog
+  // entries above were moved here to fix. /scanner additionally had a
+  // hand-written FastAPI handler returning a 302, which tells search engines to
+  // keep the old URL indexed; that handler is removed and this map now serves it
+  // as a 301 through the same code path as every other retired URL.
+  //
+  // The two dynamic legacy paths (/scanner/progress/:scanId and
+  // /scanner/results/:scanId) are NOT here — a static map cannot carry the scan
+  // ID. They stay in routes.jsx as RedirectScannerToScan, which reads the param.
+  // /history and /scan-history are deliberately NOT here. Their only sensible
+  // target is /scan/history, which is noindex (per-user, auth-gated), and a
+  // redirect whose target cannot be indexed is a soft-404 for a crawler — the
+  // invariant enforced by redirects.test.js. They stay as client-side <Navigate>
+  // in routes.jsx, which is the correct tool for an in-app path.
+  { from: "/scanner", to: "/scan" },
+  { from: "/dashboard", to: "/scan" },
+  { from: "/analysis", to: "/scan" },
+  { from: "/sample-report", to: "/research/case-studies/honey" },
 ];
 
 /** Flat { from: to } map — the shape written to public/redirects.json. */

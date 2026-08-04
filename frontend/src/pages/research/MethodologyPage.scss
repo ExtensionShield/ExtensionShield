@@ -352,10 +352,59 @@
 
 .aggregate-risk-display {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 0.75rem;
   margin-bottom: 2rem;
   min-height: 300px;
+}
+
+/* The sample dial shows an invented 83. This caption is the only thing that
+   stops it reading as a real result, so it must render visibly — it previously
+   had no rule at all and fell back to unstyled inline text. */
+.illustrative-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-secondary, rgba(148, 163, 184, 0.9));
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+/* Layers → decision: the canonical description of gates, thresholds and limits. */
+.methodology-decision {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--theme-border, rgba(148, 163, 184, 0.2));
+  color: var(--theme-text-secondary);
+  line-height: 1.65;
+
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--theme-text-primary);
+  }
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.5rem;
+    color: var(--theme-text-primary);
+  }
+
+  ul {
+    margin: 0 0 0.5rem;
+    padding-left: 1.15rem;
+  }
+
+  li { margin-bottom: 0.5rem; }
+
+  strong { color: var(--theme-text-primary); }
 }
 
 .aggregate-formula {

@@ -35,5 +35,9 @@
   "/chrome-extension-security-scanner": "/free-extension-scanner",
   "/browser-extension-risk-assessment": "/extension-risk-score",
   "/research/case-studies/pdf-converters": "/guides/can-chrome-extensions-steal-data",
-  "/research/benchmarks": "/research/methodology"
+  "/research/benchmarks": "/research/methodology",
+  "/scanner": "/scan",
+  "/dashboard": "/scan",
+  "/analysis": "/scan",
+  "/sample-report": "/research/case-studies/honey"
 }

@@ -1066,6 +1066,22 @@
   gap: clamp(1rem, 2vw, 1.4rem);
 }
 
+/* Illustration caption — must stay visible. The card shows a version diff that
+   reads as scan evidence; without this chip a sighted reader has no way to know
+   the extension and publisher are placeholders. */
+.hp-ugap-label {
+  align-self: flex-start;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--extensionshield-text-secondary);
+  background: color-mix(in srgb, var(--extensionshield-text-secondary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--extensionshield-text-secondary) 22%, transparent);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
 /* Header — extension identity */
 .hp-ugap-head {
   display: flex;

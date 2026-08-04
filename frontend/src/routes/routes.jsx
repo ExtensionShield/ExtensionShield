@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { REDIRECTS } from "./redirects";
 import RedirectExtensionToScanResults from "./RedirectExtensionToScanResults";
+import RedirectScannerToScan from "./RedirectScannerToScan";
 import GlossaryPage from "../pages/GlossaryPage";
 
 // Lazy load pages for better code splitting
@@ -101,7 +102,7 @@ export const routes = [
     path: "/scan/upload",
     element: <ScanUploadPage />,
     seo: {
-      title: "Scan a CRX File — Pre-release Chrome Extension Security Audit (Pro) | ExtensionShield",
+      title: "Scan a CRX File — Pre-release Chrome Extension Security Audit | ExtensionShield",
       description: "Scan a CRX or ZIP file for a pre-release Chrome extension security audit: SAST, permissions, network indicators, and policy checks — with evidence for every finding. Private by default.",
       canonical: "/scan/upload"
     },
@@ -145,7 +146,7 @@ export const routes = [
     element: <ResearchPage />,
     seo: {
       title: "Extension Threat Research & Case Studies | ExtensionShield",
-      description: "In-depth security research on Chrome extension threats, malware analysis, and case studies.",
+      description: "Original research from ExtensionShield's own scan corpus, sourced case studies, and the published scoring methodology.",
       canonical: "/research"
     },
     priority: 0.8,
@@ -156,7 +157,7 @@ export const routes = [
     element: <CaseStudiesPage />,
     seo: {
       title: "Extension Security Case Studies | ExtensionShield",
-      description: "Real-world case studies of malicious Chrome extensions.",
+      description: "Sourced write-ups of documented extension conduct, with disputed claims marked as disputed.",
       canonical: "/research/case-studies"
     },
     priority: 0.8,
@@ -167,7 +168,7 @@ export const routes = [
     element: <HoneyCaseStudyPage />,
     seo: {
       title: "Honey Extension Case Study | ExtensionShield",
-      description: "Reported analysis of PayPal's Honey extension: alleged affiliate link hijacking, shopping tracking, and disputed savings claims.",
+      description: "What the December 2024 reporting on PayPal's Honey extension established, what the affiliate industry disputes, and why a high store rating said nothing about either.",
       canonical: "/research/case-studies/honey"
     },
     priority: 0.7,
@@ -179,7 +180,7 @@ export const routes = [
     element: <FakeAdBlockersCaseStudyPage />,
     seo: {
       title: "Fake Ad Blocker Extensions Case Study | ExtensionShield",
-      description: "Chrome extension malware case study: fake ad blockers that inject ads. 20M–80M+ users affected. Extension security research for enterprises.",
+      description: "How ad blocker clones were found injecting ads instead of blocking them: the hidden payload, remote signature list, and anti-debugging. Five extensions, 20M+ combined installs.",
       canonical: "/research/case-studies/fake-ad-blockers"
     },
     priority: 0.7,
@@ -299,6 +300,7 @@ export const routes = [
     path: "/enterprise",
     element: <EnterprisePage />,
     seo: {
+      noindex: true, // Placeholder for unshipped functionality — see EnterprisePage.jsx:8
       title: "Enterprise (planned) | ExtensionShield",
       description: "ExtensionShield is currently focused on open-source extension analysis. Enterprise capabilities are planned for the future.",
       canonical: "/enterprise"
@@ -452,38 +454,27 @@ export const routes = [
     changefreq: "monthly"
   },
 
-  // Old URL redirects
-  {
-    path: "/scanner",
-    element: <Navigate to="/scan" replace />
-  },
+  // Legacy /scanner/* deep links. These keep their own components because the
+  // scan ID has to be carried across; the static legacy paths (/scanner,
+  // /history, /dashboard, /scan-history, /sample-report, /analysis) now live in
+  // routes/redirects.js so they return a real server-side 301 instead of a
+  // client-side hop that passes no link equity.
   {
     path: "/scanner/progress/:scanId",
-    element: <Navigate to="/scan/progress/:scanId" replace />
+    element: <RedirectScannerToScan segment="progress" />
   },
   {
     path: "/scanner/results/:scanId",
-    element: <Navigate to="/scan/results/:scanId" replace />
+    element: <RedirectScannerToScan segment="results" />
   },
+  // In-app only: /scan/history is noindex, so these must not become public 301s.
   {
     path: "/history",
     element: <Navigate to="/scan/history" replace />
   },
   {
-    path: "/dashboard",
-    element: <Navigate to="/scan" replace />
-  },
-  {
     path: "/scan-history",
     element: <Navigate to="/scan/history" replace />
-  },
-  {
-    path: "/sample-report",
-    element: <Navigate to="/research/case-studies/honey" replace />
-  },
-  {
-    path: "/analysis",
-    element: <Navigate to="/scan" replace />
   },
 
   // ============ DEBUG (dev only) ============

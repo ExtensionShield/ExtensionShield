@@ -43,7 +43,7 @@ const GlossaryPage = () => {
     },
     {
       term: "Privacy Signals",
-      definition: "Privacy signals are indicators that suggest how an extension handles user privacy. These include data collection practices, tracking behavior, third-party data sharing, and compliance with privacy regulations like GDPR or CCPA.",
+      definition: "Privacy signals are indicators that suggest how an extension handles user privacy. These include data collection practices, tracking-related capability, third-party destinations referenced in code, and compliance with privacy regulations like GDPR or CCPA.",
       relatedTerms: ["Compliance Signals", "Risk Score", "Threat Intelligence"]
     },
     {

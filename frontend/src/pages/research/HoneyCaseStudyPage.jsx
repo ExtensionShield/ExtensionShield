@@ -70,7 +70,7 @@ const honeyArticleSchema = {
   "description":
     "Reported analysis of PayPal's Honey extension: alleged affiliate link practices and disputed savings claims, with sources and the disputes noted.",
   "author": { "@type": "Organization", "name": "ExtensionShield" },
-  "datePublished": "2024-12-01",
+  "datePublished": "2025-03-11",
   "dateModified": "2026-07-30",
   "publisher": { "@type": "Organization", "name": "ExtensionShield" },
   "image": "https://extensionshield.com/og.png",
