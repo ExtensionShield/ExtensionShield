@@ -154,8 +154,8 @@ export default {
             ],
             [
               "scripting",
-              "50.9%",
-              "29",
+              "49.1%",
+              "28",
               "Access to chrome.scripting: programmatic injection of JavaScript and CSS into pages the extension has host access to."
             ],
             [
@@ -172,8 +172,8 @@ export default {
             ],
             [
               "alarms",
-              "28.1%",
-              "16",
+              "26.3%",
+              "15",
               "Access to chrome.alarms for scheduled wake-ups."
             ],
             [

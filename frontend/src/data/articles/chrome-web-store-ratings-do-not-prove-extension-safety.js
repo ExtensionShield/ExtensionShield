@@ -208,7 +208,7 @@ export default {
             ],
             [
               "scripting",
-              "50.9%"
+              "49.1%"
             ],
             [
               "tabs",
@@ -220,7 +220,7 @@ export default {
             ],
             [
               "alarms",
-              "28.1%"
+              "26.3%"
             ],
             [
               "unlimitedStorage",
@@ -320,7 +320,7 @@ export default {
         },
         {
           "type": "p",
-          "text": "The pattern recurs. In March 2026 The Hacker News reported two extensions that changed ownership and were then updated with malicious functionality: QuickLens (roughly 7,000 users) and ShotBird (roughly 800 users), analysed by John Tuckner of Annex Security. QuickLens transferred to a new owner account on 1 February 2026, and a 17 February 2026 update kept the original functionality while adding code to strip security headers such as X-Frame-Options from every HTTP response, fingerprint the browser and operating system, and poll an external server every five minutes for JavaScript that was stored in local storage and executed on every page load. ShotBird's update displayed fake Chrome update prompts and captured data from input, textarea, and select elements."
+          "text": "The pattern recurs. In March 2026 The Hacker News reported two extensions that changed ownership and were then updated with malicious functionality: QuickLens (roughly 7,000 users) and ShotBird (roughly 800 users), analysed by John Tuckner of Secure Annex. QuickLens transferred to a new owner account on 1 February 2026, and a 17 February 2026 update kept the original functionality while adding code to strip security headers such as X-Frame-Options from every HTTP response, fingerprint the browser and operating system, and poll an external server every five minutes for JavaScript that was stored in local storage and executed on every page load. ShotBird's update displayed fake Chrome update prompts and captured data from input, textarea, and select elements."
         },
         {
           "type": "p",
@@ -523,7 +523,7 @@ export default {
       "to": "/scan"
     },
     {
-      "label": "All security research",
+      "label": "Reference guides",
       "to": "/guides"
     }
   ]

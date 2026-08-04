@@ -143,7 +143,7 @@ export default {
             ],
             [
               "scripting",
-              "50.9%",
+              "49.1%",
               "Pairs with host permissions to define real injection reach"
             ],
             [
