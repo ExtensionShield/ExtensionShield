@@ -54,7 +54,6 @@ export const topNavItems = [
     dropdownItems: [
       { icon: "🔬", label: "Findings", description: "Original research from our scan corpus", path: "/research" },
       { icon: "📋", label: "Case Studies", description: "Real-world analysis", path: "/research/case-studies" },
-      { icon: "benchmarks", label: "Benchmarks", description: "Industry trends & scoring", path: "/research/benchmarks" },
       { icon: "⚙️", label: "How We Score", description: "How we score risk", path: "/research/methodology" },
       { icon: "📰", label: "Guides", description: "Extension security reference", path: "/guides" }
     ]
@@ -171,7 +170,6 @@ export const footerConfig = {
       links: [
         { label: "Findings", path: "/research" },
         { label: "Case Studies", path: "/research/case-studies" },
-        { label: "Benchmarks", path: "/research/benchmarks" },
         { label: "How We Score", path: "/research/methodology" },
         { label: "Guides", path: "/guides" }
       ]

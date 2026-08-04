@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import SEOHead from "../../components/SEOHead";
 import ShieldLogo from "../../components/ShieldLogo";
 import { researchArticles, articlePath } from "../../data/articles";
-import StatsIcon from "../../components/ui/StatsIcon";
 import "./ResearchPage.scss";
 
 const ResearchPage = () => {
@@ -55,23 +54,6 @@ const ResearchPage = () => {
                 <p>Sourced write-ups of deceptive extensions, including the Honey affiliate controversy and fake ad blockers.</p>
                 <span className="card-link">
                   Explore case studies
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-            </Link>
-
-            {/* Benchmarks */}
-            <Link to="/research/benchmarks" className="research-card">
-              <div className="card-icon">
-                <StatsIcon size={32} />
-              </div>
-              <div className="card-content">
-                <h3>Benchmarks</h3>
-                <p>Open, reproducible comparisons across scanners + industry risk trends.</p>
-                <span className="card-link">
-                  View benchmarks
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>

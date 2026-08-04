@@ -6,7 +6,7 @@ Visual regression tests for **all routes** in **dark** and **light** mode. Theme
 
 - **Homepage and sections:** `/`, pricing section, case study section
 - **Core:** `/scan`, `/reports/visual-test-report` (report detail)
-- **All other routes:** `/scan/history`, `/research`, `/research/case-studies`, `/research/case-studies/honey`, `/research/methodology`, `/research/benchmarks`, `/enterprise`, `/about`, `/open-source`, `/community`, `/gsoc/ideas`, `/contribute`, `/community` (includes connect/leaderboard), `/gsoc/blog`, `/reports`, `/auth/diagnostics`, `/settings`, `/privacy-policy`, `/glossary`, `/debug/theme`, `/scan/progress/visual-test-scan`, `/scan/results/visual-test-scan`
+- **All other routes:** `/scan/history`, `/research`, `/research/case-studies`, `/research/case-studies/honey`, `/research/methodology`, `/enterprise`, `/about`, `/open-source`, `/community`, `/gsoc/ideas`, `/contribute`, `/community` (includes connect/leaderboard), `/gsoc/blog`, `/reports`, `/auth/diagnostics`, `/settings`, `/privacy-policy`, `/glossary`, `/debug/theme`, `/scan/progress/visual-test-scan`, `/scan/results/visual-test-scan`
 
 Each route is captured once in dark and once in light (same as above). Redirect-only routes (e.g. `/scanner` → `/scan`) and `/auth/callback` are not tested.
 

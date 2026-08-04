@@ -28,7 +28,6 @@ const MethodologyPage = React.lazy(() => import("../pages/research/MethodologyPa
 const CaseStudiesPage = React.lazy(() => import("../pages/research/CaseStudiesPage"));
 const HoneyCaseStudyPage = React.lazy(() => import("../pages/research/HoneyCaseStudyPage"));
 const FakeAdBlockersCaseStudyPage = React.lazy(() => import("../pages/research/FakeAdBlockersCaseStudyPage"));
-const BenchmarksPage = React.lazy(() => import("../pages/research/BenchmarksPage"));
 
 // GSoC / Open Source Pages
 const GSoCIdeasPage = React.lazy(() => import("../pages/gsoc/GSoCIdeasPage"));
@@ -197,17 +196,7 @@ export const routes = [
     priority: 0.7,
     changefreq: "monthly"
   },
-  {
-    path: "/research/benchmarks",
-    element: <BenchmarksPage />,
-    seo: {
-      title: "Benchmarks & Industry Trends | ExtensionShield",
-      description: "Transparent metrics: coverage, disagreement, speed, and governance/privacy signals. Open, reproducible comparisons across scanners.",
-      canonical: "/research/benchmarks"
-    },
-    priority: 0.7,
-    changefreq: "monthly"
-  },
+  // /research/benchmarks was retired 2026-08; see routes/redirects.js.
 
   // ============ SEO KEYWORD LANDING PAGES + EDUCATIONAL HUB ============
   {
