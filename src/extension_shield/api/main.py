@@ -2282,12 +2282,12 @@ async def root():
     return HTMLResponse(_no_frontend_html())
 
 
-# Legacy path redirects (so /scanner etc. work when requested directly)
-@app.get("/scanner")
-@app.get("/scanner/")
-def redirect_scanner_to_scan():
-    """Redirect legacy /scanner to canonical /scan."""
-    return RedirectResponse(url="/scan", status_code=302)
+# /scanner previously had a hand-written handler here returning a 302. A 302 is
+# a temporary redirect: it tells search engines to keep the old URL indexed and
+# consolidates no ranking signal. It is now an entry in the frontend redirect map
+# (frontend/src/routes/redirects.js -> public/redirects.json), so serve_spa
+# returns a real 301 for it through the same code path — and the same tests — as
+# every other retired URL.
 
 
 @app.get("/robots.txt")

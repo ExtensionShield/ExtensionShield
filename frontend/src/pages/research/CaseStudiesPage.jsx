@@ -10,7 +10,7 @@ const caseStudiesItemListSchema = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   "name": "Chrome Extension Security Case Studies",
-  "description": "Real-world case studies of malicious and deceptive Chrome extensions for security teams and enterprises.",
+  "description": "Sourced write-ups of extension conduct documented by third parties, stating what each source establishes and what remains disputed.",
   "numberOfItems": caseStudies.length,
   "itemListElement": caseStudies.map((s, i) => ({
     "@type": "ListItem",
@@ -45,8 +45,8 @@ const CaseStudiesPage = () => {
   return (
     <>
       <SEOHead
-        title="Chrome Extension Security Case Studies | Malicious Extensions Research | ExtensionShield"
-        description="Sourced case studies of deceptive Chrome extensions: the reported Honey affiliate controversy and the documented fake ad blocker payload. For security teams, enterprises, and anyone evaluating extension risk."
+        title="Chrome Extension Case Studies | Sourced Extension Research | ExtensionShield"
+        description="Sourced write-ups of documented extension conduct: the contested reporting on PayPal's Honey affiliate practices, and the ad blocker clones found injecting ads. Editorial summaries, not scan results."
         pathname="/research/case-studies"
         schema={caseStudiesItemListSchema}
       />
@@ -62,7 +62,7 @@ const CaseStudiesPage = () => {
           <header className="case-studies-header">
             <h1>Chrome Extension Security Case Studies</h1>
             <p>
-              Real-world analysis of malicious and deceptive browser extensions. Learn the patterns, tactics, and red flags security researchers and enterprises use to evaluate extension risk—from affiliate fraud and data exfiltration to ad-injecting malware.
+              Sourced write-ups of extension conduct documented by third parties. Two studies: the contested December 2024 reporting on PayPal&apos;s Honey affiliate practices, and the ad-blocker clones AdGuard and Imperva found injecting ads. Each states what its sources establish and what remains disputed. These are editorial summaries, not ExtensionShield scan results.
             </p>
           </header>
 

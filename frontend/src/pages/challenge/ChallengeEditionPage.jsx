@@ -55,7 +55,7 @@ const ChallengeEditionPage = ({ slug }) => {
       "A student security challenge: investigate real Chrome Web Store extensions, weigh the evidence, and submit an evidence-backed threat report. No coding required.",
     url: `https://extensionshield.com/challenge/${ed.slug}`,
     eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
-    eventStatus: "https://schema.org/EventScheduled",
+    eventStatus: "https://schema.org/EventCompleted",
     organizer: [
       { "@type": "Organization", name: "Nexus Spring of Code" },
       { "@type": "Organization", name: "ExtensionShield", url: "https://extensionshield.com" },

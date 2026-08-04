@@ -22,8 +22,8 @@ import "./ScannerPage.scss";
 const SignalTooltip = ({ type, children }) => {
   const tooltips = {
     security: "Security: Technical vulnerabilities, SAST findings, and code quality analysis",
-    privacy: "Privacy: Data collection risks, permissions analysis, and exfiltration detection",
-    governance: "Governance: Policy compliance, behavioral consistency, and regulatory adherence",
+    privacy: "Privacy: declared permissions, host-access breadth, risky permission combinations, and capture capability. External URLs found in code are listed as evidence, not scored — we do not observe traffic",
+    governance: "Governance: terms-of-service alignment, disclosure consistency, and whether declared permissions match the stated purpose",
     // Legacy tooltips for backward compatibility
     code: "Code Analysis: SAST scanning, entropy detection, and obfuscation checks",
     perms: "Permissions: Analysis of requested browser permissions and access levels",

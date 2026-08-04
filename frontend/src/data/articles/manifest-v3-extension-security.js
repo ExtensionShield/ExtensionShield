@@ -313,7 +313,7 @@ export default {
             ],
             [
               "scripting",
-              "50.9%"
+              "49.1%"
             ],
             [
               "tabs",
@@ -325,7 +325,7 @@ export default {
             ],
             [
               "alarms",
-              "28.1%"
+              "26.3%"
             ],
             [
               "unlimitedStorage",

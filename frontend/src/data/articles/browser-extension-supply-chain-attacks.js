@@ -241,7 +241,7 @@ export default {
             ],
             [
               "scripting",
-              "50.9%",
+              "49.1%",
               "Injects code into page contexts at runtime"
             ],
             [
@@ -256,7 +256,7 @@ export default {
             ],
             [
               "alarms",
-              "28.1%",
+              "26.3%",
               "Schedules recurring background wake-ups, including polling"
             ],
             [

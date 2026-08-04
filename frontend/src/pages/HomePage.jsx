@@ -32,7 +32,7 @@ const HONEY_SCAN = {
 const FAQ_ITEMS = [
   {
     question: "Can I scan a private CRX/ZIP?",
-    answer: "Yes. Pro users can upload a private CRX or ZIP build for a pre-release security audit. Sign in and go to Upload CRX/ZIP from the Scan menu.",
+    answer: "Yes. Any signed-in user can upload a private CRX or ZIP build for a pre-release audit. Sign in and go to Upload CRX/ZIP from the Scan menu.",
   },
   {
     question: "What does the scan check?",
@@ -52,39 +52,40 @@ const FAQ_ITEMS = [
   },
   {
     question: "Is the extension scanner free?",
-    answer: "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Private CRX/ZIP build audits are a Pro feature.",
+    answer: "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Uploading a private CRX or ZIP build is also free but requires signing in.",
   },
   {
     question: "Do I need to install anything to scan an extension?",
-    answer: "No. Paste the Chrome Web Store URL into the scanner and you typically get a risk report in well under a minute. An optional browser extension is available for one-click checks.",
+    answer: "No. Paste the Chrome Web Store URL into the scanner and the report appears in the browser when the scan finishes. An optional browser extension is available for one-click checks.",
   },
 ];
 
 /* ── The three risk layers (drive the merged risk-analysis section) ──────────
-   Short descriptions label what each layer inspects. Score reflects the frozen
-   PayPal Honey scan (Security 74, Privacy 31, Governance 100); higher = safer.
+   Short descriptions label what each layer inspects. Scores are the frozen
+   PayPal Honey scan's per-layer values (Security 84, Privacy 37, Governance 100,
+   overall 74); higher = safer. Verify against ExtensionShield.db before editing.
    Each layer keeps its topic link so the internal-link graph to the pillar
    pages is preserved. ─────────────────────────────────────────────────────── */
 const SCAN_LAYERS = [
   {
     label: "Security",
     Icon: ShieldCheck,
-    score: 74,
-    desc: "Code safety, permissions, vulnerabilities",
+    score: 84,
+    desc: "Static code patterns, obfuscation signals, malware hash lookup",
     link: { label: "Browser extension security", to: "/extension-security" },
   },
   {
     label: "Privacy",
     Icon: Eye,
-    score: 31,
-    desc: "Data collection, tracking, data usage",
+    score: 37,
+    desc: "Declared permissions, host-access breadth, capture capability",
     link: { label: "Chrome extension permissions", to: "/chrome-extension-permissions" },
   },
   {
     label: "Governance",
     Icon: Scale,
     score: 100,
-    desc: "Publisher trust, transparency, policy",
+    desc: "Policy alignment, disclosure consistency, permission justification",
     link: { label: "Extension governance", to: "/extension-governance" },
   },
 ];
@@ -289,12 +290,19 @@ const useReducedMotion = () => {
 
 const UpdateGapContent = () => (
   <>
+    {/* Illustration, not a scan record. The name and publisher below are
+        deliberately RFC 2606 reserved placeholders so they cannot be mistaken
+        for — or traced to — a real extension or a real publisher domain. The
+        visible caption is required: an aria-label alone is invisible to
+        sighted readers, who would otherwise read this as scan evidence. */}
+    <span className="hp-ugap-label">Illustration — not a real scan</span>
+
     {/* Header — extension identity */}
     <div className="hp-ugap-head">
       <span className="hp-ugap-icon" aria-hidden="true"><Puzzle size={22} strokeWidth={2} /></span>
       <div className="hp-ugap-id">
-        <span className="hp-ugap-name">Productivity Plus</span>
-        <span className="hp-ugap-pub">Publisher: origami.dev</span>
+        <span className="hp-ugap-name">Example Extension</span>
+        <span className="hp-ugap-pub">Publisher: example.com</span>
       </div>
     </div>
 
@@ -351,7 +359,7 @@ const UpdateGapArtifact = () => (
   <div
     className="hp-ugap"
     role="figure"
-    aria-label="Illustrative version comparison for an extension: an earlier scan of v12.0.1 versus the latest v12.4.0. Between the two versions, 2 new network endpoints appeared and the privacy disclosure was updated, while the declared permissions stayed unchanged."
+    aria-label="Illustration, not a real scan. A hypothetical version comparison: v12.0.1 versus v12.4.0 of a placeholder extension. Between the two versions, 2 additional network endpoints are referenced in the code and the privacy disclosure was updated, while the declared permissions stayed unchanged."
   >
     <UpdateGapContent />
   </div>
@@ -784,8 +792,8 @@ const HomePage = () => {
                     <div className="hp-ra-step-head">
                       <span className="hp-ra-num" aria-hidden="true">2</span>
                       <div className="hp-ra-step-heading">
-                        <h3>We scan in under a minute</h3>
-                        <p>Our engine evaluates 3 independent risk layers.</p>
+                        <h3>We analyze the packaged build</h3>
+                        <p>Our engine scores 3 risk layers from the extension's own files.</p>
                       </div>
                     </div>
                     <div className="hp-ra-card hp-ra-card--layers" aria-hidden="true">
@@ -829,7 +837,7 @@ const HomePage = () => {
                     <Link
                       to={getScanResultsRoute(HONEY_SCAN.extensionId)}
                       className="hp-ra-card hp-ra-card--report"
-                      aria-label={`Example scan of ${HONEY_SCAN.name}: 66 out of 100, medium risk. View the full report.`}
+                      aria-label={`Example scan of ${HONEY_SCAN.name}: 74 out of 100, medium risk. View the full report.`}
                     >
                       <div className="hp-ra-rep-head">
                         <span className="hp-ra-rep-icon" aria-hidden="true"><HoneyHexLogo /></span>
@@ -838,15 +846,15 @@ const HomePage = () => {
                           <span className="hp-ra-rep-pub">Honey · Chrome Web Store</span>
                         </div>
                         <div className="hp-ra-rep-scorebox">
-                          <span className="hp-ra-rep-score">66<em>/100</em></span>
+                          <span className="hp-ra-rep-score">74<em>/100</em></span>
                           <span className="hp-ra-risk-pill medium">Medium risk</span>
                         </div>
                       </div>
                       <div className="hp-ra-rep-rule" aria-hidden="true" />
                       <div className="hp-ra-rep-finds">
-                        <div className="hp-ra-find warn"><AlertTriangle size={13} strokeWidth={2} /><span>Requests broad host permissions</span></div>
-                        <div className="hp-ra-find ok"><CheckCircle size={13} strokeWidth={2} /><span>No critical vulnerabilities detected</span></div>
-                        <div className="hp-ra-find warn"><Eye size={13} strokeWidth={2} /><span>Third-party tracking scripts detected</span></div>
+                        <div className="hp-ra-find warn"><AlertTriangle size={13} strokeWidth={2} /><span>Declares host access to every site</span></div>
+                        <div className="hp-ra-find ok"><CheckCircle size={13} strokeWidth={2} /><span>No VirusTotal malware detections</span></div>
+                        <div className="hp-ra-find warn"><Eye size={13} strokeWidth={2} /><span>Declares cookie and network-request access</span></div>
                       </div>
                       <div className="hp-ra-rep-rule" aria-hidden="true" />
                       <div className="hp-ra-rep-foot">

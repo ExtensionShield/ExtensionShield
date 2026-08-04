@@ -20,7 +20,7 @@ const AboutUsPage = () => {
     <>
       <SEOHead
         title="Stanzin Norzang | Founder of ExtensionShield"
-        description="Stanzin Norzang is the founder of ExtensionShield, an open-source browser extension security scanner. He also co-founded Cherker, a Himalayan sea buckthorn brand from Ladakh."
+        description="Stanzin Norzang is the founder of ExtensionShield, an open-source browser extension security scanner that scores Chrome extensions on security, privacy and governance signals with published methodology."
         pathname="/about"
         schema={FOUNDER_SCHEMA}
       />
@@ -58,22 +58,22 @@ const AboutUsPage = () => {
             <div className="story-section">
               <h2>Why I built this</h2>
               <p>
-                I learned the fun way that "harmless" browser extensions sometimes translates to:
+                An extension that looks harmless can still ask for your browsing history, your
+                clipboard, and the ability to read and change every page you open.
               </p>
               <p>
-                "Hi, can I have your browsing history, clipboard, and maybe custody of your first-born child?"
-              </p>
-              <p>
-                December 2025—right near the start of the year—I installed an extension that looked totally normal. Until I actually looked at the permissions. They didn't match what it claimed to do. So I went looking for a simple answer:
+                In December 2025 I installed an extension that looked completely normal, then read
+                its permissions. They did not match what it claimed to do. So I went looking for a
+                simple answer:
               </p>
               <p>
                 <strong>Is this extension actually safe?</strong>
               </p>
               <p>
-                What I found were tools that were either too technical, too vague, or confidently wrong (the internet special). I couldn't find something that combined security analysis, privacy risk, and compliance into a clear verdict you can actually act on.
+                What I found were tools that were either too technical, too vague, or confidently wrong. I could not find one that combined permission analysis, privacy signals and policy alignment into a result you could actually act on — and check.
               </p>
               <p>
-                The thing is, building a weighted scoring model for extensions isn't easy. It takes in a lot of factors. Blindly rating them down is bad—real developers and businesses get hurt. But we've got to protect consumers too. So much data is being stolen every day. I wanted something that could be fair to both sides and still give people a verdict they could trust.
+                Building a weighted scoring model for extensions is genuinely hard, and getting it wrong has a cost in both directions. Marking legitimate software as risky harms real developers; being too permissive leaves users exposed. That tension is why the scoring code, the weights and the limits are public: a score is a starting point for review, not a verdict, and you should be able to check our work rather than take it on trust.
               </p>
             </div>
 

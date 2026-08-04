@@ -225,7 +225,7 @@ export default {
             ],
             [
               "scripting",
-              "50.9%",
+              "49.1%",
               "Tier 2 — require host scope justification"
             ],
             [
@@ -240,7 +240,7 @@ export default {
             ],
             [
               "alarms",
-              "28.1%",
+              "26.3%",
               "Tier 1 — note any periodic background work"
             ],
             [
@@ -471,7 +471,7 @@ export default {
         },
         {
           "type": "p",
-          "text": "This is not theoretical. In March 2026, The Hacker News reported on two Chrome extensions that turned malicious following ownership transfers: QuickLens (ID kdenlnncndfnhkognokgfpabgkgehodd, around 7,000 users) and ShotBird (ID gengfhhkjekmlejbhmmopegofnoifnjp, around 800 users), citing findings from monxresearch-sec and John Tuckner of Annex Security. The reported QuickLens update, deployed on 17 February 2026, stripped security headers such as X-Frame-Options from every HTTP response and polled an external server every five minutes for JavaScript, which was stored in local storage and executed on every page load. LayerX has separately documented purchased extensions that contacted an external server every five minutes to download a fresh configuration file from attacker-controlled domains after ownership changed. Both cases share the same shape: benign at review time, malicious after an update."
+          "text": "This is not theoretical. In March 2026, The Hacker News reported on two Chrome extensions that turned malicious following ownership transfers: QuickLens (ID kdenlnncndfnhkognokgfpabgkgehodd, around 7,000 users) and ShotBird (ID gengfhhkjekmlejbhmmopegofnoifnjp, around 800 users), citing findings from monxresearch-sec and John Tuckner of Secure Annex. The reported QuickLens update, deployed on 17 February 2026, stripped security headers such as X-Frame-Options from every HTTP response and polled an external server every five minutes for JavaScript, which was stored in local storage and executed on every page load. LayerX has separately documented purchased extensions that contacted an external server every five minutes to download a fresh configuration file from attacker-controlled domains after ownership changed. Both cases share the same shape: benign at review time, malicious after an update."
         },
         {
           "type": "list",

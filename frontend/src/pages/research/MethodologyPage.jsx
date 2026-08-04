@@ -26,7 +26,7 @@ const MethodologyPage = () => {
     <>
       <SEOHead
         title="Chrome Extension Risk Score & Security Analysis Methodology | ExtensionShield"
-        description="How we calculate chrome extension risk score: static analysis, threat intelligence, and extension security analysis. Transparent methodology for auditing chrome extension security."
+        description="How the ExtensionShield score is calculated: three static analysis layers weighted 34/33/33, the hard gates that override them, the ALLOW/REVIEW/BLOCK thresholds, and what static analysis of a packaged build cannot establish."
         pathname="/research/methodology"
         schema={[breadcrumbSchema]}
       />
@@ -43,7 +43,8 @@ const MethodologyPage = () => {
           <header className="methodology-header">
             <h1>How We Analyze Extensions</h1>
             <p className="subtitle">
-              Three independent analysis layers combine into one extension risk score.
+              Three analysis layers combine into one overall ExtensionShield score. Every input is
+              read from the packaged build and its store listing — the extension is never executed.
             </p>
           </header>
 
@@ -83,7 +84,7 @@ const MethodologyPage = () => {
           {/* Section Divider */}
           <div className="methodology-divider">
             <h2>How We Get There</h2>
-            <p>Three independent security pipelines work together</p>
+            <p>Three analysis layers, each scored separately</p>
           </div>
 
           {/* Three Pipeline Flow */}
@@ -147,13 +148,13 @@ const MethodologyPage = () => {
                     <h4 className="tech-credit">
                       Based on <a href="https://github.com/barvhaim/ThreatXtension" target="_blank" rel="noopener noreferrer">ThreatXtension</a> (MIT per its README)
                     </h4>
-                    <p>Static application security testing (SAST) with custom Semgrep rules detecting malicious patterns, obfuscation, and data exfiltration.</p>
-                    
+                    <p>Static application security testing (SAST). Semgrep runs 36 ExtensionShield rules alongside the public <code>p/javascript</code> ruleset, matching code patterns associated with credential capture, command-and-control traffic and obfuscation. A pattern match is an indicator that warrants review, not proof of conduct.</p>
+
                     <div className="pipeline-features">
                       <div className="feature-tag">Semgrep SAST</div>
-                      <div className="feature-tag">37 Custom Rules</div>
-                      <div className="feature-tag">Malware Detection</div>
-                      <div className="feature-tag">Code Obfuscation</div>
+                      <div className="feature-tag">36 ExtensionShield Rules</div>
+                      <div className="feature-tag">VirusTotal Hash Lookup</div>
+                      <div className="feature-tag">Obfuscation Signals</div>
                     </div>
                   </div>
                 </div>
@@ -185,14 +186,14 @@ const MethodologyPage = () => {
                   </div>
                   <div className="pipeline-details">
                     <h3>Privacy Analysis</h3>
-                    <h4 className="tech-credit">Behavioral privacy analysis</h4>
-                    <p>Behavioral analysis of data collection, third-party trackers, PII handling, and cross-origin communication patterns.</p>
-                    
+                    <h4 className="tech-credit">Static capability analysis</h4>
+                    <p>Deterministic scoring of declared permissions, dangerous permission combinations, broad host access, and screen or tab capture capability, all read from the packaged manifest. This layer measures capability, not observed conduct — the extension is never executed.</p>
+
                     <div className="pipeline-features">
-                      <div className="feature-tag">Data Collection</div>
-                      <div className="feature-tag">Third-Party Tracking</div>
-                      <div className="feature-tag">PII Detection</div>
-                      <div className="feature-tag">Storage Audit</div>
+                      <div className="feature-tag">Declared Permissions</div>
+                      <div className="feature-tag">Permission Combinations</div>
+                      <div className="feature-tag">Host-Access Breadth</div>
+                      <div className="feature-tag">Capture Capability</div>
                     </div>
                   </div>
                 </div>
@@ -247,11 +248,76 @@ const MethodologyPage = () => {
 
           </div>
 
+          {/* How the layers become a decision */}
+          <section className="methodology-decision" aria-label="How the score becomes a decision">
+            <h2>From layers to a decision</h2>
+            <p>
+              The three layer scores are combined at the weights above into an overall score from
+              0&ndash;100, where <strong>higher is safer</strong>. Hard gates can then override that
+              number, so the overall score is not always the plain weighted sum.
+            </p>
+
+            <h3>Hard gates</h3>
+            <p>
+              A gate fires on a high-confidence signal and forces the verdict regardless of the
+              computed score. Five gates ship today:
+            </p>
+            <ul>
+              <li><strong>VT_MALWARE</strong> — a VirusTotal malware detection on the package hash forces BLOCK.</li>
+              <li><strong>CRITICAL_SAST</strong> — high-confidence critical static findings force BLOCK.</li>
+              <li><strong>TOS_VIOLATION</strong> — an explicit terms-of-service prohibition plus matching code patterns forces BLOCK.</li>
+              <li><strong>PURPOSE_MISMATCH</strong> — a stated purpose contradicted by credential-capture patterns raises WARN or BLOCK.</li>
+              <li><strong>SENSITIVE_EXFIL</strong> — sensitive permissions plus outbound-transfer patterns and no disclosure raises WARN.</li>
+            </ul>
+
+            <h3>Thresholds</h3>
+            <p>
+              Absent a gate, the overall score decides: <strong>30 or below forces BLOCK</strong>,
+              <strong> below 75 forces NEEDS_REVIEW</strong>, and anything above that is ALLOW. An
+              otherwise-ALLOW result is downgraded to NEEDS_REVIEW when analyzer coverage is thin
+              (confidence below 0.5). Organization allow/block lists, where configured, take
+              precedence over every automated signal.
+            </p>
+
+            <h3>What the score is not</h3>
+            <ul>
+              <li>
+                <strong>It is not a runtime observation.</strong> ExtensionShield never installs or
+                executes the extension. There is no sandbox, no instrumented browser and no traffic
+                capture. Every signal comes from the packaged files and the store listing.
+              </li>
+              <li>
+                <strong>It does not detect trackers or personal data.</strong> There is no tracker
+                list and no PII detector in the engine. URLs found in code are reported as
+                referenced destinations, not as observed connections.
+              </li>
+              <li>
+                <strong>It cannot tell capability from intent.</strong> A password manager and a
+                credential stealer can declare identical permissions. A low score means broad
+                capability or patterns worth a human look — never proven misconduct.
+              </li>
+              <li>
+                <strong>VirusTotal is a hash lookup and is optional.</strong> We submit the package
+                SHA-256 and read existing vendor verdicts. Nothing is detonated, and when no API key
+                is configured that signal is absent rather than clean.
+              </li>
+              <li>
+                <strong>Written summaries are generated separately.</strong> Where a report includes
+                LLM-written prose, it explains the score; it never contributes to it. The score is
+                deterministic and reproducible from the open-source scoring code.
+              </li>
+              <li>
+                <strong>It describes one build.</strong> Permissions and code change between
+                versions, and a result does not carry forward to the next update.
+              </li>
+            </ul>
+          </section>
+
           {/* Related reads */}
           <section className="methodology-related" aria-label="Related reads">
             <h3>Related</h3>
             <ul>
-              <li><Link to="/scan">Scan an extension</Link> — Get a risk score in under a minute</li>
+              <li><Link to="/scan">Scan an extension</Link> — Paste a Chrome Web Store URL</li>
               <li><Link to="/research/case-studies">Browse case studies</Link> — Real-world analysis</li>
             </ul>
           </section>

@@ -91,7 +91,7 @@ export const extensionSecurityContent = {
         {
           heading: "Governance signals",
           paragraphs: [
-            "Governance review looks at publisher reputation, update cadence, disclosure quality, permission justification, policy fit, and whether a security team can defend the allow or block decision later."
+            "Governance review asks whether the extension does what it says it does: terms-of-service alignment, consistency between the stated purpose and the declared permissions, and whether the privacy disclosure matches the capability the manifest requests."
           ]
         }
       ]
@@ -101,7 +101,7 @@ export const extensionSecurityContent = {
       paragraphs: [
         "ExtensionShield gives the review process a repeatable structure. The public scan flow starts with a Chrome Web Store URL and turns the extension into a report with Security, Privacy, and Governance evidence. The private audit flow accepts CRX or ZIP builds so developers can review issues before release.",
         "The open-source core matters because security buyers and technical users do not want to rely only on vendor promises. Transparent rules and visible methodology make the trust model easier to inspect, challenge, and improve. Enterprise features can still be commercial, but the core analysis should be understandable.",
-        "The scoring model is designed to make the decision explainable. Security carries the largest weight because malicious behavior and vulnerable code can create direct compromise. Privacy receives its own weight because data exposure can be serious even when there is no malware. Governance receives a dedicated layer because policy alignment, disclosure, and repeatability matter in real organizations."
+        "The scoring model is designed to make the decision explainable. The three layers are weighted near-equally, at roughly 34/33/33. Security covers direct compromise. Privacy has its own layer because data exposure can be serious even when there is no malware. Governance has its own layer because policy alignment, disclosure, and repeatability matter in real organizations. Hard gates override the weighted score to BLOCK for severe findings such as malware indicators or credential capture."
       ],
       bullets: [
         "Scan public Chrome Web Store extensions before install.",
@@ -140,7 +140,7 @@ export const extensionSecurityContent = {
       paragraphs: [
         "A scanner is useful when the question is narrow: what can this extension access, and are there obvious risk signals? A governance platform is needed when the next question matters: what should we do with those signals, who approved the decision, and what evidence supports it?",
         "ExtensionShield keeps the scan as the entry point but treats it as the start of the workflow. The report needs to be understandable by a user, actionable by a developer, and useful to an enterprise reviewer. That is why the product language centers on browser extension security and governance rather than only scanning.",
-        "This distinction matters for rankings and for buyers. Search traffic for chrome extension security scanner is useful, but the stronger category is browser extension security. That broader category includes detection, permission review, privacy analysis, developer audit, allowlist policy, and post-approval monitoring."
+        "The distinction matters when choosing a tool. Detection, permission review, privacy analysis, developer audit, allowlist policy, and post-approval monitoring are separate problems, and a tool that solves the first does not necessarily help with the rest."
       ]
     },
     {
@@ -247,7 +247,7 @@ export const extensionRiskScoreContent = {
       heading: "How ExtensionShield structures the score",
       paragraphs: [
         "ExtensionShield separates the extension risk score into three visible layers: Security, Privacy, and Governance. This prevents one overloaded number from hiding the reason for concern.",
-        "Security carries the largest weight because it covers direct compromise signals: malicious behavior, vulnerable code patterns, suspicious APIs, obfuscation, external script risk, and threat intelligence. Privacy receives its own layer because an extension can create serious data exposure even without malware. Governance covers the decision quality: disclosure, permission justification, publisher context, policy alignment, and audit evidence.",
+        "The three layers are weighted near-equally, at roughly 34/33/33. Security covers direct compromise signals: malicious behavior, vulnerable code patterns, suspicious APIs, obfuscation, external script risk, and threat intelligence. Privacy has its own layer because an extension can create serious data exposure even without malware. Governance covers the decision quality: disclosure, permission justification, publisher context, policy alignment, and audit evidence.",
         "The result is a score that supports technical review and business decision-making. A security engineer can inspect the finding. A developer can fix a permission or disclosure issue. A manager can understand why the extension was approved or blocked."
       ],
       bullets: [
@@ -277,7 +277,7 @@ export const extensionRiskScoreContent = {
       heading: "Governance drivers behind an extension risk score",
       paragraphs: [
         "Governance drivers answer whether the risk can be managed. A security team may allow a medium-risk extension if the business need is clear, the publisher is reputable, the permissions are justified, and monitoring is in place. The same score may be unacceptable for a different team or data environment.",
-        "Governance signals include publisher reputation, update cadence, ownership or listing changes, privacy policy quality, permission justification, policy alignment, and whether evidence is preserved. These signals are especially important for enterprise extension allowlists.",
+        "ExtensionShield's governance layer scores three things: terms-of-service alignment, consistency between the claimed purpose and the declared permissions, and privacy-disclosure alignment. Publisher history, update cadence and ownership changes matter to a reviewer but are not scored — track them yourself.",
         "This is where ExtensionShield goes beyond a simple scanner. The evidence is organized so a reviewer can make a repeatable decision and revisit that decision when the extension changes."
       ]
     },
@@ -716,7 +716,7 @@ export const freeExtensionScannerContent = {
           name: "Is the extension scanner really free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Private CRX/ZIP build audits are a Pro feature for developers and teams.",
+            text: "Yes. Scanning a public Chrome Web Store extension by URL is free and needs no account. Uploading a private CRX or ZIP build is also free but requires signing in.",
           },
         },
         {

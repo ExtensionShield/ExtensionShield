@@ -229,7 +229,7 @@ export default {
             ],
             [
               "scripting",
-              "50.9%",
+              "49.1%",
               "Programmatic content script injection"
             ],
             [
@@ -244,7 +244,7 @@ export default {
             ],
             [
               "alarms",
-              "28.1%",
+              "26.3%",
               "Scheduled wake-ups for a service worker"
             ],
             [
@@ -346,7 +346,7 @@ export default {
               "label": "of corpus extensions request <all_urls> (n=57, convenience sample)"
             },
             {
-              "value": "4.31 / 76.5",
+              "value": "4.31 / 76.6",
               "label": "mean star rating vs. mean security score (n=56 rated listings)"
             }
           ]
