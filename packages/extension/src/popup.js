@@ -13,7 +13,7 @@
   var statusEl = document.getElementById('status');
   var statusTxt = document.getElementById('statusText');
   var errorBar = document.getElementById('errorBar');
-  var extCountText = document.getElementById('extCountText');
+  var extCountBadge = document.getElementById('extCountBadge');
   var appInner = document.querySelector('.app-inner');
 
   var themeToggle = document.getElementById('themeToggle');
@@ -44,23 +44,47 @@
     });
   }
 
+  var openWebDashboardBtn = document.getElementById('openWebDashboardBtn');
+  if (openWebDashboardBtn) {
+    openWebDashboardBtn.addEventListener('click', function () {
+      var targetUrl = 'http://localhost:5173/scan/history';
+      if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+        chrome.tabs.create({ url: targetUrl });
+      } else {
+        window.open(targetUrl, '_blank');
+      }
+    });
+  }
+
   var tabExtensions = document.getElementById('tabExtensions');
+  var tabAlerts = document.getElementById('tabAlerts');
   var tabScanUrl = document.getElementById('tabScanUrl');
   var paneExtensions = document.getElementById('paneExtensions');
+  var paneAlerts = document.getElementById('paneAlerts');
   var paneScanUrl = document.getElementById('paneScanUrl');
 
   function switchTab(tabName) {
     if (appInner) appInner.setAttribute('data-tab', tabName);
+    var tabs = [tabExtensions, tabAlerts, tabScanUrl];
+    var panes = [paneExtensions, paneAlerts, paneScanUrl];
+
+    for (var i = 0; i < tabs.length; i++) {
+      if (tabs[i]) tabs[i].classList.remove('active');
+    }
+    for (var j = 0; j < panes.length; j++) {
+      if (panes[j]) panes[j].classList.remove('active');
+    }
+
     if (tabName === 'extensions') {
-      tabExtensions.classList.add('active');
-      tabScanUrl.classList.remove('active');
-      paneExtensions.classList.add('active');
-      paneScanUrl.classList.remove('active');
-    } else {
-      tabScanUrl.classList.add('active');
-      tabExtensions.classList.remove('active');
-      paneScanUrl.classList.add('active');
-      paneExtensions.classList.remove('active');
+      if (tabExtensions) tabExtensions.classList.add('active');
+      if (paneExtensions) paneExtensions.classList.add('active');
+    } else if (tabName === 'alerts') {
+      if (tabAlerts) tabAlerts.classList.add('active');
+      if (paneAlerts) paneAlerts.classList.add('active');
+      loadAlerts();
+    } else if (tabName === 'scanurl') {
+      if (tabScanUrl) tabScanUrl.classList.add('active');
+      if (paneScanUrl) paneScanUrl.classList.add('active');
     }
   }
 
@@ -76,7 +100,12 @@
       switchTab('extensions'); 
     });
   }
-  if (tabScanUrl) tabScanUrl.addEventListener('click', function () { switchTab('scanurl'); });
+  if (tabAlerts) {
+    tabAlerts.addEventListener('click', function () { switchTab('alerts'); });
+  }
+  if (tabScanUrl) {
+    tabScanUrl.addEventListener('click', function () { switchTab('scanurl'); });
+  }
 
   var scanUrlInput = document.getElementById('scanUrlInput');
   var scanUrlSubmit = document.getElementById('scanUrlSubmit');
@@ -601,32 +630,94 @@
   }
 
   var currentData = [];
+  var currentFilter = 'all';
+  var currentSearchTerm = '';
+
+  var statAllCount = document.getElementById('statAllCount');
+  var statSafeCount = document.getElementById('statSafeCount');
+  var statWarnCount = document.getElementById('statWarnCount');
+  var statHighCount = document.getElementById('statHighCount');
+  var extSearchInput = document.getElementById('extSearchInput');
+  var statChips = document.querySelectorAll('.filter-pill, .stat-chip');
+
+  if (statChips && statChips.length > 0) {
+    for (var sc = 0; sc < statChips.length; sc++) {
+      statChips[sc].addEventListener('click', function () {
+        for (var k = 0; k < statChips.length; k++) statChips[k].classList.remove('active');
+        this.classList.add('active');
+        currentFilter = this.getAttribute('data-filter') || 'all';
+        render(currentData);
+      });
+    }
+  }
+
+  if (extSearchInput) {
+    extSearchInput.addEventListener('input', function () {
+      currentSearchTerm = (this.value || '').trim().toLowerCase();
+      render(currentData);
+    });
+  }
+
+  function updateStatsCounters(data) {
+    data = data || [];
+    var safe = 0, warn = 0, high = 0;
+    for (var i = 0; i < data.length; i++) {
+      var r = (data[i].riskLevel || '').toUpperCase();
+      if (r === 'LOW' || r === 'NONE') safe++;
+      else if (r === 'MED' || r === 'MEDIUM' || r === 'MODERATE') warn++;
+      else if (r === 'HIGH' || r === 'CRITICAL') high++;
+    }
+    if (statAllCount) statAllCount.textContent = String(data.length);
+    if (statSafeCount) statSafeCount.textContent = String(safe);
+    if (statWarnCount) statWarnCount.textContent = String(warn);
+    if (statHighCount) statHighCount.textContent = String(high);
+  }
 
   function render(data) {
-    currentData = data;
-    if (extCountText) extCountText.textContent = data.length;
+    currentData = data || [];
+    if (extCountBadge) extCountBadge.textContent = currentData.length + (currentData.length === 1 ? ' extension' : ' extensions');
+    updateStatsCounters(currentData);
+
     rows.innerHTML = '';
 
-    if (data.length === 0) {
-      rows.innerHTML = '<tr><td colspan="3" class="empty">No extensions found</td></tr>';
+    if (currentData.length === 0) {
+      rows.innerHTML = '<div class="empty">No active extensions detected</div>';
       return;
     }
 
-    for (var i = 0; i < data.length; i++) {
-      var d = data[i];
-      var tr = document.createElement('tr');
-
-      if (d.url) {
-        tr.setAttribute('data-url', d.url);
-        tr.classList.add('row-clickable');
+    var filtered = currentData.filter(function (d) {
+      // 1. Filter by category
+      if (currentFilter !== 'all') {
+        var r = (d.riskLevel || '').toUpperCase();
+        if (currentFilter === 'safe' && !(r === 'LOW' || r === 'NONE')) return false;
+        if (currentFilter === 'warn' && !(r === 'MED' || r === 'MEDIUM' || r === 'MODERATE')) return false;
+        if (currentFilter === 'high' && !(r === 'HIGH' || r === 'CRITICAL')) return false;
       }
 
-      var extHtml = '<div class="ext-cell">';
-      if (d.iconUrl) {
-        extHtml += '<img class="ext-icon" src="' + esc(d.iconUrl) + '" alt="" width="20" height="20">';
+      // 2. Filter by search query
+      if (currentSearchTerm) {
+        var nameMatch = (d.name || '').toLowerCase().indexOf(currentSearchTerm) !== -1;
+        var idMatch = (d.id || '').toLowerCase().indexOf(currentSearchTerm) !== -1;
+        if (!nameMatch && !idMatch) return false;
       }
-      extHtml += '<span class="ext-name" title="' + esc(d.name) + '">' + esc(d.name) + '</span>';
-      extHtml += '</div>';
+
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      rows.innerHTML = '<div class="empty">No extensions match your filter</div>';
+      return;
+    }
+
+    var expandedExtId = null;
+
+    for (var i = 0; i < filtered.length; i++) {
+      var d = filtered[i];
+      var isExpanded = expandedExtId === d.id;
+
+      var card = document.createElement('div');
+      card.className = 'ext-card-item' + (isExpanded ? ' expanded' : '');
+      card.setAttribute('data-id', d.id);
 
       var rLevel = d.riskLevel || 'unknown';
       var rCls = riskColorClass(rLevel);
@@ -638,31 +729,106 @@
         pillHtml = '<span class="risk-pill ' + rCls + '">' + esc(rText) + '</span>';
       }
 
-      var evHtml = '';
-      if (d.status === 'scanning') {
-        evHtml = '<div class="evidence-cell"><span class="scanning-text">—</span></div>';
-      } else if (d.status === 'ok' && d.findings != null) {
-        evHtml = '<div class="evidence-cell"><span class="finding-count">' + d.findings + ' finding' + (d.findings !== 1 ? 's' : '') + '</span></div>';
-      } else if (d.status === 'not_found' || d.status === 'timeout') {
-        evHtml = '<div class="evidence-cell"><span class="finding-count">—</span></div>';
-      } else {
-        evHtml = '<div class="evidence-cell"><span class="finding-count" style="color:var(--high)">—</span></div>';
+      var headerHtml = '<div class="ext-card-header">' +
+        '<div class="ext-card-lead">' +
+          (d.iconUrl ? '<img class="ext-icon" src="' + esc(d.iconUrl) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+          '<span class="ext-name" title="' + esc(d.name) + '">' + esc(d.name) + '</span>' +
+        '</div>' +
+        '<div class="ext-card-meta">' +
+          pillHtml +
+          '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+        '</div>' +
+      '</div>';
+
+      var secSig = (d.signals && d.signals.security) || { level: 'unknown', label: '—' };
+      var privSig = (d.signals && d.signals.privacy) || { level: 'unknown', label: '—' };
+      var govSig = (d.signals && d.signals.governance) || { level: 'unknown', label: '—' };
+
+      function sigBoxClass(lvl) {
+        if (lvl === 'ok') return 'sig-safe';
+        if (lvl === 'warn') return 'sig-warn';
+        if (lvl === 'high') return 'sig-high';
+        return 'sig-unk';
       }
 
-      tr.innerHTML = '<td>' + extHtml + '</td><td style="text-align:center">' + pillHtml + '</td><td>' + evHtml + '</td>';
-      rows.appendChild(tr);
-    }
+      var signalsHtml = '<div class="ext-signals-grid">' +
+        '<div class="signal-box ' + sigBoxClass(secSig.level) + '">' +
+          '<span class="signal-box-title">Security</span>' +
+          '<span class="signal-box-status">' + esc(secSig.label) + '</span>' +
+        '</div>' +
+        '<div class="signal-box ' + sigBoxClass(privSig.level) + '">' +
+          '<span class="signal-box-title">Privacy</span>' +
+          '<span class="signal-box-status">' + esc(privSig.label) + '</span>' +
+        '</div>' +
+        '<div class="signal-box ' + sigBoxClass(govSig.level) + '">' +
+          '<span class="signal-box-title">Governance</span>' +
+          '<span class="signal-box-status">' + esc(govSig.label) + '</span>' +
+        '</div>' +
+      '</div>';
 
-    bindRowClicks();
-  }
+      var findingsText = (d.findings != null) ? (d.findings + ' finding' + (d.findings !== 1 ? 's' : '')) : 'Scan pending';
+      var scoreText = (d.score != null) ? ('Score: ' + d.score + '/100') : '—';
 
-  function bindRowClicks() {
-    var clickable = rows.querySelectorAll('tr.row-clickable[data-url]');
-    for (var j = 0; j < clickable.length; j++) {
-      clickable[j].addEventListener('click', function () {
-        var url = this.getAttribute('data-url');
-        if (url) chrome.tabs.create({ url: url });
-      });
+      var summaryRow = '<div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text3); padding:0 2px;">' +
+        '<span>' + esc(findingsText) + '</span>' +
+        '<span>' + esc(scoreText) + '</span>' +
+      '</div>';
+
+      var reportUrl = d.url || (API + '/scan/' + encodeURIComponent(d.id));
+      var actionsHtml = '<div class="ext-actions-bar">' +
+        '<a href="' + reportUrl + '" target="_blank" rel="noopener noreferrer" class="alert-btn alert-btn-report">View Full Report ↗</a>' +
+        '<button type="button" class="alert-btn alert-btn-disable" data-extid="' + d.id + '">Disable</button>' +
+      '</div>';
+
+      var detailsHtml = '<div class="ext-card-details"' + (isExpanded ? '' : ' hidden') + '>' +
+        signalsHtml +
+        summaryRow +
+        actionsHtml +
+      '</div>';
+
+      card.innerHTML = headerHtml + detailsHtml;
+
+      // Header click handler for accordion toggle with auto-collapse
+      (function (extId, currentCard) {
+        var headerEl = currentCard.querySelector('.ext-card-header');
+        if (headerEl) {
+          headerEl.addEventListener('click', function () {
+            var detailsEl = currentCard.querySelector('.ext-card-details');
+            var isNowExpanded = currentCard.classList.contains('expanded');
+
+            // Auto-collapse any other open card
+            var allCards = rows.querySelectorAll('.ext-card-item');
+            for (var c = 0; c < allCards.length; c++) {
+              allCards[c].classList.remove('expanded');
+              var dEl = allCards[c].querySelector('.ext-card-details');
+              if (dEl) dEl.hidden = true;
+            }
+
+            if (!isNowExpanded) {
+              currentCard.classList.add('expanded');
+              if (detailsEl) detailsEl.hidden = false;
+            }
+          });
+        }
+
+        var disableBtn = currentCard.querySelector('button[data-extid]');
+        if (disableBtn) {
+          disableBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            disableBtn.disabled = true;
+            disableBtn.textContent = 'Disabling…';
+            chrome.runtime.sendMessage({
+              action: 'toggleExtensionState',
+              extensionId: extId,
+              enabled: false
+            }, function () {
+              scan(false);
+            });
+          });
+        }
+      })(d.id, card);
+
+      rows.appendChild(card);
     }
   }
 
@@ -788,6 +954,196 @@
       nextExt();
   }
 
+  /* ─── Security Alerts & Settings Logic ─── */
+  var alertsBadge = document.getElementById('alertsBadge');
+  var alertsSettingsToggle = document.getElementById('alertsSettingsToggle');
+  var alertsClearBtn = document.getElementById('alertsClearBtn');
+  var alertsSettingsDrawer = document.getElementById('alertsSettingsDrawer');
+  var settingEnableNotifs = document.getElementById('settingEnableNotifs');
+  var settingHighRiskOnly = document.getElementById('settingHighRiskOnly');
+  var settingInstantHeuristics = document.getElementById('settingInstantHeuristics');
+  var alertsList = document.getElementById('alertsList');
+  var alertsEmptyState = document.getElementById('alertsEmptyState');
+
+  function formatTimeAgo(isoString) {
+    if (!isoString) return '';
+    var date = new Date(isoString);
+    var now = new Date();
+    var diffMs = now - date;
+    var diffSec = Math.floor(diffMs / 1000);
+    var diffMin = Math.floor(diffSec / 60);
+    var diffHr = Math.floor(diffMin / 60);
+    var diffDays = Math.floor(diffHr / 24);
+
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return diffMin + 'm ago';
+    if (diffHr < 24) return diffHr + 'h ago';
+    if (diffDays === 1) return 'Yesterday';
+    return diffDays + 'd ago';
+  }
+
+  function renderRiskBadge(rLevel, score, isScanning) {
+    if (isScanning) {
+      return '<span class="risk-pill r-scanning"><span class="pill-spinner"></span></span>';
+    }
+    var lvl = rLevel || (score != null ? riskLevelFromScore(score) : 'unknown');
+    var cls = riskColorClass(lvl);
+    var label = riskDisplayLabel(lvl);
+    return '<span class="risk-pill ' + cls + '">' + esc(label) + '</span>';
+  }
+
+  function initAlertSettings() {
+    chrome.runtime.sendMessage({ action: 'getSettings' }, function (settings) {
+      if (!settings) return;
+      if (settingEnableNotifs) settingEnableNotifs.checked = !!settings.enableNotifications;
+      if (settingHighRiskOnly) settingHighRiskOnly.checked = !!settings.alertHighRiskOnly;
+      if (settingInstantHeuristics) settingInstantHeuristics.checked = !!settings.instantHeuristics;
+    });
+
+    if (alertsSettingsToggle && alertsSettingsDrawer) {
+      alertsSettingsToggle.addEventListener('click', function () {
+        alertsSettingsDrawer.hidden = !alertsSettingsDrawer.hidden;
+      });
+    }
+
+    function onSettingChange() {
+      var updated = {
+        enableNotifications: settingEnableNotifs ? settingEnableNotifs.checked : true,
+        alertHighRiskOnly: settingHighRiskOnly ? settingHighRiskOnly.checked : false,
+        instantHeuristics: settingInstantHeuristics ? settingInstantHeuristics.checked : true
+      };
+      chrome.runtime.sendMessage({ action: 'saveSettings', settings: updated });
+    }
+
+    if (settingEnableNotifs) settingEnableNotifs.addEventListener('change', onSettingChange);
+    if (settingHighRiskOnly) settingHighRiskOnly.addEventListener('change', onSettingChange);
+    if (settingInstantHeuristics) settingInstantHeuristics.addEventListener('change', onSettingChange);
+
+    if (alertsClearBtn) {
+      alertsClearBtn.addEventListener('click', function () {
+        chrome.runtime.sendMessage({ action: 'clearAlertsHistory' }, function () {
+          renderAlerts([]);
+        });
+      });
+    }
+  }
+
+  function renderAlerts(alerts) {
+    if (!alertsList || !alertsEmptyState) return;
+    alerts = alerts || [];
+
+    var highRiskCount = alerts.filter(function (a) {
+      return (a.riskLevel === 'HIGH' || a.status === 'scanning') && a.status !== 'disabled';
+    }).length;
+
+    if (alertsBadge) {
+      if (highRiskCount > 0) {
+        alertsBadge.textContent = String(highRiskCount);
+        alertsBadge.hidden = false;
+      } else {
+        alertsBadge.hidden = true;
+      }
+    }
+
+    if (alerts.length === 0) {
+      alertsList.innerHTML = '';
+      alertsList.hidden = true;
+      alertsEmptyState.hidden = false;
+      return;
+    }
+
+    alertsEmptyState.hidden = true;
+    alertsList.hidden = false;
+    alertsList.innerHTML = '';
+
+    for (var i = 0; i < alerts.length; i++) {
+      var item = alerts[i];
+      var card = document.createElement('div');
+      var riskClass = 'alert-low';
+      if (item.riskLevel === 'HIGH') riskClass = 'alert-high';
+      else if (item.riskLevel === 'MEDIUM') riskClass = 'alert-medium';
+
+      card.className = 'alert-card ' + riskClass;
+
+      var headerHtml = '<div class="alert-card-top">' +
+        '<div class="alert-card-ext">' +
+          '<img class="alert-ext-icon" src="' + (item.icon || 'icons/48.png') + '" alt="" onerror="this.src=\'icons/48.png\'">' +
+          '<div class="alert-ext-info">' +
+            '<span class="alert-ext-name" title="' + esc(item.name) + '">' + esc(item.name) + '</span>' +
+            '<span class="alert-time">' + formatTimeAgo(item.timestamp) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="alert-badge-wrap">' +
+          renderRiskBadge(item.riskLevel, item.score, item.status === 'scanning') +
+        '</div>' +
+      '</div>';
+
+      var permsHtml = '';
+      if (item.permissions && item.permissions.length > 0) {
+        permsHtml += '<div class="alert-perms">';
+        for (var p = 0; p < Math.min(item.permissions.length, 4); p++) {
+          var pName = item.permissions[p].permission || item.permissions[p];
+          permsHtml += '<span class="alert-perm-chip" title="' + esc(item.permissions[p].description || pName) + '">' + esc(pName) + '</span>';
+        }
+        if (item.permissions.length > 4) {
+          permsHtml += '<span class="alert-perm-chip">+' + (item.permissions.length - 4) + ' more</span>';
+        }
+        permsHtml += '</div>';
+      }
+
+      var reportUrl = item.slug ? (API + '/scan/' + encodeURIComponent(item.slug)) : (API + '/scan/' + encodeURIComponent(item.extensionId));
+      var isDisabled = item.status === 'disabled';
+
+      var actionsHtml = '<div class="alert-card-actions">' +
+        '<a href="' + reportUrl + '" target="_blank" rel="noopener noreferrer" class="alert-btn alert-btn-report">View Report ↗</a>' +
+        '<button type="button" class="alert-btn ' + (isDisabled ? 'alert-btn-enable' : 'alert-btn-disable') + '" data-extid="' + item.extensionId + '" data-action="' + (isDisabled ? 'enable' : 'disable') + '">' +
+          (isDisabled ? 'Enable Extension' : 'Disable Extension') +
+        '</button>' +
+      '</div>';
+
+      card.innerHTML = headerHtml + permsHtml + actionsHtml;
+
+      var toggleBtn = card.querySelector('button[data-extid]');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (function (btn, extId, currentAction) {
+          return function () {
+            var enable = currentAction === 'enable';
+            btn.disabled = true;
+            btn.textContent = 'Updating…';
+            chrome.runtime.sendMessage({
+              action: 'toggleExtensionState',
+              extensionId: extId,
+              enabled: enable
+            }, function (res) {
+              if (res && res.success) {
+                loadAlerts();
+              } else {
+                btn.disabled = false;
+                btn.textContent = enable ? 'Enable Extension' : 'Disable Extension';
+              }
+            });
+          };
+        })(toggleBtn, item.extensionId, isDisabled ? 'enable' : 'disable'));
+      }
+
+      alertsList.appendChild(card);
+    }
+  }
+
+  function loadAlerts() {
+    chrome.runtime.sendMessage({ action: 'getAlertsHistory' }, function (alerts) {
+      renderAlerts(alerts || []);
+    });
+  }
+
+  chrome.runtime.onMessage.addListener(function (msg) {
+    if (msg.type === 'ALERTS_UPDATED') {
+      renderAlerts(msg.alerts);
+    }
+  });
+
   initTheme();
+  initAlertSettings();
+  loadAlerts();
   scan(false);
 })();

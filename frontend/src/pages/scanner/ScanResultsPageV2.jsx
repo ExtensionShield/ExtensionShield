@@ -144,6 +144,214 @@ export const LayerCards = ({ layerCards, onOpenLayer }) => (
   </section>
 );
 
+function getHumanPermissionExplanations(manifest, permissions) {
+  const perms = new Set([
+    ...(permissions || []),
+    ...(manifest?.permissions || []),
+    ...(manifest?.optional_permissions || [])
+  ]);
+  const hostPerms = manifest?.host_permissions || [];
+
+  const items = [];
+
+  // Web Access
+  const hasAllUrls = hostPerms.some(h => typeof h === "string" && (h.includes('<all_urls>') || h.includes('*://*/*'))) ||
+    Array.from(perms).some(p => p === '<all_urls>');
+  if (hasAllUrls) {
+    items.push({
+      icon: '🌐',
+      title: 'Full Web Browsing Access',
+      desc: 'Can read, see, and interact with information on every website you visit.',
+      impact: 'high'
+    });
+  } else if (hostPerms.length > 0) {
+    items.push({
+      icon: '🌐',
+      title: 'Specific Websites Access',
+      desc: `Can interact with specific web domains (${hostPerms.slice(0, 2).join(', ')}${hostPerms.length > 2 ? ` +${hostPerms.length - 2} more` : ''}).`,
+      impact: 'medium'
+    });
+  }
+
+  // Cookies / Accounts
+  if (perms.has('cookies')) {
+    items.push({
+      icon: '🍪',
+      title: 'Account Cookies & Sessions',
+      desc: 'Can view and modify login sessions stored in your browser.',
+      impact: 'high'
+    });
+  }
+
+  // Clipboard
+  if (perms.has('clipboardRead') || perms.has('clipboardWrite')) {
+    items.push({
+      icon: '📋',
+      title: 'Clipboard Access',
+      desc: perms.has('clipboardRead') ? 'Can read text you copy to your clipboard.' : 'Can copy text directly to your clipboard.',
+      impact: perms.has('clipboardRead') ? 'high' : 'medium'
+    });
+  }
+
+  // Storage / Settings
+  if (perms.has('storage')) {
+    items.push({
+      icon: '💾',
+      title: 'Local Preferences',
+      desc: 'Saves your preferences and local data safely on your machine.',
+      impact: 'safe'
+    });
+  }
+
+  // Background scripts
+  if (perms.has('background') || manifest?.background) {
+    items.push({
+      icon: '⚡',
+      title: 'Background Activity',
+      desc: 'Can run processes quietly in the background while Chrome is open.',
+      impact: 'medium'
+    });
+  }
+
+  // Tabs / ActiveTab
+  if (perms.has('tabs') || perms.has('activeTab')) {
+    items.push({
+      icon: '📑',
+      title: 'Browser Tab Information',
+      desc: 'Can see the web address and title of the tab you are currently viewing.',
+      impact: 'medium'
+    });
+  }
+
+  if (items.length === 0) {
+    items.push({
+      icon: '🛡️',
+      title: 'Minimal Permissions',
+      desc: 'This extension requires no special browser access or elevated permissions.',
+      impact: 'safe'
+    });
+  }
+
+  return items;
+}
+
+function getHumanRecommendation(decision, overallScore, riskLevel) {
+  const normDecision = (decision || '').toUpperCase();
+  const normRisk = (riskLevel || '').toUpperCase();
+
+  if (normDecision === 'BLOCK' || normRisk === 'HIGH' || normRisk === 'CRITICAL' || overallScore <= 40) {
+    return {
+      status: 'High Risk Detected',
+      badge: 'Not Recommended',
+      tone: 'bad',
+      title: 'We recommend removing or disabling this extension',
+      steps: [
+        {
+          priority: 'Immediate Action',
+          priorityTone: 'bad',
+          icon: '🚫',
+          title: 'Uninstall or Disable from Chrome',
+          desc: 'Dangerous behavior, malicious patterns, or severe permission risks were identified in the package.',
+          actionLabel: 'Manage in Chrome ↗',
+          actionType: 'manage'
+        },
+        {
+          priority: 'Security Check',
+          priorityTone: 'bad',
+          icon: '🔒',
+          title: 'Revoke Sensitive Account Tokens',
+          desc: 'If you signed into services while this extension had access to your web traffic, consider resetting sessions.',
+          actionLabel: 'Check Permissions ↗',
+          actionType: 'permissions'
+        },
+        {
+          priority: 'Recommended',
+          priorityTone: 'warn',
+          icon: '🔍',
+          title: 'Find Verified Safe Alternatives',
+          desc: 'Search the Chrome Web Store for audited tools with verified publisher badges and cleaner permission profiles.',
+          actionLabel: 'Explore Alternatives ↗',
+          actionType: 'alternatives'
+        }
+      ]
+    };
+  }
+
+  if (normDecision === 'NEEDS_REVIEW' || normRisk === 'MED' || normRisk === 'MEDIUM' || overallScore < 75) {
+    return {
+      status: 'Review Recommended',
+      badge: 'Use with Caution',
+      tone: 'warn',
+      title: 'Keep installed only if you actively need and trust it',
+      steps: [
+        {
+          priority: 'Action Required',
+          priorityTone: 'warn',
+          icon: '⚠️',
+          title: 'Review Broad Permissions',
+          desc: 'This extension has permission to interact with sensitive website data. Verify if you need all of its capabilities.',
+          actionLabel: 'Inspect Permissions ↗',
+          actionType: 'permissions'
+        },
+        {
+          priority: 'Best Practice',
+          priorityTone: 'neutral',
+          icon: '🛡️',
+          title: 'Check Developer Authenticity',
+          desc: 'Ensure the publisher is verified and maintains an active, public privacy policy before providing sensitive data.',
+          actionLabel: 'Verify Publisher ↗',
+          actionType: 'publisher'
+        },
+        {
+          priority: 'Pro Tip',
+          priorityTone: 'good',
+          icon: '⚡',
+          title: 'Limit Site Access in Settings',
+          desc: 'You can restrict extension access to "On Click" in Chrome extension settings to prevent background data collection.',
+          actionLabel: 'Learn How ↗',
+          actionType: 'settings'
+        }
+      ]
+    };
+  }
+
+  return {
+    status: 'Clean & Safe',
+    badge: 'Safe to Use',
+    tone: 'good',
+    title: 'This extension appears safe and healthy',
+    steps: [
+      {
+        priority: 'Verified',
+        priorityTone: 'good',
+        icon: '✅',
+        title: 'Safe for Daily Browsing',
+        desc: 'No hidden exfiltration, suspicious scripts, or abnormal tracking patterns were detected during our multi-layer scan.',
+        actionLabel: 'View Evidence ↗',
+        actionType: 'evidence'
+      },
+      {
+        priority: 'Best Practice',
+        priorityTone: 'good',
+        icon: '🔄',
+        title: 'Keep Auto-Updates Enabled',
+        desc: 'Extensions update automatically through Chrome to patch security vulnerabilities and maintain browser compatibility.',
+        actionLabel: 'Web Store Details ↗',
+        actionType: 'store'
+      },
+      {
+        priority: 'Pro Tip',
+        priorityTone: 'neutral',
+        icon: '💡',
+        title: 'Periodic Health Check',
+        desc: 'Re-scan extensions every few months to ensure new updates maintain their safe security posture.',
+        actionLabel: 'Share Report ↗',
+        actionType: 'share'
+      }
+    ]
+  };
+}
+
 /**
  * ScanResultsPageV2 - Redesigned results dashboard
  * Uses ReportViewModel from normalizeScanResultSafe() - NO fake data
@@ -194,6 +402,7 @@ const ScanResultsPageV2 = () => {
 
   // Responsive donut size for small screens
   const [donutSize, setDonutSize] = useState(300);
+  const [viewMode, setViewMode] = useState("plain"); // "plain" | "technical"
   const [publisherDetailsOpen, setPublisherDetailsOpen] = useState(false);
   // Sidebar cards are open on desktop and collapsed by default on mobile (≤768px).
   const [issueOverviewOpen, setIssueOverviewOpen] = useState(
@@ -774,6 +983,17 @@ const ScanResultsPageV2 = () => {
     );
   }
 
+  const humanAccessItems = getHumanPermissionExplanations(
+    scanResults?.manifest,
+    scanResults?.manifest?.permissions
+  );
+
+  const humanRec = getHumanRecommendation(
+    scores?.decision,
+    overallScore,
+    scores?.overall?.band || scores?.security?.band
+  );
+
   return (
     <>
       {resultsSEOHead}
@@ -1032,94 +1252,250 @@ const ScanResultsPageV2 = () => {
           </section>
 
           <div className="report-main">
-            {/* Layer cards: Security / Privacy / Governance */}
-            <LayerCards layerCards={layerCards} onOpenLayer={openLayerModal} />
-
-            {/* Key Findings */}
-            <section className="report-findings" id="key-findings">
-              <div className="report-section-head">
-                <h2 className="report-section-title">Key Findings</h2>
-                <span className="report-section-sub">Issues that need your attention</span>
+            {/* Dual-View Mode Switcher */}
+            <div className="report-view-mode-bar">
+              <div className="view-mode-segmented">
+                <button
+                  type="button"
+                  className={`view-mode-btn ${viewMode === "plain" ? "is-active" : ""}`}
+                  onClick={() => setViewMode("plain")}
+                >
+                  <span className="btn-icon">✨</span>
+                  <span>Plain English Overview</span>
+                </button>
+                <button
+                  type="button"
+                  className={`view-mode-btn ${viewMode === "technical" ? "is-active" : ""}`}
+                  onClick={() => setViewMode("technical")}
+                >
+                  <span className="btn-icon">🔍</span>
+                  <span>Technical & SAST Evidence</span>
+                </button>
               </div>
-              {topFindings.length === 0 ? (
-                <p className="report-findings-empty">No issues were found in this area.</p>
-              ) : (
-                <ul className="findings-list">
-                  {topFindings.map((f, i) => {
-                    const tone = severityTone(f.level);
-                    const open = expandedFinding === i;
-                    const evCount = f.evidenceCount || 0;
-                    // Evidence label (display only — helper selects the existing
-                    // finding.evidence.label, never generates one). Resolvable IDs keep
-                    // the openable count + "View evidence"; otherwise fall back to the
-                    // structured evidence reference; "Evidence not linked" only when
-                    // neither IDs nor structured evidence exist.
-                    const ev = f.evidence;
-                    const evidenceText = resolveFindingEvidenceLabel(f, evCount);
-                    const evidenceTitle = ev && ev.available
-                      ? (ev.snippet || ev.reason || ev.finalReason || '')
-                      : '';
-                    return (
-                      <li className="finding-row" key={`${f.displayTitle}-${i}`}>
-                        <div className="finding-main">
-                          <AlertTriangle size={16} className={`finding-icon tone-${tone}`} aria-hidden="true" />
-                          <div className="finding-text">
-                            <span className="finding-title">{f.displayTitle}</span>
-                            {f.summary && open && <span className="finding-summary">{f.summary}</span>}
-                            {open && ev && ev.available && (
-                              <div className="finding-evidence-details">
-                                {ev.filePath && (
-                                  <div className="fed-row"><span className="fed-key">File</span>
-                                    <span className="fed-val">{ev.filePath}{typeof ev.lineStart === "number" && ev.lineStart > 0 ? `:${ev.lineStart}${typeof ev.lineEnd === "number" && ev.lineEnd > ev.lineStart ? `–${ev.lineEnd}` : ""}` : ""}</span></div>
-                                )}
-                                {ev.snippet && <pre className="fed-snippet">{ev.snippet}</pre>}
-                                {ev.permission && (<div className="fed-row"><span className="fed-key">Permission</span><span className="fed-val">{ev.permission}</span></div>)}
-                                {ev.hostPermission && (<div className="fed-row"><span className="fed-key">Host access</span><span className="fed-val">{ev.hostPermission}</span></div>)}
-                                {ev.kind === "manifest" && ev.manifestField && !ev.permission && (<div className="fed-row"><span className="fed-key">Manifest</span><span className="fed-val">{ev.manifestField}</span></div>)}
-                                {(ev.rulepack || ev.ruleId) && (<div className="fed-row"><span className="fed-key">Rule</span><span className="fed-val">{ev.rulepack ? `${ev.rulepack}${ev.ruleId ? `::${ev.ruleId}` : ""}` : ev.ruleId}</span></div>)}
-                                {ev.finalReason && (<div className="fed-row"><span className="fed-key">Reason</span><span className="fed-val">{ev.finalReason}</span></div>)}
-                                {ev.actionRequired && ev.actionRequired !== ev.finalReason && (<div className="fed-row"><span className="fed-key">Action</span><span className="fed-val">{ev.actionRequired}</span></div>)}
-                                {typeof ev.malicious === "number" && (<div className="fed-row"><span className="fed-key">VirusTotal</span><span className="fed-val">{ev.malicious} malicious · {ev.suspicious || 0} suspicious{ev.hash ? ` · ${String(ev.hash).slice(0, 12)}…` : ""}</span></div>)}
-                                {ev.analyzer && (<div className="fed-row"><span className="fed-key">Coverage</span><span className="fed-val">{ev.analyzer}{ev.reason ? ` — ${ev.reason}` : ""}</span></div>)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <span className={`finding-severity tone-${tone}`} title={severityLabel(f.level)}>
-                          {severityBadge(f.level)}
-                        </span>
-                        <span className="finding-category">{f.category}</span>
-                        <span className="finding-evidence" title={evidenceTitle}>{evidenceText}</span>
-                        <div className="finding-actions">
-                          {evCount > 0 && (
-                            <button
-                              type="button"
-                              className="finding-view-evidence"
-                              onClick={() => openEvidenceDrawer(f.resolvableEvidenceIds)}
-                            >
-                              View evidence <ExternalLink size={13} aria-hidden="true" />
-                            </button>
-                          )}
-                          {(f.summary || (ev && ev.available)) && (
-                            <button
-                              type="button"
-                              className={`finding-expand${open ? " is-open" : ""}`}
-                              aria-expanded={open}
-                              aria-label="Toggle finding details"
-                              onClick={() => setExpandedFinding(open ? null : i)}
-                            >
-                              <ChevronDown size={16} aria-hidden="true" />
-                            </button>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
+            </div>
 
-            <EvidenceTechnicalDetails rawScanResult={scanResults} viewModel={viewModel} />
+            {viewMode === "plain" ? (
+              <section className="plain-story-container" aria-label="Plain English Security Story">
+                {/* 1. Safety Breakdown Card */}
+                <div className={`plain-card plain-card-verdict tone-${humanRec.tone}`}>
+                  <div className="plain-card-head">
+                    <span className="plain-card-tag">{humanRec.badge}</span>
+                    <h3 className="plain-card-title">{humanRec.title}</h3>
+                  </div>
+                  <p className="plain-card-body">
+                    {verdict.body || "Our automated scanner evaluated the code, permissions, and network behavior to ensure it meets browser safety standards."}
+                  </p>
+                  
+                  <div className="plain-signals-row">
+                    <div className="plain-signal-item">
+                      <span className="psi-lbl">Code Safety</span>
+                      <span className={`psi-val ${scores?.security?.band === "BAD" ? "bad" : scores?.security?.band === "WARN" ? "warn" : "good"}`}>
+                        {scores?.security?.band === "GOOD" ? "✅ Clean" : scores?.security?.band === "WARN" ? "⚠️ Caution" : "🚫 Risky"}
+                      </span>
+                    </div>
+                    <div className="plain-signal-item">
+                      <span className="psi-lbl">Privacy Impact</span>
+                      <span className={`psi-val ${scores?.privacy?.band === "BAD" ? "bad" : scores?.privacy?.band === "WARN" ? "warn" : "good"}`}>
+                        {scores?.privacy?.band === "GOOD" ? "🔒 Protected" : scores?.privacy?.band === "WARN" ? "⚠️ Moderate" : "🔓 High Access"}
+                      </span>
+                    </div>
+                    <div className="plain-signal-item">
+                      <span className="psi-lbl">Developer Reputation</span>
+                      <span className={`psi-val ${scores?.governance?.band === "BAD" ? "bad" : scores?.governance?.band === "WARN" ? "warn" : "good"}`}>
+                        {scores?.governance?.band === "GOOD" ? "⭐ Established" : scores?.governance?.band === "WARN" ? "ℹ️ Neutral" : "⚠️ Unverified"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. What this extension can access */}
+                <div className="plain-card plain-card-access">
+                  <div className="plain-card-head">
+                    <h3 className="plain-card-title">What this extension can do on your browser</h3>
+                    <span className="plain-card-sub">Translated into plain everyday language</span>
+                  </div>
+                  <div className="access-items-grid">
+                    {(humanAccessItems || []).map((item, idx) => (
+                      <div key={idx} className={`access-item impact-${item.impact || 'safe'}`}>
+                        <span className="access-item-icon">{item.icon || '🛡️'}</span>
+                        <div className="access-item-text">
+                          <span className="access-item-title">{item.title}</span>
+                          <span className="access-item-desc">{item.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Recommended Next Steps */}
+                <div className="plain-card plain-card-recommendations">
+                  <div className="plain-card-head">
+                    <h3 className="plain-card-title">Recommended Next Steps</h3>
+                    <span className="plain-card-sub">Actionable checklist to keep your browsing secure</span>
+                  </div>
+                  <div className="step-cards-timeline">
+                    {(humanRec?.steps || []).map((step, idx) => (
+                      <div key={idx} className={`step-card priority-${step.priorityTone || 'neutral'}`}>
+                        <div className="step-card-lead">
+                          <span className="step-card-num">{idx + 1}</span>
+                          <span className="step-card-icon" aria-hidden="true">{step.icon}</span>
+                        </div>
+                        <div className="step-card-content">
+                          <div className="step-card-header">
+                            <span className="step-card-title">{step.title}</span>
+                            <span className={`step-priority-pill tone-${step.priorityTone || 'neutral'}`}>{step.priority}</span>
+                          </div>
+                          <p className="step-card-desc">{step.desc}</p>
+                        </div>
+                        {step.actionLabel && (
+                          <div className="step-card-actions">
+                            <button
+                              type="button"
+                              className={`step-action-btn tone-${step.priorityTone || 'neutral'}`}
+                              onClick={() => {
+                                if (step.actionType === 'evidence') {
+                                  setViewMode('technical');
+                                } else if (step.actionType === 'permissions') {
+                                  const el = document.querySelector('.plain-card-access');
+                                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                } else if (step.actionType === 'publisher') {
+                                  setPublisherDetailsOpen(true);
+                                } else if (step.actionType === 'store' && chromeStoreUrl) {
+                                  window.open(chromeStoreUrl, '_blank');
+                                } else if (step.actionType === 'share') {
+                                  if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(window.location.href);
+                                    alert('Report link copied to clipboard!');
+                                  }
+                                } else if (step.actionType === 'manage') {
+                                  window.open('chrome://extensions', '_blank');
+                                } else {
+                                  setViewMode('technical');
+                                }
+                              }}
+                            >
+                              {step.actionLabel}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Developer & Store Signals */}
+                <div className="plain-card plain-card-trust">
+                  <div className="plain-card-head">
+                    <h3 className="plain-card-title">Developer & Community Trust</h3>
+                    <span className="plain-card-sub">Web store reputation & longevity indicators</span>
+                  </div>
+                  <div className="trust-metrics-grid">
+                    <div className="trust-metric-box">
+                      <span className="tmb-label">Active Users</span>
+                      <span className="tmb-val">{meta?.users != null ? meta.users.toLocaleString() : (viewModel?.publisherDisclosures?.user_count != null ? viewModel.publisherDisclosures.user_count.toLocaleString() : "—")}</span>
+                    </div>
+                    <div className="trust-metric-box">
+                      <span className="tmb-label">User Rating</span>
+                      <span className="tmb-val">{meta?.rating != null ? `⭐ ${meta.rating.toFixed(1)}/5` : "—"}</span>
+                    </div>
+                    <div className="trust-metric-box">
+                      <span className="tmb-label">Trader Status</span>
+                      <span className="tmb-val">{viewModel?.publisherDisclosures?.trader_status === "TRADER" ? "Verified Trader" : "Standard Developer"}</span>
+                    </div>
+                    <div className="trust-metric-box">
+                      <span className="tmb-label">Last Updated</span>
+                      <span className="tmb-val">{viewModel?.publisherDisclosures?.last_updated_iso || formatScanDate(meta?.scanTimestamp)}</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ) : (
+              <>
+                {/* Layer cards: Security / Privacy / Governance */}
+                <LayerCards layerCards={layerCards} onOpenLayer={openLayerModal} />
+
+                {/* Key Findings */}
+                <section className="report-findings" id="key-findings">
+                  <div className="report-section-head">
+                    <h2 className="report-section-title">Key Findings</h2>
+                    <span className="report-section-sub">Issues that need your attention</span>
+                  </div>
+                  {topFindings.length === 0 ? (
+                    <p className="report-findings-empty">No issues were found in this area.</p>
+                  ) : (
+                    <ul className="findings-list">
+                      {topFindings.map((f, i) => {
+                        const tone = severityTone(f.level);
+                        const open = expandedFinding === i;
+                        const evCount = f.evidenceCount || 0;
+                        const ev = f.evidence;
+                        const evidenceText = resolveFindingEvidenceLabel(f, evCount);
+                        const evidenceTitle = ev && ev.available
+                          ? (ev.snippet || ev.reason || ev.finalReason || '')
+                          : '';
+                        return (
+                          <li className="finding-row" key={`${f.displayTitle}-${i}`}>
+                            <div className="finding-main">
+                              <AlertTriangle size={16} className={`finding-icon tone-${tone}`} aria-hidden="true" />
+                              <div className="finding-text">
+                                <span className="finding-title">{f.displayTitle}</span>
+                                {f.summary && open && <span className="finding-summary">{f.summary}</span>}
+                                {open && ev && ev.available && (
+                                  <div className="finding-evidence-details">
+                                    {ev.filePath && (
+                                      <div className="fed-row"><span className="fed-key">File</span>
+                                        <span className="fed-val">{ev.filePath}{typeof ev.lineStart === "number" && ev.lineStart > 0 ? `:${ev.lineStart}${typeof ev.lineEnd === "number" && ev.lineEnd > ev.lineStart ? `–${ev.lineEnd}` : ""}` : ""}</span></div>
+                                    )}
+                                    {ev.snippet && <pre className="fed-snippet">{ev.snippet}</pre>}
+                                    {ev.permission && (<div className="fed-row"><span className="fed-key">Permission</span><span className="fed-val">{ev.permission}</span></div>)}
+                                    {ev.hostPermission && (<div className="fed-row"><span className="fed-key">Host access</span><span className="fed-val">{ev.hostPermission}</span></div>)}
+                                    {ev.kind === "manifest" && ev.manifestField && !ev.permission && (<div className="fed-row"><span className="fed-key">Manifest</span><span className="fed-val">{ev.manifestField}</span></div>)}
+                                    {(ev.rulepack || ev.ruleId) && (<div className="fed-row"><span className="fed-key">Rule</span><span className="fed-val">{ev.rulepack ? `${ev.rulepack}${ev.ruleId ? `::${ev.ruleId}` : ""}` : ev.ruleId}</span></div>)}
+                                    {ev.finalReason && (<div className="fed-row"><span className="fed-key">Reason</span><span className="fed-val">{ev.finalReason}</span></div>)}
+                                    {ev.actionRequired && ev.actionRequired !== ev.finalReason && (<div className="fed-row"><span className="fed-key">Action</span><span className="fed-val">{ev.actionRequired}</span></div>)}
+                                    {typeof ev.malicious === "number" && (<div className="fed-row"><span className="fed-key">VirusTotal</span><span className="fed-val">{ev.malicious} malicious · {ev.suspicious || 0} suspicious{ev.hash ? ` · ${String(ev.hash).slice(0, 12)}…` : ""}</span></div>)}
+                                    {ev.analyzer && (<div className="fed-row"><span className="fed-key">Coverage</span><span className="fed-val">{ev.analyzer}{ev.reason ? ` — ${ev.reason}` : ""}</span></div>)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <span className={`finding-severity tone-${tone}`} title={severityLabel(f.level)}>
+                              {severityBadge(f.level)}
+                            </span>
+                            <span className="finding-category">{f.category}</span>
+                            <span className="finding-evidence" title={evidenceTitle}>{evidenceText}</span>
+                            <div className="finding-actions">
+                              {evCount > 0 && (
+                                <button
+                                  type="button"
+                                  className="finding-view-evidence"
+                                  onClick={() => openEvidenceDrawer(f.resolvableEvidenceIds)}
+                                >
+                                  View evidence <ExternalLink size={13} aria-hidden="true" />
+                                </button>
+                              )}
+                              {(f.summary || (ev && ev.available)) && (
+                                <button
+                                  type="button"
+                                  className={`finding-expand${open ? " is-open" : ""}`}
+                                  aria-expanded={open}
+                                  aria-label="Toggle finding details"
+                                  onClick={() => setExpandedFinding(open ? null : i)}
+                                >
+                                  <ChevronDown size={16} aria-hidden="true" />
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+
+                <EvidenceTechnicalDetails rawScanResult={scanResults} viewModel={viewModel} />
+              </>
+            )}
           </div>
 
           {/* Right sidebar: Issue Overview, Quick Navigation, Similar Extensions */}

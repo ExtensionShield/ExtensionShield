@@ -182,6 +182,8 @@ const ScanHistoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "timestamp", direction: "desc" });
+  const [activeRiskFilter, setActiveRiskFilter] = useState("all");
+  const [expandedScanId, setExpandedScanId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -325,17 +327,35 @@ const ScanHistoryPage = () => {
   }, [allScans]);
 
   const filteredScans = useMemo(() => {
-    if (SHOW_TABLE_WITHOUT_SIGN_IN && !isAuthenticated) {
-      return allScans;
+    let scans = allScans;
+    if (activeRiskFilter !== "all") {
+      scans = scans.filter((scan) => {
+        const lvl = (scan.risk_level || "").toUpperCase();
+        if (activeRiskFilter === "safe") return lvl === "LOW" || lvl === "NONE";
+        if (activeRiskFilter === "warn") return lvl === "MED" || lvl === "MEDIUM" || lvl === "MODERATE";
+        if (activeRiskFilter === "high") return lvl === "HIGH" || lvl === "CRITICAL";
+        return true;
+      });
     }
-    if (!searchTerm.trim()) return allScans;
+    if (!searchTerm.trim()) return scans;
     const term = searchTerm.toLowerCase();
-    return allScans.filter(
+    return scans.filter(
       (scan) =>
         scan.extension_name?.toLowerCase().includes(term) ||
         scan.extension_id?.toLowerCase().includes(term)
     );
-  }, [allScans, isAuthenticated, searchTerm]);
+  }, [allScans, activeRiskFilter, searchTerm]);
+
+  const statsCounts = useMemo(() => {
+    let safe = 0, warn = 0, high = 0;
+    for (const scan of allScans) {
+      const lvl = (scan.risk_level || "").toUpperCase();
+      if (lvl === "LOW" || lvl === "NONE") safe++;
+      else if (lvl === "MED" || lvl === "MEDIUM" || lvl === "MODERATE") warn++;
+      else if (lvl === "HIGH" || lvl === "CRITICAL") high++;
+    }
+    return { all: allScans.length, safe, warn, high };
+  }, [allScans]);
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -428,6 +448,46 @@ const ScanHistoryPage = () => {
                 </p>
               </div>
 
+              {/* Progressive Health Filter Strip */}
+              <div className="history-stats-strip">
+                <button
+                  type="button"
+                  className={`stat-filter-pill ${activeRiskFilter === "all" ? "active" : ""}`}
+                  onClick={() => { setActiveRiskFilter("all"); setCurrentPage(1); }}
+                >
+                  <span className="dot dot-all" />
+                  <span>All Scans</span>
+                  <span className="count">{statsCounts.all}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`stat-filter-pill ${activeRiskFilter === "safe" ? "active" : ""}`}
+                  onClick={() => { setActiveRiskFilter("safe"); setCurrentPage(1); }}
+                >
+                  <span className="dot dot-safe" />
+                  <span>Safe</span>
+                  <span className="count">{statsCounts.safe}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`stat-filter-pill ${activeRiskFilter === "warn" ? "active" : ""}`}
+                  onClick={() => { setActiveRiskFilter("warn"); setCurrentPage(1); }}
+                >
+                  <span className="dot dot-warn" />
+                  <span>Review Needed</span>
+                  <span className="count">{statsCounts.warn}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`stat-filter-pill ${activeRiskFilter === "high" ? "active" : ""}`}
+                  onClick={() => { setActiveRiskFilter("high"); setCurrentPage(1); }}
+                >
+                  <span className="dot dot-high" />
+                  <span>High Risk</span>
+                  <span className="count">{statsCounts.high}</span>
+                </button>
+              </div>
+
               <div className="history-toolbar">
                 <div className="toolbar-left">
                   <div className="scan-count-badge">
@@ -462,7 +522,7 @@ const ScanHistoryPage = () => {
                   {!loading && filteredScans.length > 0 && (
                     <div className="table-section-heading">
                       <h2 className="table-section-title">Scanned extensions</h2>
-                      <p className="table-section-subtitle">Click View to open the evidence report.</p>
+                      <p className="table-section-subtitle">Click on any row to expand progressive security details or view report.</p>
                     </div>
                   )}
                 </div>
@@ -551,102 +611,156 @@ const ScanHistoryPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedAndPaginatedScans.map((scan, index) => (
-                          <tr
-                            key={scan.extension_id || index}
-                            className={hoveredRow === scan.extension_id ? "row-hovered" : ""}
-                            onMouseEnter={() => setHoveredRow(scan.extension_id)}
-                            onMouseLeave={() => setHoveredRow(null)}
-                            onClick={() => handleViewReport(scan)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                handleViewReport(scan);
-                              }
-                            }}
-                            role="button"
-                            tabIndex={0}
-                          >
-                            <td className="extension-cell">
-                              <div className="extension-info">
-                                <img
-                                  src={getExtensionIconUrl(scan.extension_id)}
-                                  alt={scan.extension_name}
-                                  className="extension-icon"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = EXTENSION_ICON_PLACEHOLDER;
-                                  }}
-                                />
-                                <div className="extension-details">
-                                  <span className="extension-name">
-                                    {scan.extension_name || scan.metadata?.title || scan.metadata?.name || scan.manifest?.name || scan.extension_id}
-                                  </span>
-                                  <span className="extension-scanned">
-                                    {formatTimeAgo(scan.timestamp ?? scan.scanned_at ?? scan.created_at ?? scan.updated_at)}
-                                  </span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="hide-mobile">{formatUserCount(scan.user_count)}</td>
-                            <td className="hide-mobile">
-                              {scan.rating != null ? (
-                                <span className="rating-value">{parseFloat(scan.rating).toFixed(1)}</span>
-                              ) : (
-                                <span className="no-data">—</span>
+                        {sortedAndPaginatedScans.map((scan, index) => {
+                          const isExpanded = expandedScanId === scan.extension_id;
+                          return (
+                            <React.Fragment key={scan.extension_id || index}>
+                              <tr
+                                className={`scan-summary-row ${isExpanded ? "row-expanded" : ""} ${hoveredRow === scan.extension_id ? "row-hovered" : ""}`}
+                                onMouseEnter={() => setHoveredRow(scan.extension_id)}
+                                onMouseLeave={() => setHoveredRow(null)}
+                                onClick={() => setExpandedScanId(isExpanded ? null : scan.extension_id)}
+                                role="button"
+                                tabIndex={0}
+                              >
+                                <td className="extension-cell">
+                                  <div className="extension-info">
+                                    <img
+                                      src={getExtensionIconUrl(scan.extension_id)}
+                                      alt={scan.extension_name}
+                                      className="extension-icon"
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = EXTENSION_ICON_PLACEHOLDER;
+                                      }}
+                                    />
+                                    <div className="extension-details">
+                                      <span className="extension-name">
+                                        {scan.extension_name || scan.metadata?.title || scan.metadata?.name || scan.manifest?.name || scan.extension_id}
+                                      </span>
+                                      <span className="extension-scanned">
+                                        {formatTimeAgo(scan.timestamp ?? scan.scanned_at ?? scan.created_at ?? scan.updated_at)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="hide-mobile">{formatUserCount(scan.user_count)}</td>
+                                <td className="hide-mobile">
+                                  {scan.rating != null ? (
+                                    <span className="rating-value">{parseFloat(scan.rating).toFixed(1)}</span>
+                                  ) : (
+                                    <span className="no-data">—</span>
+                                  )}
+                                </td>
+                                <td className="hide-tablet">
+                                  {scan.rating_count != null ? (
+                                    <span>{formatUserCount(scan.rating_count)}</span>
+                                  ) : (
+                                    <span className="no-data">—</span>
+                                  )}
+                                </td>
+                                <td>
+                                  {scan.needs_rescan ? (
+                                    <RescanPill />
+                                  ) : scan.unavailable ? (
+                                    <UnavailablePill />
+                                  ) : (
+                                    <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} />
+                                  )}
+                                </td>
+                                <td className="signals-cell">
+                                  {scan.needs_rescan || scan.unavailable ? (
+                                    <span className="no-data">{scan.needs_rescan ? "Pending rescan" : "—"}</span>
+                                  ) : (
+                                    <div className="signals-container">
+                                      <SignalChip type="security" signal={scan.signals?.security_signal} />
+                                      <SignalChip type="privacy" signal={scan.signals?.privacy_signal} />
+                                      <SignalChip type="governance" signal={scan.signals?.governance_signal} />
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="evidence-cell">
+                                  <div className="evidence-container">
+                                    <span className="findings-count">
+                                      {scan.needs_rescan || scan.unavailable
+                                        ? "—"
+                                        : `${scan.findings_count || 0} finding${scan.findings_count !== 1 ? "s" : ""}`}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="expand-indicator-btn"
+                                      title={isExpanded ? "Collapse details" : "Expand details"}
+                                      aria-label={isExpanded ? "Collapse details" : "Expand details"}
+                                    >
+                                      <svg
+                                        className={`expand-chevron ${isExpanded ? "rotated" : ""}`}
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                      >
+                                        <polyline points="6 9 12 15 18 9" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+
+                              {isExpanded && (
+                                <tr className="expanded-scan-drawer-tr">
+                                  <td colSpan={7} className="expanded-scan-drawer-td">
+                                    <div className="expanded-drawer-inner">
+                                      <div className="drawer-signals-grid">
+                                        <div className="drawer-signal-card">
+                                          <span className="card-lbl">Security Analysis</span>
+                                          <span className="card-val">{getSignalDisplayLabel(scan.signals?.security_signal)}</span>
+                                        </div>
+                                        <div className="drawer-signal-card">
+                                          <span className="card-lbl">Privacy & Permissions</span>
+                                          <span className="card-val">{getSignalDisplayLabel(scan.signals?.privacy_signal)}</span>
+                                        </div>
+                                        <div className="drawer-signal-card">
+                                          <span className="card-lbl">Governance & Compliance</span>
+                                          <span className="card-val">{getSignalDisplayLabel(scan.signals?.governance_signal)}</span>
+                                        </div>
+                                        <div className="drawer-signal-card">
+                                          <span className="card-lbl">Overall Risk Score</span>
+                                          <span className="card-val score-highlight">
+                                            {typeof scan.score === "number" ? `${scan.score}/100` : "—"}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <div className="drawer-actions-bar">
+                                        <button
+                                          type="button"
+                                          className="drawer-action-btn primary"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleViewReport(scan);
+                                          }}
+                                        >
+                                          View Full Security Report ↗
+                                        </button>
+                                        {scan.extension_id && (
+                                          <a
+                                            href={`https://chromewebstore.google.com/detail/x/${encodeURIComponent(scan.extension_id)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="drawer-action-btn secondary"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            View on Chrome Web Store ↗
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
                               )}
-                            </td>
-                            <td className="hide-tablet">
-                              {scan.rating_count != null ? (
-                                <span>{formatUserCount(scan.rating_count)}</span>
-                              ) : (
-                                <span className="no-data">—</span>
-                              )}
-                            </td>
-                            <td>
-                              {scan.needs_rescan ? (
-                                <RescanPill />
-                              ) : scan.unavailable ? (
-                                <UnavailablePill />
-                              ) : (
-                                <RiskVerdictBadge level={scan.risk_level} score={scan.score} decision={resolveScanVerdict(scan)} />
-                              )}
-                            </td>
-                            <td className="signals-cell">
-                              {scan.needs_rescan || scan.unavailable ? (
-                                <span className="no-data">{scan.needs_rescan ? "Pending rescan" : "—"}</span>
-                              ) : (
-                                <div className="signals-container">
-                                  <SignalChip type="security" signal={scan.signals?.security_signal} />
-                                  <SignalChip type="privacy" signal={scan.signals?.privacy_signal} />
-                                  <SignalChip type="governance" signal={scan.signals?.governance_signal} />
-                                </div>
-                              )}
-                            </td>
-                            <td className="evidence-cell">
-                              <div className="evidence-container">
-                                <span className="findings-count">
-                                  {scan.needs_rescan || scan.unavailable
-                                    ? "—"
-                                    : `${scan.findings_count || 0} finding${scan.findings_count !== 1 ? "s" : ""}`}
-                                </span>
-                                <button
-                                  className="view-report-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleViewReport(scan);
-                                  }}
-                                >
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                    <circle cx="12" cy="12" r="3" />
-                                  </svg>
-                                  View
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                            </React.Fragment>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
