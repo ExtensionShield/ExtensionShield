@@ -5,6 +5,7 @@
          "32": "icons/32.png",
          "48": "icons/48.png"
       },
+      "default_popup": "popup.html",
       "default_title": "ExtensionShield – Extension Security Scanner"
    },
    "background": {
@@ -24,8 +25,7 @@
    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1EQJhE6eyAVdlLZ5lH0M+w1dcfVl3fOr4H1H2nw3aUksRoCwivfGOZNgGU1SrwdFeC7HlynvIn/w5YwKvCR+0EMsJAi7gp3yQj1NyegYf/d0EwBIHgJiGvrAn47zG/25GlrNdU4M+88B8kMquouPL6Sq5G99nYVkc6DNdE+8iIZe9aqQYIXFa7idAZ+qu44WUz4g+GfjketId+BkHYSN/RM7UY2iY8XEV/Zw5di1Jr0sGHQqZViTeN2wH+9/C5SeHTT3pIKAldCLkru++jFHc3YpAxcrxukkxh1R4a+H+FjpoqWYrfXVmiS8MMZoHZJcOJzEjDen6Wfq/YJKnxOYRwIDAQAB",
    "manifest_version": 3,
    "name": "Extension Shield",
-   "permissions": [ "storage" ],
-   "optional_permissions": [ "management" ],
+   "permissions": [ "storage", "notifications", "management" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
    "version": "1.1.0"
 }
